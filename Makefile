@@ -24,7 +24,8 @@ build-benchmark:
 
 # Build both binaries
 .PHONY: build
-build: build-main build-benchmark
+#build: build-main build-benchmark
+build: build-main
 
 # Run the main executable from the bin directory
 .PHONY: run
