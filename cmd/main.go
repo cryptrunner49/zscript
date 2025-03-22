@@ -1,45 +1,52 @@
 package main
 
 import (
-	"github.com/cryptrunner49/gorex/internal/chunk"
-	"github.com/cryptrunner49/gorex/internal/debug"
-	"github.com/cryptrunner49/gorex/internal/value"
+	"bufio"
+	"fmt"
+	"os"
+
 	"github.com/cryptrunner49/gorex/internal/vm"
 )
 
 func main() {
 	vm.InitVM()
 
-	ch := chunk.New()
-
-	constant := ch.AddConstant(value.Value(1.2))
-	ch.Write(uint8(chunk.OP_CONSTANT), 123)
-	ch.Write(uint8(constant), 123)
-
-	constant = ch.AddConstant(value.Value(3.4))
-	ch.Write(uint8(chunk.OP_CONSTANT), 123)
-	ch.Write(uint8(constant), 123)
-
-	ch.Write(uint8(chunk.OP_ADD), 123)
-
-	constant = ch.AddConstant(value.Value(5.6))
-	ch.Write(uint8(chunk.OP_CONSTANT), 123)
-	ch.Write(uint8(constant), 123)
-
-	ch.Write(uint8(chunk.OP_DIVIDE), 123)
-
-	constant = ch.AddConstant(value.Value(2))
-	ch.Write(uint8(chunk.OP_CONSTANT), 123)
-	ch.Write(uint8(constant), 123)
-
-	ch.Write(uint8(chunk.OP_MULTIPLY), 123)
-	ch.Write(uint8(chunk.OP_NEGATE), 123)
-
-	ch.Write(uint8(chunk.OP_RETURN), 123)
-
-	debug.Disassemble(ch, "test chunk")
-	vm.Interpret(ch)
+	if len(os.Args) == 1 {
+		repl()
+	} else if len(os.Args) == 2 {
+		runFile(os.Args[1])
+	} else {
+		fmt.Fprintf(os.Stderr, "Usage: crex [path]\n")
+		os.Exit(1)
+	}
 
 	vm.FreeVM()
-	ch.Free()
+}
+
+func repl() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("> ")
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println()
+			break
+		}
+		vm.Interpret(line)
+	}
+}
+
+func runFile(path string) {
+	source, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open file \"%s\": %v\n", path, err)
+		os.Exit(74)
+	}
+	result := vm.Interpret(string(source))
+	if result == vm.INTERPRET_COMPILE_ERROR {
+		os.Exit(65)
+	}
+	if result == vm.INTERPRET_RUNTIME_ERROR {
+		os.Exit(70)
+	}
 }

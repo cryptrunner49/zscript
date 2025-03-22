@@ -19,7 +19,7 @@ const (
 )
 
 type Chunk struct {
-	code      []uint8 // Using uint8 to match C's uint8_t
+	code      []uint8
 	lines     []int
 	count     int
 	capacity  int

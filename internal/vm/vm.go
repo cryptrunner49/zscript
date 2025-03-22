@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"github.com/cryptrunner49/gorex/internal/chunk"
+	"github.com/cryptrunner49/gorex/internal/common"
+	"github.com/cryptrunner49/gorex/internal/compiler"
 	"github.com/cryptrunner49/gorex/internal/debug"
 	"github.com/cryptrunner49/gorex/internal/value"
 )
 
-const (
-	STACK_MAX = 256
-)
+const STACK_MAX = 256
 
 type InterpretResult int
 
@@ -22,7 +22,7 @@ const (
 
 type VM struct {
 	chunk    *chunk.Chunk
-	ip       int // Using int as index instead of pointer
+	ip       int
 	stack    [STACK_MAX]value.Value
 	stackTop int
 }
@@ -33,9 +33,7 @@ func InitVM() {
 	resetStack()
 }
 
-func FreeVM() {
-	// No-op in Go version since memory is managed automatically
-}
+func FreeVM() {}
 
 func resetStack() {
 	vm.stackTop = 0
@@ -51,15 +49,20 @@ func Pop() value.Value {
 	return vm.stack[vm.stackTop]
 }
 
-func Interpret(ch *chunk.Chunk) InterpretResult {
+func Interpret(source string) InterpretResult {
+	ch := chunk.New()
+	if !compiler.Compile(source, ch) {
+		ch.Free()
+		return INTERPRET_COMPILE_ERROR
+	}
 	vm.chunk = ch
 	vm.ip = 0
-	return run()
+	result := run()
+	ch.Free()
+	return result
 }
 
 func run() InterpretResult {
-	const debugTraceExecution = true // Matches C's DEBUG_TRACE_EXECUTION
-
 	readByte := func() uint8 {
 		b := vm.chunk.Code()[vm.ip]
 		vm.ip++
@@ -70,7 +73,7 @@ func run() InterpretResult {
 	}
 
 	for {
-		if debugTraceExecution {
+		if common.DebugTraceExecution {
 			fmt.Print("      ")
 			for i := 0; i < vm.stackTop; i++ {
 				fmt.Print("[ ")
@@ -84,8 +87,7 @@ func run() InterpretResult {
 		instruction := readByte()
 		switch instruction {
 		case uint8(chunk.OP_CONSTANT):
-			constant := readConstant()
-			Push(constant)
+			Push(readConstant())
 		case uint8(chunk.OP_ADD):
 			b := Pop()
 			a := Pop()
