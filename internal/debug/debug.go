@@ -10,13 +10,12 @@ import (
 func Disassemble(ch *chunk.Chunk, name string) {
 	fmt.Printf("== %s ==\n", name)
 	for offset := 0; offset < ch.Count(); {
-		offset = disassembleInstruction(ch, offset)
+		offset = DisassembleInstruction(ch, offset)
 	}
 }
 
-func disassembleInstruction(ch *chunk.Chunk, offset int) int {
+func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 	fmt.Printf("%04d ", offset)
-
 	if offset > 0 && ch.Lines()[offset] == ch.Lines()[offset-1] {
 		fmt.Print("   | ")
 	} else {
@@ -25,9 +24,19 @@ func disassembleInstruction(ch *chunk.Chunk, offset int) int {
 
 	instruction := ch.Code()[offset]
 	switch instruction {
-	case chunk.OP_CONSTANT:
+	case uint8(chunk.OP_CONSTANT):
 		return constantInstruction("OP_CONSTANT", ch, offset)
-	case chunk.OP_RETURN:
+	case uint8(chunk.OP_ADD):
+		return simpleInstruction("OP_ADD", offset)
+	case uint8(chunk.OP_SUBTRACT):
+		return simpleInstruction("OP_SUBTRACT", offset)
+	case uint8(chunk.OP_MULTIPLY):
+		return simpleInstruction("OP_MULTIPLY", offset)
+	case uint8(chunk.OP_DIVIDE):
+		return simpleInstruction("OP_DIVIDE", offset)
+	case uint8(chunk.OP_NEGATE):
+		return simpleInstruction("OP_NEGATE", offset)
+	case uint8(chunk.OP_RETURN):
 		return simpleInstruction("OP_RETURN", offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
