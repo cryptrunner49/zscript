@@ -2,11 +2,14 @@ package vm
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/cryptrunner49/gorex/internal/chunk"
 	"github.com/cryptrunner49/gorex/internal/common"
 	"github.com/cryptrunner49/gorex/internal/compiler"
 	"github.com/cryptrunner49/gorex/internal/debug"
+	"github.com/cryptrunner49/gorex/internal/object"
 	"github.com/cryptrunner49/gorex/internal/value"
 )
 
@@ -97,7 +100,7 @@ func run() InterpretResult {
 		case uint8(chunk.OP_EQUAL):
 			b := Pop()
 			a := Pop()
-			Push(value.Value{Type: value.VAL_BOOL, Bool: valuesEqual(a, b)})
+			Push(value.Value{Type: value.VAL_BOOL, Bool: value.Equal(a, b)})
 		case uint8(chunk.OP_GREATER):
 			b := Pop()
 			a := Pop()
@@ -109,11 +112,49 @@ func run() InterpretResult {
 		case uint8(chunk.OP_ADD):
 			b := Pop()
 			a := Pop()
-			Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number + b.Number})
+			// If both operands are strings, concatenate them.
+			if a.Type == value.VAL_OBJ && b.Type == value.VAL_OBJ {
+				astr, okA := a.Obj.(*object.ObjString)
+				bstr, okB := b.Obj.(*object.ObjString)
+				if okA && okB {
+					result := astr.Chars + bstr.Chars
+					Push(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(result)})
+					continue
+				}
+			}
+			// Otherwise, if both are numbers, add them.
+			if a.Type == value.VAL_NUMBER && b.Type == value.VAL_NUMBER {
+				Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number + b.Number})
+			} else {
+				fmt.Fprintln(os.Stderr, "Operands must be two numbers or two strings.")
+				return INTERPRET_RUNTIME_ERROR
+			}
 		case uint8(chunk.OP_SUBTRACT):
 			b := Pop()
 			a := Pop()
-			Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number - b.Number})
+			// If both operands are strings, "crop" b from a (remove first occurrence).
+			if a.Type == value.VAL_OBJ && b.Type == value.VAL_OBJ {
+				astr, okA := a.Obj.(*object.ObjString)
+				bstr, okB := b.Obj.(*object.ObjString)
+				if okA && okB {
+					idx := strings.Index(astr.Chars, bstr.Chars)
+					if idx >= 0 {
+						newStr := astr.Chars[:idx] + astr.Chars[idx+len(bstr.Chars):]
+						Push(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(newStr)})
+					} else {
+						// b not found in a; push a unchanged.
+						Push(a)
+					}
+					continue
+				}
+			}
+			// Otherwise, if both are numbers, subtract them.
+			if a.Type == value.VAL_NUMBER && b.Type == value.VAL_NUMBER {
+				Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number - b.Number})
+			} else {
+				fmt.Fprintln(os.Stderr, "Operands must be two numbers or two strings.")
+				return INTERPRET_RUNTIME_ERROR
+			}
 		case uint8(chunk.OP_MULTIPLY):
 			b := Pop()
 			a := Pop()
@@ -133,22 +174,6 @@ func run() InterpretResult {
 			fmt.Println()
 			return INTERPRET_OK
 		}
-	}
-}
-
-func valuesEqual(a, b value.Value) bool {
-	if a.Type != b.Type {
-		return false
-	}
-	switch a.Type {
-	case value.VAL_BOOL:
-		return a.Bool == b.Bool
-	case value.VAL_NULL:
-		return true
-	case value.VAL_NUMBER:
-		return a.Number == b.Number
-	default:
-		return false
 	}
 }
 

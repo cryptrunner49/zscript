@@ -9,6 +9,7 @@ import (
 	"github.com/cryptrunner49/gorex/internal/common"
 	"github.com/cryptrunner49/gorex/internal/debug"
 	"github.com/cryptrunner49/gorex/internal/lexer"
+	"github.com/cryptrunner49/gorex/internal/object"
 	"github.com/cryptrunner49/gorex/internal/token"
 	"github.com/cryptrunner49/gorex/internal/value"
 )
@@ -50,9 +51,7 @@ type ParseRule struct {
 var rules []ParseRule
 
 func init() {
-	// Initialize rules slice with enough capacity
 	rules = make([]ParseRule, token.TOKEN_EOF+1)
-	// Populate rules dynamically
 	rules[token.TOKEN_LEFT_PAREN] = ParseRule{grouping, nil, PREC_NONE}
 	rules[token.TOKEN_RIGHT_PAREN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_LEFT_BRACE] = ParseRule{nil, nil, PREC_NONE}
@@ -73,7 +72,7 @@ func init() {
 	rules[token.TOKEN_LESS] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_LESS_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_IDENTIFIER] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_STRING] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_STRING] = ParseRule{stringLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_NUMBER] = ParseRule{number, nil, PREC_NONE}
 	rules[token.TOKEN_AND] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_CLASS] = ParseRule{nil, nil, PREC_NONE}
@@ -108,7 +107,7 @@ func errorAt(t token.Token, message string) {
 	if t.Type == token.TOKEN_EOF {
 		fmt.Fprintf(os.Stderr, " at end")
 	} else if t.Type == token.TOKEN_ERROR {
-		// Nothing
+		// Nothing.
 	} else {
 		fmt.Fprintf(os.Stderr, " at '%s'", t.Start)
 	}
@@ -143,17 +142,17 @@ func consume(typ token.TokenType, message string) {
 	errorAtCurrent(message)
 }
 
-func emitByte(byte uint8) {
-	currentChunk().Write(byte, parser.previous.Line)
+func emitByte(b byte) {
+	currentChunk().Write(b, parser.previous.Line)
 }
 
-func emitBytes(byte1, byte2 uint8) {
-	emitByte(byte1)
-	emitByte(byte2)
+func emitBytes(b1, b2 byte) {
+	emitByte(b1)
+	emitByte(b2)
 }
 
 func emitReturn() {
-	emitByte(uint8(chunk.OP_RETURN))
+	emitByte(byte(chunk.OP_RETURN))
 }
 
 func endCompiler() {
@@ -188,6 +187,17 @@ func grouping() {
 	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
 }
 
+func stringLiteral() {
+	// Remove the surrounding quotes.
+	text := parser.previous.Start
+	if len(text) < 2 {
+		error("Invalid string literal.")
+		return
+	}
+	str := text[1 : len(text)-1]
+	emitConstant(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(str)})
+}
+
 func makeConstant(val value.Value) uint8 {
 	constant := currentChunk().AddConstant(val)
 	if constant > 255 {
@@ -198,7 +208,7 @@ func makeConstant(val value.Value) uint8 {
 }
 
 func emitConstant(val value.Value) {
-	emitBytes(uint8(chunk.OP_CONSTANT), makeConstant(val))
+	emitBytes(byte(chunk.OP_CONSTANT), makeConstant(val))
 }
 
 func number() {
@@ -211,9 +221,9 @@ func unary() {
 	parsePrecedence(PREC_UNARY)
 	switch operatorType {
 	case token.TOKEN_MINUS:
-		emitByte(uint8(chunk.OP_NEGATE))
+		emitByte(byte(chunk.OP_NEGATE))
 	case token.TOKEN_BANG:
-		emitByte(uint8(chunk.OP_NOT))
+		emitByte(byte(chunk.OP_NOT))
 	}
 }
 
@@ -223,36 +233,36 @@ func binary() {
 	parsePrecedence(Precedence(rule.Precedence + 1))
 	switch operatorType {
 	case token.TOKEN_PLUS:
-		emitByte(uint8(chunk.OP_ADD))
+		emitByte(byte(chunk.OP_ADD))
 	case token.TOKEN_MINUS:
-		emitByte(uint8(chunk.OP_SUBTRACT))
+		emitByte(byte(chunk.OP_SUBTRACT))
 	case token.TOKEN_STAR:
-		emitByte(uint8(chunk.OP_MULTIPLY))
+		emitByte(byte(chunk.OP_MULTIPLY))
 	case token.TOKEN_SLASH:
-		emitByte(uint8(chunk.OP_DIVIDE))
+		emitByte(byte(chunk.OP_DIVIDE))
 	case token.TOKEN_BANG_EQUAL:
-		emitBytes(uint8(chunk.OP_EQUAL), uint8(chunk.OP_NOT))
+		emitBytes(byte(chunk.OP_EQUAL), byte(chunk.OP_NOT))
 	case token.TOKEN_EQUAL_EQUAL:
-		emitByte(uint8(chunk.OP_EQUAL))
+		emitByte(byte(chunk.OP_EQUAL))
 	case token.TOKEN_GREATER:
-		emitByte(uint8(chunk.OP_GREATER))
+		emitByte(byte(chunk.OP_GREATER))
 	case token.TOKEN_GREATER_EQUAL:
-		emitBytes(uint8(chunk.OP_LESS), uint8(chunk.OP_NOT))
+		emitBytes(byte(chunk.OP_LESS), byte(chunk.OP_NOT))
 	case token.TOKEN_LESS:
-		emitByte(uint8(chunk.OP_LESS))
+		emitByte(byte(chunk.OP_LESS))
 	case token.TOKEN_LESS_EQUAL:
-		emitBytes(uint8(chunk.OP_GREATER), uint8(chunk.OP_NOT))
+		emitBytes(byte(chunk.OP_GREATER), byte(chunk.OP_NOT))
 	}
 }
 
 func literal() {
 	switch parser.previous.Type {
 	case token.TOKEN_FALSE:
-		emitByte(uint8(chunk.OP_FALSE))
+		emitByte(byte(chunk.OP_FALSE))
 	case token.TOKEN_NULL:
-		emitByte(uint8(chunk.OP_NULL))
+		emitByte(byte(chunk.OP_NULL))
 	case token.TOKEN_TRUE:
-		emitByte(uint8(chunk.OP_TRUE))
+		emitByte(byte(chunk.OP_TRUE))
 	}
 }
 
