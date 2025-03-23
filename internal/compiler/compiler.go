@@ -64,31 +64,31 @@ func init() {
 	rules[token.TOKEN_SEMICOLON] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_SLASH] = ParseRule{nil, binary, PREC_FACTOR}
 	rules[token.TOKEN_STAR] = ParseRule{nil, binary, PREC_FACTOR}
-	rules[token.TOKEN_BANG] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_BANG_EQUAL] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_BANG] = ParseRule{unary, nil, PREC_NONE}
+	rules[token.TOKEN_BANG_EQUAL] = ParseRule{nil, binary, PREC_EQUALITY}
 	rules[token.TOKEN_EQUAL] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_EQUAL_EQUAL] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_GREATER] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_GREATER_EQUAL] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_LESS] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_LESS_EQUAL] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_EQUAL_EQUAL] = ParseRule{nil, binary, PREC_EQUALITY}
+	rules[token.TOKEN_GREATER] = ParseRule{nil, binary, PREC_COMPARISON}
+	rules[token.TOKEN_GREATER_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
+	rules[token.TOKEN_LESS] = ParseRule{nil, binary, PREC_COMPARISON}
+	rules[token.TOKEN_LESS_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_IDENTIFIER] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_STRING] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_NUMBER] = ParseRule{number, nil, PREC_NONE}
 	rules[token.TOKEN_AND] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_CLASS] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_ELSE] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_FALSE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_FALSE] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_FOR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_FN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_IF] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_NULL] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_NULL] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_OR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_PRINT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RETURN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_SUPER] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_THIS] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_TRUE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_TRUE] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_VAR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_WHILE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_ERROR] = ParseRule{nil, nil, PREC_NONE}
@@ -158,11 +158,6 @@ func emitReturn() {
 
 func endCompiler() {
 	emitReturn()
-	/*
-		if common.DebugPrintCode && !parser.hadError {
-			debug.Disassemble(currentChunk(), "code")
-		}
-	*/
 	if common.DebugPrintCode {
 		debug.Disassemble(currentChunk(), "code")
 	}
@@ -208,7 +203,7 @@ func emitConstant(val value.Value) {
 
 func number() {
 	val, _ := strconv.ParseFloat(parser.previous.Start, 64)
-	emitConstant(value.Value(val))
+	emitConstant(value.Value{Type: value.VAL_NUMBER, Number: val})
 }
 
 func unary() {
@@ -217,6 +212,8 @@ func unary() {
 	switch operatorType {
 	case token.TOKEN_MINUS:
 		emitByte(uint8(chunk.OP_NEGATE))
+	case token.TOKEN_BANG:
+		emitByte(uint8(chunk.OP_NOT))
 	}
 }
 
@@ -233,6 +230,29 @@ func binary() {
 		emitByte(uint8(chunk.OP_MULTIPLY))
 	case token.TOKEN_SLASH:
 		emitByte(uint8(chunk.OP_DIVIDE))
+	case token.TOKEN_BANG_EQUAL:
+		emitBytes(uint8(chunk.OP_EQUAL), uint8(chunk.OP_NOT))
+	case token.TOKEN_EQUAL_EQUAL:
+		emitByte(uint8(chunk.OP_EQUAL))
+	case token.TOKEN_GREATER:
+		emitByte(uint8(chunk.OP_GREATER))
+	case token.TOKEN_GREATER_EQUAL:
+		emitBytes(uint8(chunk.OP_LESS), uint8(chunk.OP_NOT))
+	case token.TOKEN_LESS:
+		emitByte(uint8(chunk.OP_LESS))
+	case token.TOKEN_LESS_EQUAL:
+		emitBytes(uint8(chunk.OP_GREATER), uint8(chunk.OP_NOT))
+	}
+}
+
+func literal() {
+	switch parser.previous.Type {
+	case token.TOKEN_FALSE:
+		emitByte(uint8(chunk.OP_FALSE))
+	case token.TOKEN_NULL:
+		emitByte(uint8(chunk.OP_NULL))
+	case token.TOKEN_TRUE:
+		emitByte(uint8(chunk.OP_TRUE))
 	}
 }
 

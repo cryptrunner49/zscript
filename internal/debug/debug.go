@@ -26,6 +26,18 @@ func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 	switch instruction {
 	case uint8(chunk.OP_CONSTANT):
 		return constantInstruction("OP_CONSTANT", ch, offset)
+	case uint8(chunk.OP_NULL):
+		return simpleInstruction("OP_NULL", offset)
+	case uint8(chunk.OP_TRUE):
+		return simpleInstruction("OP_TRUE", offset)
+	case uint8(chunk.OP_FALSE):
+		return simpleInstruction("OP_FALSE", offset)
+	case uint8(chunk.OP_EQUAL):
+		return simpleInstruction("OP_EQUAL", offset)
+	case uint8(chunk.OP_GREATER):
+		return simpleInstruction("OP_GREATER", offset)
+	case uint8(chunk.OP_LESS):
+		return simpleInstruction("OP_LESS", offset)
 	case uint8(chunk.OP_ADD):
 		return simpleInstruction("OP_ADD", offset)
 	case uint8(chunk.OP_SUBTRACT):
@@ -34,6 +46,8 @@ func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 		return simpleInstruction("OP_MULTIPLY", offset)
 	case uint8(chunk.OP_DIVIDE):
 		return simpleInstruction("OP_DIVIDE", offset)
+	case uint8(chunk.OP_NOT):
+		return simpleInstruction("OP_NOT", offset)
 	case uint8(chunk.OP_NEGATE):
 		return simpleInstruction("OP_NEGATE", offset)
 	case uint8(chunk.OP_RETURN):

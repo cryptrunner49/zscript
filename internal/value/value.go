@@ -2,7 +2,19 @@ package value
 
 import "fmt"
 
-type Value float64
+type ValueType int
+
+const (
+	VAL_BOOL ValueType = iota
+	VAL_NULL
+	VAL_NUMBER
+)
+
+type Value struct {
+	Type   ValueType
+	Bool   bool
+	Number float64
+}
 
 type ValueArray struct {
 	values   []Value
@@ -43,7 +55,14 @@ func (va *ValueArray) Values() []Value {
 }
 
 func PrintValue(value Value) {
-	fmt.Printf("%g", value)
+	switch value.Type {
+	case VAL_BOOL:
+		fmt.Print(value.Bool)
+	case VAL_NULL:
+		fmt.Print("null")
+	case VAL_NUMBER:
+		fmt.Printf("%g", value.Number)
+	}
 }
 
 func growCapacity(capacity int) int {

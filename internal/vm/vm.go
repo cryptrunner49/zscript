@@ -88,28 +88,70 @@ func run() InterpretResult {
 		switch instruction {
 		case uint8(chunk.OP_CONSTANT):
 			Push(readConstant())
+		case uint8(chunk.OP_NULL):
+			Push(value.Value{Type: value.VAL_NULL})
+		case uint8(chunk.OP_TRUE):
+			Push(value.Value{Type: value.VAL_BOOL, Bool: true})
+		case uint8(chunk.OP_FALSE):
+			Push(value.Value{Type: value.VAL_BOOL, Bool: false})
+		case uint8(chunk.OP_EQUAL):
+			b := Pop()
+			a := Pop()
+			Push(value.Value{Type: value.VAL_BOOL, Bool: valuesEqual(a, b)})
+		case uint8(chunk.OP_GREATER):
+			b := Pop()
+			a := Pop()
+			Push(value.Value{Type: value.VAL_BOOL, Bool: a.Number > b.Number})
+		case uint8(chunk.OP_LESS):
+			b := Pop()
+			a := Pop()
+			Push(value.Value{Type: value.VAL_BOOL, Bool: a.Number < b.Number})
 		case uint8(chunk.OP_ADD):
 			b := Pop()
 			a := Pop()
-			Push(a + b)
+			Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number + b.Number})
 		case uint8(chunk.OP_SUBTRACT):
 			b := Pop()
 			a := Pop()
-			Push(a - b)
+			Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number - b.Number})
 		case uint8(chunk.OP_MULTIPLY):
 			b := Pop()
 			a := Pop()
-			Push(a * b)
+			Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number * b.Number})
 		case uint8(chunk.OP_DIVIDE):
 			b := Pop()
 			a := Pop()
-			Push(a / b)
+			Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number / b.Number})
+		case uint8(chunk.OP_NOT):
+			val := Pop()
+			Push(value.Value{Type: value.VAL_BOOL, Bool: isFalsey(val)})
 		case uint8(chunk.OP_NEGATE):
-			Push(-Pop())
+			val := Pop()
+			Push(value.Value{Type: value.VAL_NUMBER, Number: -val.Number})
 		case uint8(chunk.OP_RETURN):
 			value.PrintValue(Pop())
 			fmt.Println()
 			return INTERPRET_OK
 		}
 	}
+}
+
+func valuesEqual(a, b value.Value) bool {
+	if a.Type != b.Type {
+		return false
+	}
+	switch a.Type {
+	case value.VAL_BOOL:
+		return a.Bool == b.Bool
+	case value.VAL_NULL:
+		return true
+	case value.VAL_NUMBER:
+		return a.Number == b.Number
+	default:
+		return false
+	}
+}
+
+func isFalsey(val value.Value) bool {
+	return val.Type == value.VAL_NULL || (val.Type == value.VAL_BOOL && !val.Bool)
 }
