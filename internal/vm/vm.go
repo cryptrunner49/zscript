@@ -28,15 +28,22 @@ type VM struct {
 	ip       int
 	stack    [STACK_MAX]value.Value
 	stackTop int
+	objects  *object.Obj
+	strings  map[uint32]*object.ObjString
 }
 
 var vm VM
 
 func InitVM() {
 	resetStack()
+	vm.objects = nil
+	vm.strings = make(map[uint32]*object.ObjString)
 }
 
-func FreeVM() {}
+func FreeVM() {
+	vm.strings = nil
+	vm.objects = nil
+}
 
 func resetStack() {
 	vm.stackTop = 0
@@ -112,7 +119,6 @@ func run() InterpretResult {
 		case uint8(chunk.OP_ADD):
 			b := Pop()
 			a := Pop()
-			// If both operands are strings, concatenate them.
 			if a.Type == value.VAL_OBJ && b.Type == value.VAL_OBJ {
 				astr, okA := a.Obj.(*object.ObjString)
 				bstr, okB := b.Obj.(*object.ObjString)
@@ -122,7 +128,6 @@ func run() InterpretResult {
 					continue
 				}
 			}
-			// Otherwise, if both are numbers, add them.
 			if a.Type == value.VAL_NUMBER && b.Type == value.VAL_NUMBER {
 				Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number + b.Number})
 			} else {
@@ -132,7 +137,6 @@ func run() InterpretResult {
 		case uint8(chunk.OP_SUBTRACT):
 			b := Pop()
 			a := Pop()
-			// If both operands are strings, "crop" b from a (remove first occurrence).
 			if a.Type == value.VAL_OBJ && b.Type == value.VAL_OBJ {
 				astr, okA := a.Obj.(*object.ObjString)
 				bstr, okB := b.Obj.(*object.ObjString)
@@ -142,13 +146,11 @@ func run() InterpretResult {
 						newStr := astr.Chars[:idx] + astr.Chars[idx+len(bstr.Chars):]
 						Push(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(newStr)})
 					} else {
-						// b not found in a; push a unchanged.
 						Push(a)
 					}
 					continue
 				}
 			}
-			// Otherwise, if both are numbers, subtract them.
 			if a.Type == value.VAL_NUMBER && b.Type == value.VAL_NUMBER {
 				Push(value.Value{Type: value.VAL_NUMBER, Number: a.Number - b.Number})
 			} else {

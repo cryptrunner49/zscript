@@ -6,7 +6,6 @@ import (
 	"github.com/cryptrunner49/gorex/internal/object"
 )
 
-// ValueType represents the type of a value.
 type ValueType int
 
 const (
@@ -16,12 +15,11 @@ const (
 	VAL_OBJ
 )
 
-// Value holds a runtime value.
 type Value struct {
 	Type   ValueType
 	Bool   bool
 	Number float64
-	Obj    interface{} // For VAL_OBJ, holds an object (like *object.ObjString).
+	Obj    interface{}
 }
 
 type ValueArray struct {
