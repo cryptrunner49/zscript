@@ -40,7 +40,7 @@ const (
 	PREC_PRIMARY
 )
 
-type ParseFn func()
+type ParseFn func(bool)
 
 type ParseRule struct {
 	Prefix     ParseFn
@@ -71,7 +71,7 @@ func init() {
 	rules[token.TOKEN_GREATER_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_LESS] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_LESS_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
-	rules[token.TOKEN_IDENTIFIER] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_IDENTIFIER] = ParseRule{variable, nil, PREC_NONE}
 	rules[token.TOKEN_STRING] = ParseRule{stringLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_NUMBER] = ParseRule{number, nil, PREC_NONE}
 	rules[token.TOKEN_AND] = ParseRule{nil, nil, PREC_NONE}
@@ -142,6 +142,18 @@ func consume(typ token.TokenType, message string) {
 	errorAtCurrent(message)
 }
 
+func check(typ token.TokenType) bool {
+	return parser.current.Type == typ
+}
+
+func match(typ token.TokenType) bool {
+	if !check(typ) {
+		return false
+	}
+	advance()
+	return true
+}
+
 func emitByte(b byte) {
 	currentChunk().Write(b, parser.previous.Line)
 }
@@ -157,13 +169,70 @@ func emitReturn() {
 
 func endCompiler() {
 	emitReturn()
-	if common.DebugPrintCode {
+	if common.DebugPrintCode && !parser.hadError {
 		debug.Disassemble(currentChunk(), "code")
 	}
 }
 
 func expression() {
 	parsePrecedence(PREC_ASSIGNMENT)
+}
+
+func statement() {
+	if match(token.TOKEN_PRINT) {
+		printStatement()
+	} else {
+		expressionStatement()
+	}
+}
+
+func declaration() {
+	if match(token.TOKEN_VAR) {
+		varDeclaration()
+	} else {
+		statement()
+	}
+	if parser.panicMode {
+		synchronize()
+	}
+}
+
+func varDeclaration() {
+	global := parseVariable("Expect variable name.")
+	if match(token.TOKEN_EQUAL) {
+		expression()
+	} else {
+		emitByte(byte(chunk.OP_NULL))
+	}
+	consume(token.TOKEN_SEMICOLON, "Expect ';' after variable declaration.")
+	defineVariable(global)
+}
+
+func printStatement() {
+	expression()
+	consume(token.TOKEN_SEMICOLON, "Expect ';' after value.")
+	emitByte(byte(chunk.OP_PRINT))
+}
+
+func expressionStatement() {
+	expression()
+	consume(token.TOKEN_SEMICOLON, "Expect ';' after expression.")
+	emitByte(byte(chunk.OP_POP))
+}
+
+func synchronize() {
+	parser.panicMode = false
+	for parser.current.Type != token.TOKEN_EOF {
+		if parser.previous.Type == token.TOKEN_SEMICOLON {
+			return
+		}
+		switch parser.current.Type {
+		case token.TOKEN_CLASS, token.TOKEN_FN, token.TOKEN_VAR, token.TOKEN_FOR,
+			token.TOKEN_IF, token.TOKEN_WHILE, token.TOKEN_PRINT, token.TOKEN_RETURN:
+			return
+		}
+		advance()
+	}
 }
 
 func parsePrecedence(precedence Precedence) {
@@ -173,22 +242,39 @@ func parsePrecedence(precedence Precedence) {
 		error("Expect expression")
 		return
 	}
-	prefixRule()
+	canAssign := precedence <= PREC_ASSIGNMENT
+	prefixRule(canAssign)
 
 	for precedence <= getRule(parser.current.Type).Precedence {
 		advance()
 		infixRule := getRule(parser.previous.Type).Infix
-		infixRule()
+		infixRule(canAssign)
+	}
+
+	if canAssign && match(token.TOKEN_EQUAL) {
+		error("Invalid assignment target.")
 	}
 }
 
-func grouping() {
+func identifierConstant(name token.Token) uint8 {
+	return makeConstant(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(name.Start)})
+}
+
+func parseVariable(errorMessage string) uint8 {
+	consume(token.TOKEN_IDENTIFIER, errorMessage)
+	return identifierConstant(parser.previous)
+}
+
+func defineVariable(global uint8) {
+	emitBytes(byte(chunk.OP_DEFINE_GLOBAL), global)
+}
+
+func grouping(canAssign bool) {
 	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
 }
 
-func stringLiteral() {
-	// Remove the surrounding quotes.
+func stringLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
 		error("Invalid string literal.")
@@ -211,12 +297,12 @@ func emitConstant(val value.Value) {
 	emitBytes(byte(chunk.OP_CONSTANT), makeConstant(val))
 }
 
-func number() {
+func number(canAssign bool) {
 	val, _ := strconv.ParseFloat(parser.previous.Start, 64)
 	emitConstant(value.Value{Type: value.VAL_NUMBER, Number: val})
 }
 
-func unary() {
+func unary(canAssign bool) {
 	operatorType := parser.previous.Type
 	parsePrecedence(PREC_UNARY)
 	switch operatorType {
@@ -227,7 +313,7 @@ func unary() {
 	}
 }
 
-func binary() {
+func binary(canAssign bool) {
 	operatorType := parser.previous.Type
 	rule := getRule(operatorType)
 	parsePrecedence(Precedence(rule.Precedence + 1))
@@ -255,7 +341,7 @@ func binary() {
 	}
 }
 
-func literal() {
+func literal(canAssign bool) {
 	switch parser.previous.Type {
 	case token.TOKEN_FALSE:
 		emitByte(byte(chunk.OP_FALSE))
@@ -263,6 +349,20 @@ func literal() {
 		emitByte(byte(chunk.OP_NULL))
 	case token.TOKEN_TRUE:
 		emitByte(byte(chunk.OP_TRUE))
+	}
+}
+
+func variable(canAssign bool) {
+	namedVariable(parser.previous, canAssign)
+}
+
+func namedVariable(name token.Token, canAssign bool) {
+	arg := identifierConstant(name)
+	if canAssign && match(token.TOKEN_EQUAL) {
+		expression()
+		emitBytes(byte(chunk.OP_SET_GLOBAL), arg)
+	} else {
+		emitBytes(byte(chunk.OP_GET_GLOBAL), arg)
 	}
 }
 
@@ -276,8 +376,9 @@ func Compile(source string, ch *chunk.Chunk) bool {
 	parser.hadError = false
 	parser.panicMode = false
 	advance()
-	expression()
-	consume(token.TOKEN_EOF, "Expect end of expression.")
+	for !match(token.TOKEN_EOF) {
+		declaration()
+	}
 	endCompiler()
 	return !parser.hadError
 }

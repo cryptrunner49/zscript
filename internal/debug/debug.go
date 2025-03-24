@@ -32,6 +32,14 @@ func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 		return simpleInstruction("OP_TRUE", offset)
 	case uint8(chunk.OP_FALSE):
 		return simpleInstruction("OP_FALSE", offset)
+	case uint8(chunk.OP_POP):
+		return simpleInstruction("OP_POP", offset)
+	case uint8(chunk.OP_DEFINE_GLOBAL):
+		return constantInstruction("OP_DEFINE_GLOBAL", ch, offset)
+	case uint8(chunk.OP_SET_GLOBAL):
+		return constantInstruction("OP_SET_GLOBAL", ch, offset)
+	case uint8(chunk.OP_GET_GLOBAL):
+		return constantInstruction("OP_GET_GLOBAL", ch, offset)
 	case uint8(chunk.OP_EQUAL):
 		return simpleInstruction("OP_EQUAL", offset)
 	case uint8(chunk.OP_GREATER):
@@ -50,6 +58,8 @@ func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 		return simpleInstruction("OP_NOT", offset)
 	case uint8(chunk.OP_NEGATE):
 		return simpleInstruction("OP_NEGATE", offset)
+	case uint8(chunk.OP_PRINT):
+		return simpleInstruction("OP_PRINT", offset)
 	case uint8(chunk.OP_RETURN):
 		return simpleInstruction("OP_RETURN", offset)
 	default:
