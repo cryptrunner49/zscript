@@ -21,7 +21,19 @@ type Parser struct {
 	panicMode bool
 }
 
+type Local struct {
+	name  token.Token
+	depth int
+}
+
+type Compiler struct {
+	locals     [256]Local
+	localCount int
+	scopeDepth int
+}
+
 var parser Parser
+var current *Compiler
 var compilingChunk *chunk.Chunk
 
 type Precedence int
@@ -174,6 +186,18 @@ func endCompiler() {
 	}
 }
 
+func beginScope() {
+	current.scopeDepth++
+}
+
+func endScope() {
+	current.scopeDepth--
+	for current.localCount > 0 && current.locals[current.localCount-1].depth > current.scopeDepth {
+		emitByte(byte(chunk.OP_POP))
+		current.localCount--
+	}
+}
+
 func expression() {
 	parsePrecedence(PREC_ASSIGNMENT)
 }
@@ -181,9 +205,20 @@ func expression() {
 func statement() {
 	if match(token.TOKEN_PRINT) {
 		printStatement()
+	} else if match(token.TOKEN_LEFT_BRACE) {
+		beginScope()
+		block()
+		endScope()
 	} else {
 		expressionStatement()
 	}
+}
+
+func block() {
+	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+		declaration()
+	}
+	consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after block.")
 }
 
 func declaration() {
@@ -260,12 +295,56 @@ func identifierConstant(name token.Token) uint8 {
 	return makeConstant(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(name.Start)})
 }
 
+func identifiersEqual(a, b token.Token) bool {
+	return a.Start == b.Start
+}
+
+func addLocal(name token.Token) {
+	if current.localCount == 256 {
+		error("Too many local variables in function.")
+		return
+	}
+	local := &current.locals[current.localCount]
+	local.name = name
+	local.depth = -1 // Uninitialized
+	current.localCount++
+}
+
+func declareVariable() {
+	if current.scopeDepth == 0 {
+		return
+	}
+	name := parser.previous
+	for i := current.localCount - 1; i >= 0; i-- {
+		local := current.locals[i]
+		if local.depth != -1 && local.depth < current.scopeDepth {
+			break
+		}
+		if identifiersEqual(name, local.name) {
+			error("Already variable with this name in this scope.")
+		}
+	}
+	addLocal(name)
+}
+
 func parseVariable(errorMessage string) uint8 {
 	consume(token.TOKEN_IDENTIFIER, errorMessage)
+	declareVariable()
+	if current.scopeDepth > 0 {
+		return 0
+	}
 	return identifierConstant(parser.previous)
 }
 
+func markInitialized() {
+	current.locals[current.localCount-1].depth = current.scopeDepth
+}
+
 func defineVariable(global uint8) {
+	if current.scopeDepth > 0 {
+		markInitialized()
+		return
+	}
 	emitBytes(byte(chunk.OP_DEFINE_GLOBAL), global)
 }
 
@@ -352,26 +431,56 @@ func literal(canAssign bool) {
 	}
 }
 
-func variable(canAssign bool) {
-	namedVariable(parser.previous, canAssign)
+func resolveLocal(name token.Token) int {
+	for i := current.localCount - 1; i >= 0; i-- {
+		local := current.locals[i]
+		if identifiersEqual(name, local.name) {
+			if local.depth == -1 {
+				error("Can't read local variable in its own initializer.")
+			}
+			return i
+		}
+	}
+	return -1
 }
 
 func namedVariable(name token.Token, canAssign bool) {
-	arg := identifierConstant(name)
+	var getOp, setOp uint8
+	arg := resolveLocal(name)
+	if arg != -1 {
+		getOp = byte(chunk.OP_GET_LOCAL)
+		setOp = byte(chunk.OP_SET_LOCAL)
+	} else {
+		arg = int(identifierConstant(name))
+		getOp = byte(chunk.OP_GET_GLOBAL)
+		setOp = byte(chunk.OP_SET_GLOBAL)
+	}
 	if canAssign && match(token.TOKEN_EQUAL) {
 		expression()
-		emitBytes(byte(chunk.OP_SET_GLOBAL), arg)
+		emitBytes(setOp, uint8(arg))
 	} else {
-		emitBytes(byte(chunk.OP_GET_GLOBAL), arg)
+		emitBytes(getOp, uint8(arg))
 	}
+}
+
+func variable(canAssign bool) {
+	namedVariable(parser.previous, canAssign)
 }
 
 func getRule(typ token.TokenType) ParseRule {
 	return rules[typ]
 }
 
+func initCompiler(compiler *Compiler) {
+	compiler.localCount = 0
+	compiler.scopeDepth = 0
+	current = compiler
+}
+
 func Compile(source string, ch *chunk.Chunk) bool {
 	lexer.InitLexer(source)
+	var compiler Compiler
+	initCompiler(&compiler)
 	compilingChunk = ch
 	parser.hadError = false
 	parser.panicMode = false

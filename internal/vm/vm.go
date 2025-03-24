@@ -149,6 +149,12 @@ func run() InterpretResult {
 			Push(value.Value{Type: value.VAL_BOOL, Bool: false})
 		case uint8(chunk.OP_POP):
 			Pop()
+		case uint8(chunk.OP_SET_LOCAL):
+			slot := readByte()
+			vm.stack[slot] = peek(0)
+		case uint8(chunk.OP_GET_LOCAL):
+			slot := readByte()
+			Push(vm.stack[slot])
 		case uint8(chunk.OP_DEFINE_GLOBAL):
 			name := readString()
 			vm.globals[name] = peek(0)
