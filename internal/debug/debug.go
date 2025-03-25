@@ -66,6 +66,12 @@ func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 		return simpleInstruction("OP_PRINT", offset)
 	case uint8(chunk.OP_RETURN):
 		return simpleInstruction("OP_RETURN", offset)
+	case uint8(chunk.OP_JUMP):
+		return jumpInstruction("OP_JUMP", 1, ch, offset)
+	case uint8(chunk.OP_JUMP_IF_FALSE):
+		return jumpInstruction("OP_JUMP_IF_FALSE", 1, ch, offset)
+	case uint8(chunk.OP_LOOP):
+		return jumpInstruction("OP_LOOP", -1, ch, offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1
@@ -89,4 +95,10 @@ func byteInstruction(name string, ch *chunk.Chunk, offset int) int {
 	slot := ch.Code()[offset+1]
 	fmt.Printf("%-16s %4d\n", name, slot)
 	return offset + 2
+}
+
+func jumpInstruction(name string, sign int, ch *chunk.Chunk, offset int) int {
+	jump := int(ch.Code()[offset+1])<<8 | int(ch.Code()[offset+2])
+	fmt.Printf("%-16s %4d -> %d\n", name, offset, offset+3+sign*jump)
+	return offset + 3
 }

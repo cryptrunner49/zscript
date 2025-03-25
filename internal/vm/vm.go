@@ -236,6 +236,17 @@ func run() InterpretResult {
 		case uint8(chunk.OP_PRINT):
 			value.PrintValue(Pop())
 			fmt.Println()
+		case uint8(chunk.OP_JUMP):
+			offset := int(readByte())<<8 | int(readByte())
+			vm.ip += offset
+		case uint8(chunk.OP_JUMP_IF_FALSE):
+			offset := int(readByte())<<8 | int(readByte())
+			if isFalsey(peek(0)) {
+				vm.ip += offset
+			}
+		case uint8(chunk.OP_LOOP):
+			offset := int(readByte())<<8 | int(readByte())
+			vm.ip -= offset
 		case uint8(chunk.OP_RETURN):
 			return INTERPRET_OK
 		}

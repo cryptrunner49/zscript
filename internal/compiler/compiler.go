@@ -86,7 +86,7 @@ func init() {
 	rules[token.TOKEN_IDENTIFIER] = ParseRule{variable, nil, PREC_NONE}
 	rules[token.TOKEN_STRING] = ParseRule{stringLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_NUMBER] = ParseRule{number, nil, PREC_NONE}
-	rules[token.TOKEN_AND] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_AND] = ParseRule{nil, and, PREC_AND}
 	rules[token.TOKEN_CLASS] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_ELSE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_FALSE] = ParseRule{literal, nil, PREC_NONE}
@@ -94,7 +94,7 @@ func init() {
 	rules[token.TOKEN_FN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_IF] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_NULL] = ParseRule{literal, nil, PREC_NONE}
-	rules[token.TOKEN_OR] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_OR] = ParseRule{nil, or, PREC_OR}
 	rules[token.TOKEN_PRINT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RETURN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_SUPER] = ParseRule{nil, nil, PREC_NONE}
@@ -205,6 +205,12 @@ func expression() {
 func statement() {
 	if match(token.TOKEN_PRINT) {
 		printStatement()
+	} else if match(token.TOKEN_IF) {
+		ifStatement()
+	} else if match(token.TOKEN_WHILE) {
+		whileStatement()
+	} else if match(token.TOKEN_FOR) {
+		forStatement()
 	} else if match(token.TOKEN_LEFT_BRACE) {
 		beginScope()
 		block()
@@ -490,4 +496,112 @@ func Compile(source string, ch *chunk.Chunk) bool {
 	}
 	endCompiler()
 	return !parser.hadError
+}
+
+func emitJump(instruction byte) int {
+	emitByte(instruction)
+	emitByte(0xff)
+	emitByte(0xff)
+	return currentChunk().Count() - 2
+}
+
+func patchJump(offset int) {
+	jump := currentChunk().Count() - offset - 2
+	if jump > 65535 {
+		error("Too much code to jump over.")
+	}
+	currentChunk().Code()[offset] = byte((jump >> 8) & 0xff)
+	currentChunk().Code()[offset+1] = byte(jump & 0xff)
+}
+
+func and(canAssign bool) {
+	endJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
+	emitByte(byte(chunk.OP_POP))
+	parsePrecedence(PREC_AND)
+	patchJump(endJump)
+}
+
+func or(canAssign bool) {
+	elseJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
+	endJump := emitJump(byte(chunk.OP_JUMP))
+	patchJump(elseJump)
+	emitByte(byte(chunk.OP_POP))
+	parsePrecedence(PREC_OR)
+	patchJump(endJump)
+}
+
+func ifStatement() {
+	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'if'.")
+	expression()
+	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after condition.")
+	thenJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
+	emitByte(byte(chunk.OP_POP))
+	statement()
+	elseJump := emitJump(byte(chunk.OP_JUMP))
+	patchJump(thenJump)
+	emitByte(byte(chunk.OP_POP))
+	if match(token.TOKEN_ELSE) {
+		statement()
+	}
+	patchJump(elseJump)
+}
+
+func emitLoop(loopStart int) {
+	emitByte(byte(chunk.OP_LOOP))
+	offset := currentChunk().Count() - loopStart + 2
+	if offset > 65535 {
+		error("Loop body too large.")
+	}
+	emitByte(byte((offset >> 8) & 0xff))
+	emitByte(byte(offset & 0xff))
+}
+
+func whileStatement() {
+	loopStart := currentChunk().Count()
+	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'while'.")
+	expression()
+	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after condition.")
+	exitJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
+	emitByte(byte(chunk.OP_POP))
+	statement()
+	emitLoop(loopStart)
+	patchJump(exitJump)
+	emitByte(byte(chunk.OP_POP))
+}
+
+func forStatement() {
+	beginScope()
+	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'for'.")
+	if match(token.TOKEN_SEMICOLON) {
+		// No initializer
+	} else if match(token.TOKEN_VAR) {
+		varDeclaration()
+	} else {
+		expressionStatement()
+	}
+	loopStart := currentChunk().Count()
+	exitJump := -1
+	if !match(token.TOKEN_SEMICOLON) {
+		expression()
+		consume(token.TOKEN_SEMICOLON, "Expect ';' after loop condition.")
+		exitJump = emitJump(byte(chunk.OP_JUMP_IF_FALSE))
+		emitByte(byte(chunk.OP_POP))
+	}
+	if !match(token.TOKEN_RIGHT_PAREN) {
+		bodyJump := emitJump(byte(chunk.OP_JUMP))
+		incrementStart := currentChunk().Count()
+		expression()
+		emitByte(byte(chunk.OP_POP))
+		consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.")
+		emitLoop(loopStart)
+		loopStart = incrementStart
+		patchJump(bodyJump)
+	}
+	statement()
+	emitLoop(loopStart)
+	if exitJump != -1 {
+		patchJump(exitJump)
+		emitByte(byte(chunk.OP_POP))
+	}
+	endScope()
 }
