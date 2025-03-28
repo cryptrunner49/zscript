@@ -1,9 +1,7 @@
-package chunk
+package runtime
 
 import (
 	"errors"
-
-	"github.com/cryptrunner49/gorex/internal/value"
 )
 
 type OpCode uint8
@@ -32,6 +30,7 @@ const (
 	OP_JUMP
 	OP_JUMP_IF_FALSE
 	OP_LOOP
+	OP_CALL
 	OP_RETURN
 )
 
@@ -40,7 +39,7 @@ type Chunk struct {
 	lines     []int
 	count     int
 	capacity  int
-	constants value.ValueArray
+	constants ValueArray
 }
 
 func New() *Chunk {
@@ -69,7 +68,7 @@ func (c *Chunk) Write(byte uint8, line int) error {
 	return nil
 }
 
-func (c *Chunk) AddConstant(val value.Value) int {
+func (c *Chunk) AddConstant(val Value) int {
 	c.constants.Write(val)
 	return c.constants.Count() - 1
 }
@@ -91,7 +90,7 @@ func (c *Chunk) Lines() []int {
 	return c.lines[:c.count]
 }
 
-func (c *Chunk) Constants() *value.ValueArray {
+func (c *Chunk) Constants() *ValueArray {
 	return &c.constants
 }
 

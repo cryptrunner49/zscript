@@ -1,9 +1,7 @@
-package value
+package runtime
 
 import (
 	"fmt"
-
-	"github.com/cryptrunner49/gorex/internal/object"
 )
 
 type ValueType int
@@ -73,15 +71,8 @@ func PrintValue(v Value) {
 	case VAL_NUMBER:
 		fmt.Printf("%g", v.Number)
 	case VAL_OBJ:
-		object.PrintObject(v.Obj)
+		PrintObject(v.Obj)
 	}
-}
-
-func growCapacity(capacity int) int {
-	if capacity < 8 {
-		return 8
-	}
-	return capacity * 2
 }
 
 func Equal(a, b Value) bool {
@@ -96,8 +87,8 @@ func Equal(a, b Value) bool {
 	case VAL_NUMBER:
 		return a.Number == b.Number
 	case VAL_OBJ:
-		aStr, okA := a.Obj.(*object.ObjString)
-		bStr, okB := b.Obj.(*object.ObjString)
+		aStr, okA := a.Obj.(*ObjString)
+		bStr, okB := b.Obj.(*ObjString)
 		if okA && okB {
 			return aStr.Chars == bStr.Chars
 		}

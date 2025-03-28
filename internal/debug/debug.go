@@ -3,18 +3,17 @@ package debug
 import (
 	"fmt"
 
-	"github.com/cryptrunner49/gorex/internal/chunk"
-	"github.com/cryptrunner49/gorex/internal/value"
+	"github.com/cryptrunner49/gorex/internal/runtime"
 )
 
-func Disassemble(ch *chunk.Chunk, name string) {
+func Disassemble(ch *runtime.Chunk, name string) {
 	fmt.Printf("== %s ==\n", name)
 	for offset := 0; offset < ch.Count(); {
 		offset = DisassembleInstruction(ch, offset)
 	}
 }
 
-func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
+func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 	fmt.Printf("%04d ", offset)
 	if offset > 0 && ch.Lines()[offset] == ch.Lines()[offset-1] {
 		fmt.Print("   | ")
@@ -24,53 +23,55 @@ func DisassembleInstruction(ch *chunk.Chunk, offset int) int {
 
 	instruction := ch.Code()[offset]
 	switch instruction {
-	case uint8(chunk.OP_CONSTANT):
+	case uint8(runtime.OP_CONSTANT):
 		return constantInstruction("OP_CONSTANT", ch, offset)
-	case uint8(chunk.OP_NULL):
+	case uint8(runtime.OP_NULL):
 		return simpleInstruction("OP_NULL", offset)
-	case uint8(chunk.OP_TRUE):
+	case uint8(runtime.OP_TRUE):
 		return simpleInstruction("OP_TRUE", offset)
-	case uint8(chunk.OP_FALSE):
+	case uint8(runtime.OP_FALSE):
 		return simpleInstruction("OP_FALSE", offset)
-	case uint8(chunk.OP_POP):
+	case uint8(runtime.OP_POP):
 		return simpleInstruction("OP_POP", offset)
-	case uint8(chunk.OP_SET_LOCAL):
+	case uint8(runtime.OP_SET_LOCAL):
 		return byteInstruction("OP_SET_LOCAL", ch, offset)
-	case uint8(chunk.OP_GET_LOCAL):
+	case uint8(runtime.OP_GET_LOCAL):
 		return byteInstruction("OP_GET_LOCAL", ch, offset)
-	case uint8(chunk.OP_DEFINE_GLOBAL):
+	case uint8(runtime.OP_DEFINE_GLOBAL):
 		return constantInstruction("OP_DEFINE_GLOBAL", ch, offset)
-	case uint8(chunk.OP_SET_GLOBAL):
+	case uint8(runtime.OP_SET_GLOBAL):
 		return constantInstruction("OP_SET_GLOBAL", ch, offset)
-	case uint8(chunk.OP_GET_GLOBAL):
+	case uint8(runtime.OP_GET_GLOBAL):
 		return constantInstruction("OP_GET_GLOBAL", ch, offset)
-	case uint8(chunk.OP_EQUAL):
+	case uint8(runtime.OP_EQUAL):
 		return simpleInstruction("OP_EQUAL", offset)
-	case uint8(chunk.OP_GREATER):
+	case uint8(runtime.OP_GREATER):
 		return simpleInstruction("OP_GREATER", offset)
-	case uint8(chunk.OP_LESS):
+	case uint8(runtime.OP_LESS):
 		return simpleInstruction("OP_LESS", offset)
-	case uint8(chunk.OP_ADD):
+	case uint8(runtime.OP_ADD):
 		return simpleInstruction("OP_ADD", offset)
-	case uint8(chunk.OP_SUBTRACT):
+	case uint8(runtime.OP_SUBTRACT):
 		return simpleInstruction("OP_SUBTRACT", offset)
-	case uint8(chunk.OP_MULTIPLY):
+	case uint8(runtime.OP_MULTIPLY):
 		return simpleInstruction("OP_MULTIPLY", offset)
-	case uint8(chunk.OP_DIVIDE):
+	case uint8(runtime.OP_DIVIDE):
 		return simpleInstruction("OP_DIVIDE", offset)
-	case uint8(chunk.OP_NOT):
+	case uint8(runtime.OP_NOT):
 		return simpleInstruction("OP_NOT", offset)
-	case uint8(chunk.OP_NEGATE):
+	case uint8(runtime.OP_NEGATE):
 		return simpleInstruction("OP_NEGATE", offset)
-	case uint8(chunk.OP_PRINT):
+	case uint8(runtime.OP_PRINT):
 		return simpleInstruction("OP_PRINT", offset)
-	case uint8(chunk.OP_RETURN):
+	case uint8(runtime.OP_CALL):
+		return byteInstruction("OP_CALL", ch, offset)
+	case uint8(runtime.OP_RETURN):
 		return simpleInstruction("OP_RETURN", offset)
-	case uint8(chunk.OP_JUMP):
+	case uint8(runtime.OP_JUMP):
 		return jumpInstruction("OP_JUMP", 1, ch, offset)
-	case uint8(chunk.OP_JUMP_IF_FALSE):
+	case uint8(runtime.OP_JUMP_IF_FALSE):
 		return jumpInstruction("OP_JUMP_IF_FALSE", 1, ch, offset)
-	case uint8(chunk.OP_LOOP):
+	case uint8(runtime.OP_LOOP):
 		return jumpInstruction("OP_LOOP", -1, ch, offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
@@ -83,21 +84,21 @@ func simpleInstruction(name string, offset int) int {
 	return offset + 1
 }
 
-func constantInstruction(name string, ch *chunk.Chunk, offset int) int {
+func constantInstruction(name string, ch *runtime.Chunk, offset int) int {
 	constant := ch.Code()[offset+1]
 	fmt.Printf("%-16s %4d '", name, constant)
-	value.PrintValue(ch.Constants().Values()[constant])
+	runtime.PrintValue(ch.Constants().Values()[constant])
 	fmt.Println("'")
 	return offset + 2
 }
 
-func byteInstruction(name string, ch *chunk.Chunk, offset int) int {
+func byteInstruction(name string, ch *runtime.Chunk, offset int) int {
 	slot := ch.Code()[offset+1]
 	fmt.Printf("%-16s %4d\n", name, slot)
 	return offset + 2
 }
 
-func jumpInstruction(name string, sign int, ch *chunk.Chunk, offset int) int {
+func jumpInstruction(name string, sign int, ch *runtime.Chunk, offset int) int {
 	jump := int(ch.Code()[offset+1])<<8 | int(ch.Code()[offset+2])
 	fmt.Printf("%-16s %4d -> %d\n", name, offset, offset+3+sign*jump)
 	return offset + 3

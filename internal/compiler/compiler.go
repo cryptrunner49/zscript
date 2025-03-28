@@ -5,13 +5,18 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cryptrunner49/gorex/internal/chunk"
 	"github.com/cryptrunner49/gorex/internal/common"
 	"github.com/cryptrunner49/gorex/internal/debug"
 	"github.com/cryptrunner49/gorex/internal/lexer"
-	"github.com/cryptrunner49/gorex/internal/object"
+	"github.com/cryptrunner49/gorex/internal/runtime"
 	"github.com/cryptrunner49/gorex/internal/token"
-	"github.com/cryptrunner49/gorex/internal/value"
+)
+
+type FunctionType int
+
+const (
+	TYPE_FUNCTION FunctionType = iota
+	TYPE_SCRIPT
 )
 
 type Parser struct {
@@ -27,6 +32,10 @@ type Local struct {
 }
 
 type Compiler struct {
+	enclosing    *Compiler
+	function     *runtime.ObjFunction
+	functionType FunctionType
+
 	locals     [256]Local
 	localCount int
 	scopeDepth int
@@ -34,7 +43,6 @@ type Compiler struct {
 
 var parser Parser
 var current *Compiler
-var compilingChunk *chunk.Chunk
 
 type Precedence int
 
@@ -64,7 +72,7 @@ var rules []ParseRule
 
 func init() {
 	rules = make([]ParseRule, token.TOKEN_EOF+1)
-	rules[token.TOKEN_LEFT_PAREN] = ParseRule{grouping, nil, PREC_NONE}
+	rules[token.TOKEN_LEFT_PAREN] = ParseRule{grouping, call, PREC_CALL}
 	rules[token.TOKEN_RIGHT_PAREN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_LEFT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RIGHT_BRACE] = ParseRule{nil, nil, PREC_NONE}
@@ -106,8 +114,8 @@ func init() {
 	rules[token.TOKEN_EOF] = ParseRule{nil, nil, PREC_NONE}
 }
 
-func currentChunk() *chunk.Chunk {
-	return compilingChunk
+func currentChunk() *runtime.Chunk {
+	return &current.function.Chunk
 }
 
 func errorAt(t token.Token, message string) {
@@ -176,14 +184,24 @@ func emitBytes(b1, b2 byte) {
 }
 
 func emitReturn() {
-	emitByte(byte(chunk.OP_RETURN))
+	emitByte(byte(runtime.OP_NULL))
+	emitByte(byte(runtime.OP_RETURN))
 }
 
-func endCompiler() {
+func endCompiler() *runtime.ObjFunction {
 	emitReturn()
+	function := current.function
+
 	if common.DebugPrintCode && !parser.hadError {
-		debug.Disassemble(currentChunk(), "code")
+		name := "<script>"
+		if function.Name != nil {
+			name = function.Name.Chars
+		}
+		debug.Disassemble(currentChunk(), name)
 	}
+
+	current = current.enclosing
+	return function
 }
 
 func beginScope() {
@@ -193,7 +211,7 @@ func beginScope() {
 func endScope() {
 	current.scopeDepth--
 	for current.localCount > 0 && current.locals[current.localCount-1].depth > current.scopeDepth {
-		emitByte(byte(chunk.OP_POP))
+		emitByte(byte(runtime.OP_POP))
 		current.localCount--
 	}
 }
@@ -211,12 +229,28 @@ func statement() {
 		whileStatement()
 	} else if match(token.TOKEN_FOR) {
 		forStatement()
+	} else if match(token.TOKEN_RETURN) {
+		returnStatement()
 	} else if match(token.TOKEN_LEFT_BRACE) {
 		beginScope()
 		block()
 		endScope()
 	} else {
 		expressionStatement()
+	}
+}
+
+func returnStatement() {
+	if current.functionType == TYPE_SCRIPT {
+		error("Can't return from top-level code.")
+	}
+
+	if match(token.TOKEN_SEMICOLON) {
+		emitReturn()
+	} else {
+		expression()
+		consume(token.TOKEN_SEMICOLON, "Expect ';' after return value.")
+		emitByte(byte(runtime.OP_RETURN))
 	}
 }
 
@@ -228,7 +262,9 @@ func block() {
 }
 
 func declaration() {
-	if match(token.TOKEN_VAR) {
+	if match(token.TOKEN_FN) {
+		fnDeclaration()
+	} else if match(token.TOKEN_VAR) {
 		varDeclaration()
 	} else {
 		statement()
@@ -238,12 +274,19 @@ func declaration() {
 	}
 }
 
+func fnDeclaration() {
+	global := parseVariable("Expect function name.")
+	markInitialized()
+	function(TYPE_FUNCTION)
+	defineVariable(global)
+}
+
 func varDeclaration() {
 	global := parseVariable("Expect variable name.")
 	if match(token.TOKEN_EQUAL) {
 		expression()
 	} else {
-		emitByte(byte(chunk.OP_NULL))
+		emitByte(byte(runtime.OP_NULL))
 	}
 	consume(token.TOKEN_SEMICOLON, "Expect ';' after variable declaration.")
 	defineVariable(global)
@@ -252,13 +295,37 @@ func varDeclaration() {
 func printStatement() {
 	expression()
 	consume(token.TOKEN_SEMICOLON, "Expect ';' after value.")
-	emitByte(byte(chunk.OP_PRINT))
+	emitByte(byte(runtime.OP_PRINT))
 }
 
 func expressionStatement() {
 	expression()
 	consume(token.TOKEN_SEMICOLON, "Expect ';' after expression.")
-	emitByte(byte(chunk.OP_POP))
+	emitByte(byte(runtime.OP_POP))
+}
+
+func call(canAssign bool) {
+	argCount := argumentList()
+	emitBytes(byte(runtime.OP_CALL), argCount)
+}
+
+func argumentList() uint8 {
+	var argCount uint8 = 0
+	if !check(token.TOKEN_RIGHT_PAREN) {
+		for {
+			expression()
+
+			if argCount == 255 {
+				error("Can't have more than 255 arguments.")
+			}
+			argCount++
+			if !match(token.TOKEN_COMMA) {
+				break
+			}
+		}
+	}
+	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after arguments.")
+	return argCount
 }
 
 func synchronize() {
@@ -298,7 +365,7 @@ func parsePrecedence(precedence Precedence) {
 }
 
 func identifierConstant(name token.Token) uint8 {
-	return makeConstant(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(name.Start)})
+	return makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(name.Start)})
 }
 
 func identifiersEqual(a, b token.Token) bool {
@@ -343,7 +410,41 @@ func parseVariable(errorMessage string) uint8 {
 }
 
 func markInitialized() {
+	if current.scopeDepth == 0 {
+		return
+	}
 	current.locals[current.localCount-1].depth = current.scopeDepth
+}
+
+func function(funcType FunctionType) {
+	var compiler Compiler
+	initCompiler(&compiler, funcType)
+	beginScope()
+
+	// Compile the parameter list
+	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after function name.")
+	if !check(token.TOKEN_RIGHT_PAREN) {
+		for {
+			current.function.Arity++
+			if current.function.Arity > 255 {
+				errorAtCurrent("Can't have more than 255 parameters.")
+			}
+			paramConstant := parseVariable("Expect parameter name.")
+			defineVariable(paramConstant)
+			if !match(token.TOKEN_COMMA) {
+				break
+			}
+		}
+	}
+	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after parameters.")
+
+	// The body
+	consume(token.TOKEN_LEFT_BRACE, "Expect '{' before function body.")
+	block()
+
+	// Create the function object
+	function := endCompiler()
+	emitBytes(byte(runtime.OP_CONSTANT), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function})) // Changed from function.Obj to function
 }
 
 func defineVariable(global uint8) {
@@ -351,7 +452,7 @@ func defineVariable(global uint8) {
 		markInitialized()
 		return
 	}
-	emitBytes(byte(chunk.OP_DEFINE_GLOBAL), global)
+	emitBytes(byte(runtime.OP_DEFINE_GLOBAL), global)
 }
 
 func grouping(canAssign bool) {
@@ -366,25 +467,25 @@ func stringLiteral(canAssign bool) {
 		return
 	}
 	str := text[1 : len(text)-1]
-	emitConstant(value.Value{Type: value.VAL_OBJ, Obj: object.NewObjString(str)})
+	emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)})
 }
 
-func makeConstant(val value.Value) uint8 {
+func makeConstant(val runtime.Value) uint8 {
 	constant := currentChunk().AddConstant(val)
 	if constant > 255 {
-		error("Too many constants in one chunk.")
+		error("Too many constants in one runtime.")
 		return 0
 	}
 	return uint8(constant)
 }
 
-func emitConstant(val value.Value) {
-	emitBytes(byte(chunk.OP_CONSTANT), makeConstant(val))
+func emitConstant(val runtime.Value) {
+	emitBytes(byte(runtime.OP_CONSTANT), makeConstant(val))
 }
 
 func number(canAssign bool) {
 	val, _ := strconv.ParseFloat(parser.previous.Start, 64)
-	emitConstant(value.Value{Type: value.VAL_NUMBER, Number: val})
+	emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
 }
 
 func unary(canAssign bool) {
@@ -392,9 +493,9 @@ func unary(canAssign bool) {
 	parsePrecedence(PREC_UNARY)
 	switch operatorType {
 	case token.TOKEN_MINUS:
-		emitByte(byte(chunk.OP_NEGATE))
+		emitByte(byte(runtime.OP_NEGATE))
 	case token.TOKEN_BANG:
-		emitByte(byte(chunk.OP_NOT))
+		emitByte(byte(runtime.OP_NOT))
 	}
 }
 
@@ -404,36 +505,36 @@ func binary(canAssign bool) {
 	parsePrecedence(Precedence(rule.Precedence + 1))
 	switch operatorType {
 	case token.TOKEN_PLUS:
-		emitByte(byte(chunk.OP_ADD))
+		emitByte(byte(runtime.OP_ADD))
 	case token.TOKEN_MINUS:
-		emitByte(byte(chunk.OP_SUBTRACT))
+		emitByte(byte(runtime.OP_SUBTRACT))
 	case token.TOKEN_STAR:
-		emitByte(byte(chunk.OP_MULTIPLY))
+		emitByte(byte(runtime.OP_MULTIPLY))
 	case token.TOKEN_SLASH:
-		emitByte(byte(chunk.OP_DIVIDE))
+		emitByte(byte(runtime.OP_DIVIDE))
 	case token.TOKEN_BANG_EQUAL:
-		emitBytes(byte(chunk.OP_EQUAL), byte(chunk.OP_NOT))
+		emitBytes(byte(runtime.OP_EQUAL), byte(runtime.OP_NOT))
 	case token.TOKEN_EQUAL_EQUAL:
-		emitByte(byte(chunk.OP_EQUAL))
+		emitByte(byte(runtime.OP_EQUAL))
 	case token.TOKEN_GREATER:
-		emitByte(byte(chunk.OP_GREATER))
+		emitByte(byte(runtime.OP_GREATER))
 	case token.TOKEN_GREATER_EQUAL:
-		emitBytes(byte(chunk.OP_LESS), byte(chunk.OP_NOT))
+		emitBytes(byte(runtime.OP_LESS), byte(runtime.OP_NOT))
 	case token.TOKEN_LESS:
-		emitByte(byte(chunk.OP_LESS))
+		emitByte(byte(runtime.OP_LESS))
 	case token.TOKEN_LESS_EQUAL:
-		emitBytes(byte(chunk.OP_GREATER), byte(chunk.OP_NOT))
+		emitBytes(byte(runtime.OP_GREATER), byte(runtime.OP_NOT))
 	}
 }
 
 func literal(canAssign bool) {
 	switch parser.previous.Type {
 	case token.TOKEN_FALSE:
-		emitByte(byte(chunk.OP_FALSE))
+		emitByte(byte(runtime.OP_FALSE))
 	case token.TOKEN_NULL:
-		emitByte(byte(chunk.OP_NULL))
+		emitByte(byte(runtime.OP_NULL))
 	case token.TOKEN_TRUE:
-		emitByte(byte(chunk.OP_TRUE))
+		emitByte(byte(runtime.OP_TRUE))
 	}
 }
 
@@ -454,12 +555,12 @@ func namedVariable(name token.Token, canAssign bool) {
 	var getOp, setOp uint8
 	arg := resolveLocal(name)
 	if arg != -1 {
-		getOp = byte(chunk.OP_GET_LOCAL)
-		setOp = byte(chunk.OP_SET_LOCAL)
+		getOp = byte(runtime.OP_GET_LOCAL)
+		setOp = byte(runtime.OP_SET_LOCAL)
 	} else {
 		arg = int(identifierConstant(name))
-		getOp = byte(chunk.OP_GET_GLOBAL)
-		setOp = byte(chunk.OP_SET_GLOBAL)
+		getOp = byte(runtime.OP_GET_GLOBAL)
+		setOp = byte(runtime.OP_SET_GLOBAL)
 	}
 	if canAssign && match(token.TOKEN_EQUAL) {
 		expression()
@@ -477,25 +578,43 @@ func getRule(typ token.TokenType) ParseRule {
 	return rules[typ]
 }
 
-func initCompiler(compiler *Compiler) {
+func initCompiler(compiler *Compiler, funcType FunctionType) {
+	compiler.enclosing = current
+	compiler.function = nil
+	compiler.functionType = funcType
 	compiler.localCount = 0
 	compiler.scopeDepth = 0
+	compiler.function = runtime.NewFunction()
 	current = compiler
+
+	if funcType != TYPE_SCRIPT {
+		current.function.Name = runtime.CopyString(parser.previous.Start)
+	}
+
+	current.localCount++
+	local := &current.locals[current.localCount]
+	local.depth = 0
+	local.name.Start = ""
+	local.name.Length = 0
 }
 
-func Compile(source string, ch *chunk.Chunk) bool {
+func Compile(source string) *runtime.ObjFunction {
 	lexer.InitLexer(source)
 	var compiler Compiler
-	initCompiler(&compiler)
-	compilingChunk = ch
+	initCompiler(&compiler, TYPE_SCRIPT)
 	parser.hadError = false
 	parser.panicMode = false
 	advance()
 	for !match(token.TOKEN_EOF) {
 		declaration()
 	}
-	endCompiler()
-	return !parser.hadError
+
+	function := endCompiler()
+	if !parser.hadError {
+		return function
+	} else {
+		return nil
+	}
 }
 
 func emitJump(instruction byte) int {
@@ -515,17 +634,17 @@ func patchJump(offset int) {
 }
 
 func and(canAssign bool) {
-	endJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
-	emitByte(byte(chunk.OP_POP))
+	endJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+	emitByte(byte(runtime.OP_POP))
 	parsePrecedence(PREC_AND)
 	patchJump(endJump)
 }
 
 func or(canAssign bool) {
-	elseJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
-	endJump := emitJump(byte(chunk.OP_JUMP))
+	elseJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+	endJump := emitJump(byte(runtime.OP_JUMP))
 	patchJump(elseJump)
-	emitByte(byte(chunk.OP_POP))
+	emitByte(byte(runtime.OP_POP))
 	parsePrecedence(PREC_OR)
 	patchJump(endJump)
 }
@@ -534,12 +653,12 @@ func ifStatement() {
 	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'if'.")
 	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after condition.")
-	thenJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
-	emitByte(byte(chunk.OP_POP))
+	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+	emitByte(byte(runtime.OP_POP))
 	statement()
-	elseJump := emitJump(byte(chunk.OP_JUMP))
+	elseJump := emitJump(byte(runtime.OP_JUMP))
 	patchJump(thenJump)
-	emitByte(byte(chunk.OP_POP))
+	emitByte(byte(runtime.OP_POP))
 	if match(token.TOKEN_ELSE) {
 		statement()
 	}
@@ -547,7 +666,7 @@ func ifStatement() {
 }
 
 func emitLoop(loopStart int) {
-	emitByte(byte(chunk.OP_LOOP))
+	emitByte(byte(runtime.OP_LOOP))
 	offset := currentChunk().Count() - loopStart + 2
 	if offset > 65535 {
 		error("Loop body too large.")
@@ -561,12 +680,12 @@ func whileStatement() {
 	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'while'.")
 	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after condition.")
-	exitJump := emitJump(byte(chunk.OP_JUMP_IF_FALSE))
-	emitByte(byte(chunk.OP_POP))
+	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+	emitByte(byte(runtime.OP_POP))
 	statement()
 	emitLoop(loopStart)
 	patchJump(exitJump)
-	emitByte(byte(chunk.OP_POP))
+	emitByte(byte(runtime.OP_POP))
 }
 
 func forStatement() {
@@ -584,14 +703,14 @@ func forStatement() {
 	if !match(token.TOKEN_SEMICOLON) {
 		expression()
 		consume(token.TOKEN_SEMICOLON, "Expect ';' after loop condition.")
-		exitJump = emitJump(byte(chunk.OP_JUMP_IF_FALSE))
-		emitByte(byte(chunk.OP_POP))
+		exitJump = emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+		emitByte(byte(runtime.OP_POP))
 	}
 	if !match(token.TOKEN_RIGHT_PAREN) {
-		bodyJump := emitJump(byte(chunk.OP_JUMP))
+		bodyJump := emitJump(byte(runtime.OP_JUMP))
 		incrementStart := currentChunk().Count()
 		expression()
-		emitByte(byte(chunk.OP_POP))
+		emitByte(byte(runtime.OP_POP))
 		consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.")
 		emitLoop(loopStart)
 		loopStart = incrementStart
@@ -601,7 +720,7 @@ func forStatement() {
 	emitLoop(loopStart)
 	if exitJump != -1 {
 		patchJump(exitJump)
-		emitByte(byte(chunk.OP_POP))
+		emitByte(byte(runtime.OP_POP))
 	}
 	endScope()
 }

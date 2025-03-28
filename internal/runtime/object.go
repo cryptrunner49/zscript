@@ -1,4 +1,4 @@
-package object
+package runtime
 
 import (
 	"fmt"
@@ -8,12 +8,42 @@ import (
 type ObjType int
 
 const (
-	OBJ_STRING ObjType = iota
+	OBJ_FUNCTION ObjType = iota
+	OBJ_NATIVE
+	OBJ_STRING
 )
 
 type Obj struct {
 	Type ObjType
 	Next *Obj
+}
+
+type NativeFn func(argCount int, args []Value) Value
+
+type ObjNative struct {
+	Obj
+	Function NativeFn
+}
+
+func NewNative(function NativeFn) *ObjNative {
+	return &ObjNative{
+		Function: function,
+	}
+}
+
+type ObjFunction struct {
+	Obj   Obj
+	Arity int
+	Chunk Chunk
+	Name  *ObjString
+}
+
+func NewFunction() *ObjFunction {
+	function := &ObjFunction{}
+	function.Arity = 0
+	function.Name = nil
+	function.Chunk = *New()
+	return function
 }
 
 type ObjString struct {
@@ -48,6 +78,14 @@ func CopyString(s string) *ObjString {
 
 func PrintObject(obj interface{}) {
 	switch o := obj.(type) {
+	case *ObjFunction:
+		if o.Name == nil {
+			fmt.Print("<script>")
+		} else {
+			fmt.Printf("<fn %s>", o.Name.Chars)
+		}
+	case *ObjNative:
+		fmt.Print("<native fn>")
 	case *ObjString:
 		fmt.Print(o.Chars)
 	default:

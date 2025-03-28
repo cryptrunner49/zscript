@@ -224,8 +224,8 @@ func (l *Lexer) identifierType() token.TokenType {
 				return l.checkKeyword(2, "lse", token.TOKEN_FALSE)
 			case 'o':
 				return l.checkKeyword(2, "r", token.TOKEN_FOR)
-			case 'u':
-				return l.checkKeyword(2, "n", token.TOKEN_FN)
+			case 'n':
+				return l.checkKeyword(1, "n", token.TOKEN_FN)
 			}
 		}
 	case 'i':
