@@ -213,8 +213,6 @@ func (l *Lexer) identifierType() token.TokenType {
 	switch l.source[l.start] {
 	case 'a':
 		return l.checkKeyword(1, "nd", token.TOKEN_AND)
-	case 'c':
-		return l.checkKeyword(1, "lass", token.TOKEN_CLASS)
 	case 'e':
 		return l.checkKeyword(1, "lse", token.TOKEN_ELSE)
 	case 'f':
@@ -239,7 +237,7 @@ func (l *Lexer) identifierType() token.TokenType {
 	case 'r':
 		return l.checkKeyword(1, "eturn", token.TOKEN_RETURN)
 	case 's':
-		return l.checkKeyword(1, "uper", token.TOKEN_SUPER)
+		return l.checkKeyword(1, "truct", token.TOKEN_STRUCT)
 	case 't':
 		if l.current-l.start > 1 {
 			switch l.source[l.start+1] {

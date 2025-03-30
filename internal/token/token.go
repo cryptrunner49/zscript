@@ -33,6 +33,7 @@ const (
 
 	// Keywords
 	TOKEN_AND
+	TOKEN_STRUCT
 	TOKEN_CLASS
 	TOKEN_ELSE
 	TOKEN_FALSE

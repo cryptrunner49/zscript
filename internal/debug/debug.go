@@ -43,10 +43,14 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return constantInstruction("OP_SET_GLOBAL", ch, offset)
 	case uint8(runtime.OP_GET_GLOBAL):
 		return constantInstruction("OP_GET_GLOBAL", ch, offset)
-	case uint8(runtime.OP_GET_UPVALUE): // Added for upvalues
+	case uint8(runtime.OP_GET_UPVALUE):
 		return byteInstruction("OP_GET_UPVALUE", ch, offset)
-	case uint8(runtime.OP_SET_UPVALUE): // Added for upvalues
+	case uint8(runtime.OP_SET_UPVALUE):
 		return byteInstruction("OP_SET_UPVALUE", ch, offset)
+	case uint8(runtime.OP_GET_PROPERTY):
+		return constantInstruction("OP_GET_PROPERTY", ch, offset)
+	case uint8(runtime.OP_SET_PROPERTY):
+		return constantInstruction("OP_SET_PROPERTY", ch, offset)
 	case uint8(runtime.OP_EQUAL):
 		return simpleInstruction("OP_EQUAL", offset)
 	case uint8(runtime.OP_GREATER):
@@ -69,7 +73,7 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return simpleInstruction("OP_PRINT", offset)
 	case uint8(runtime.OP_CALL):
 		return byteInstruction("OP_CALL", ch, offset)
-	case uint8(runtime.OP_CLOSURE): // Added for closures
+	case uint8(runtime.OP_CLOSURE):
 		offset++
 		constant := ch.Code()[offset]
 		offset++
@@ -91,7 +95,7 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 			fmt.Printf("%04d      | %s %d\n", offset-2, upvalueType, index)
 		}
 		return offset
-	case uint8(runtime.OP_CLOSE_UPVALUE): // Added for upvalues
+	case uint8(runtime.OP_CLOSE_UPVALUE):
 		return simpleInstruction("OP_CLOSE_UPVALUE", offset)
 	case uint8(runtime.OP_RETURN):
 		return simpleInstruction("OP_RETURN", offset)
@@ -101,6 +105,8 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return jumpInstruction("OP_JUMP_IF_FALSE", 1, ch, offset)
 	case uint8(runtime.OP_LOOP):
 		return jumpInstruction("OP_LOOP", -1, ch, offset)
+	case uint8(runtime.OP_STRUCT):
+		return constantInstruction("OP_STRUCT", ch, offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1

@@ -19,7 +19,7 @@ const (
 )
 
 type CallFrame struct {
-	closure *runtime.ObjClosure // Changed from ObjFunction
+	closure *runtime.ObjClosure
 	ip      int
 	slots   int
 }
@@ -40,7 +40,7 @@ type VM struct {
 	objects      *runtime.Obj
 	globals      map[*runtime.ObjString]runtime.Value
 	strings      map[uint32]*runtime.ObjString
-	openUpvalues *runtime.ObjUpvalue // Added for upvalues
+	openUpvalues *runtime.ObjUpvalue
 }
 
 var vm VM
@@ -62,7 +62,7 @@ func FreeVM() {
 func resetStack() {
 	vm.stackTop = 0
 	vm.frameCount = 0
-	vm.openUpvalues = nil // Added for upvalues
+	vm.openUpvalues = nil
 }
 
 func Push(val runtime.Value) {
@@ -96,7 +96,7 @@ func runtimeError(format string, args ...interface{}) InterpretResult {
 	fmt.Fprintln(os.Stderr)
 	for i := vm.frameCount - 1; i >= 0; i-- {
 		frame := &vm.frames[i]
-		function := frame.closure.Function // Updated to use closure
+		function := frame.closure.Function
 		instruction := frame.ip - 1
 		line := function.Chunk.Lines()[instruction]
 		fmt.Fprintf(os.Stderr, "[line %d] in ", line)
@@ -164,7 +164,7 @@ func closeUpvalues(last *runtime.Value) {
 
 func run() InterpretResult {
 	readByte := func(frame *CallFrame) uint8 {
-		b := frame.closure.Function.Chunk.Code()[frame.ip] // Updated to use closure
+		b := frame.closure.Function.Chunk.Code()[frame.ip]
 		frame.ip++
 		return b
 	}
@@ -245,14 +245,45 @@ func run() InterpretResult {
 			} else {
 				return runtimeError("Undefined variable '%s'.", name.Chars)
 			}
-		case uint8(runtime.OP_GET_UPVALUE): // Added for upvalues
+		case uint8(runtime.OP_GET_UPVALUE):
 			slot := readByte(frame)
 			upvalue := frame.closure.Upvalues[slot]
 			Push(*upvalue.Location)
-		case uint8(runtime.OP_SET_UPVALUE): // Added for upvalues
+		case uint8(runtime.OP_SET_UPVALUE):
 			slot := readByte(frame)
 			upvalue := frame.closure.Upvalues[slot]
 			*upvalue.Location = peek(0)
+		case uint8(runtime.OP_GET_PROPERTY):
+			// Ensure the top of the stack is an instance.
+			instVal := peek(0)
+			instance, ok := instVal.Obj.(*runtime.ObjInstance)
+			if !ok {
+				return runtimeError("Only instances have properties.")
+			}
+			// Read the property name from the chunk.
+			name := readString(frame)
+			// Look up the property value in the instance's fields.
+			if value, found := instance.Fields[name]; found {
+				Pop() // Pop the instance.
+				Push(value)
+				break
+			}
+			return runtimeError("Undefined property '%s'.", name.Chars)
+		case uint8(runtime.OP_SET_PROPERTY):
+			// Ensure that the value below the top of the stack is an instance.
+			instVal := peek(1)
+			instance, ok := instVal.Obj.(*runtime.ObjInstance)
+			if !ok {
+				return runtimeError("Only instances have fields.")
+			}
+			// Read the property name.
+			name := readString(frame)
+			// Set the property in the instance.
+			instance.Fields[name] = peek(0)
+			// For assignment, pop the value and the instance, then push the value back.
+			value := Pop() // Pop the value.
+			Pop()          // Pop the instance.
+			Push(value)
 		case uint8(runtime.OP_EQUAL):
 			b := Pop()
 			a := Pop()
@@ -331,7 +362,7 @@ func run() InterpretResult {
 			if !callValue(peek(argCount), argCount) {
 				return INTERPRET_RUNTIME_ERROR
 			}
-		case uint8(runtime.OP_CLOSURE): // Added for closures
+		case uint8(runtime.OP_CLOSURE):
 			function := readConstant(frame).Obj.(*runtime.ObjFunction)
 			closure := runtime.NewClosure(function)
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure})
@@ -344,12 +375,12 @@ func run() InterpretResult {
 					closure.Upvalues[i] = frame.closure.Upvalues[index]
 				}
 			}
-		case uint8(runtime.OP_CLOSE_UPVALUE): // Added for upvalues
+		case uint8(runtime.OP_CLOSE_UPVALUE):
 			closeUpvalues(&vm.stack[vm.stackTop-1])
 			Pop()
 		case uint8(runtime.OP_RETURN):
 			result := Pop()
-			closeUpvalues(&vm.stack[frame.slots]) // Added for upvalues
+			closeUpvalues(&vm.stack[frame.slots])
 			vm.frameCount--
 			if vm.frameCount == 0 {
 				Pop()
@@ -359,6 +390,9 @@ func run() InterpretResult {
 				Push(result)
 				frame = &vm.frames[vm.frameCount-1]
 			}
+		case uint8(runtime.OP_STRUCT):
+			objStruct := runtime.NewStruct(readString(frame))
+			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objStruct})
 		}
 	}
 }
@@ -370,13 +404,17 @@ func isFalsey(val runtime.Value) bool {
 func callValue(callee runtime.Value, argCount int) bool {
 	if callee.Type == runtime.VAL_OBJ {
 		switch obj := callee.Obj.(type) {
-		case *runtime.ObjClosure: // Updated to use ObjClosure
+		case *runtime.ObjClosure:
 			return call(obj, argCount)
 		case *runtime.ObjNative:
 			native := obj.Function
 			result := native(argCount, vm.stack[vm.stackTop-argCount:vm.stackTop])
 			vm.stackTop -= argCount + 1
 			Push(result)
+			return true
+		case *runtime.ObjStruct:
+			// Create a new instance of the structure.
+			vm.stack[vm.stackTop-argCount-1] = runtime.ObjVal(runtime.NewInstance(obj))
 			return true
 		default:
 			// Non-callable object type
@@ -387,7 +425,7 @@ func callValue(callee runtime.Value, argCount int) bool {
 }
 
 func call(closure *runtime.ObjClosure, argCount int) bool {
-	if argCount != closure.Function.Arity { // Updated to use closure
+	if argCount != closure.Function.Arity {
 		runtimeError("Expected %d arguments but got %d", closure.Function.Arity, argCount)
 		return false
 	}

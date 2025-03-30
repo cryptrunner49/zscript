@@ -29,10 +29,10 @@ type Parser struct {
 type Local struct {
 	name       token.Token
 	depth      int
-	isCaptured bool // Added for upvalues
+	isCaptured bool
 }
 
-type Upvalue struct { // Added for upvalues
+type Upvalue struct {
 	index   uint8
 	isLocal bool
 }
@@ -43,7 +43,7 @@ type Compiler struct {
 	functionType FunctionType
 	locals       [256]Local
 	localCount   int
-	upvalues     [256]Upvalue // Added for upvalues
+	upvalues     [256]Upvalue
 	scopeDepth   int
 }
 
@@ -83,7 +83,7 @@ func init() {
 	rules[token.TOKEN_LEFT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RIGHT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_COMMA] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_DOT] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_DOT] = ParseRule{nil, dot, PREC_CALL}
 	rules[token.TOKEN_MINUS] = ParseRule{unary, binary, PREC_TERM}
 	rules[token.TOKEN_PLUS] = ParseRule{nil, binary, PREC_TERM}
 	rules[token.TOKEN_SEMICOLON] = ParseRule{nil, nil, PREC_NONE}
@@ -112,6 +112,7 @@ func init() {
 	rules[token.TOKEN_PRINT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RETURN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_SUPER] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_STRUCT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_THIS] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_TRUE] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_VAR] = ParseRule{nil, nil, PREC_NONE}
@@ -122,6 +123,17 @@ func init() {
 
 func currentChunk() *runtime.Chunk {
 	return &current.function.Chunk
+}
+
+func dot(canAssign bool) {
+	consume(token.TOKEN_IDENTIFIER, "Expect property name after '.'.")
+	name := identifierConstant(parser.previous)
+	if canAssign && match(token.TOKEN_EQUAL) {
+		expression()
+		emitBytes(byte(runtime.OP_SET_PROPERTY), name)
+	} else {
+		emitBytes(byte(runtime.OP_GET_PROPERTY), name)
+	}
 }
 
 func errorAt(t token.Token, message string) {
@@ -216,7 +228,7 @@ func endScope() {
 	current.scopeDepth--
 	for current.localCount > 0 && current.locals[current.localCount-1].depth > current.scopeDepth {
 		if current.locals[current.localCount-1].isCaptured {
-			emitByte(byte(runtime.OP_CLOSE_UPVALUE)) // Updated for upvalues
+			emitByte(byte(runtime.OP_CLOSE_UPVALUE))
 		} else {
 			emitByte(byte(runtime.OP_POP))
 		}
@@ -268,8 +280,22 @@ func block() {
 	consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after block.")
 }
 
+func structDeclaration() {
+	consume(token.TOKEN_IDENTIFIER, "Expect struct name.")
+	nameConstant := identifierConstant(parser.previous)
+	declareVariable()
+
+	emitBytes(byte(runtime.OP_STRUCT), nameConstant)
+	defineVariable(nameConstant)
+
+	consume(token.TOKEN_LEFT_BRACE, "Expect '{' before class body.")
+	consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after class body.")
+}
+
 func declaration() {
-	if match(token.TOKEN_FN) {
+	if match(token.TOKEN_STRUCT) {
+		structDeclaration()
+	} else if match(token.TOKEN_FN) {
 		fnDeclaration()
 	} else if match(token.TOKEN_VAR) {
 		varDeclaration()
@@ -384,7 +410,7 @@ func addLocal(name token.Token) {
 	local := &current.locals[current.localCount]
 	local.name = name
 	local.depth = -1
-	local.isCaptured = false // Initialize isCaptured
+	local.isCaptured = false
 	current.localCount++
 }
 
@@ -639,7 +665,7 @@ func initCompiler(compiler *Compiler, funcType FunctionType) {
 		current.function.Name = runtime.CopyString(parser.previous.Start)
 	}
 	current.localCount++
-	local := &current.locals[current.localCount-1] // Adjusted index
+	local := &current.locals[current.localCount-1]
 	local.depth = 0
 	local.isCaptured = false
 	local.name.Start = ""

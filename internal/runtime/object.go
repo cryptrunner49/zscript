@@ -8,11 +8,13 @@ import (
 type ObjType int
 
 const (
-	OBJ_UPVALUE ObjType = iota // Added for upvalues
-	OBJ_CLOSURE                // Added for closures
+	OBJ_UPVALUE ObjType = iota
+	OBJ_CLOSURE
 	OBJ_FUNCTION
 	OBJ_NATIVE
 	OBJ_STRING
+	OBJ_STRUCT
+	OBJ_INSTANCE
 )
 
 type Obj struct {
@@ -44,7 +46,7 @@ type ObjClosure struct {
 type ObjFunction struct {
 	Obj          Obj
 	Arity        int
-	UpvalueCount int // Added for closures
+	UpvalueCount int
 	Chunk        Chunk
 	Name         *ObjString
 }
@@ -53,6 +55,17 @@ type ObjString struct {
 	Obj
 	Chars string
 	Hash  uint32
+}
+
+type ObjStruct struct {
+	Obj  Obj
+	Name *ObjString
+}
+
+type ObjInstance struct {
+	Obj       Obj
+	Structure *ObjStruct
+	Fields    map[*ObjString]Value
 }
 
 var strings = make(map[uint32]*ObjString)
@@ -113,6 +126,14 @@ func CopyString(s string) *ObjString {
 	return NewObjString(s)
 }
 
+func NewStruct(name *ObjString) *ObjStruct {
+	instance := &ObjStruct{
+		Obj:  Obj{Type: OBJ_STRUCT},
+		Name: name,
+	}
+	return instance
+}
+
 func PrintObject(obj interface{}) {
 	switch o := obj.(type) {
 	case *ObjClosure:
@@ -131,6 +152,8 @@ func PrintObject(obj interface{}) {
 		fmt.Print("<native fn>")
 	case *ObjString:
 		fmt.Print(o.Chars)
+	case *ObjStruct:
+		fmt.Print(o.Name.Chars)
 	default:
 		fmt.Print("unknown object")
 	}
@@ -140,4 +163,16 @@ func hashString(s string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(s))
 	return h.Sum32()
+}
+
+func ObjVal(obj interface{}) Value {
+	return Value{Type: VAL_OBJ, Obj: obj}
+}
+
+func NewInstance(structure *ObjStruct) *ObjInstance {
+	return &ObjInstance{
+		Obj:       Obj{Type: OBJ_INSTANCE},
+		Structure: structure,
+		Fields:    make(map[*ObjString]Value),
+	}
 }
