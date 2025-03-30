@@ -1,0 +1,15 @@
+fn outer() {
+    var x = "value";
+    fn middle() {
+        fn inner() {
+            print x;
+        }
+        print "create inner closure";
+        return inner;
+    }
+    print "return from outer";
+    return middle;
+}
+var mid = outer();
+var in = mid();
+in();

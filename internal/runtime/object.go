@@ -8,7 +8,9 @@ import (
 type ObjType int
 
 const (
-	OBJ_FUNCTION ObjType = iota
+	OBJ_UPVALUE ObjType = iota // Added for upvalues
+	OBJ_CLOSURE                // Added for closures
+	OBJ_FUNCTION
 	OBJ_NATIVE
 	OBJ_STRING
 )
@@ -25,25 +27,26 @@ type ObjNative struct {
 	Function NativeFn
 }
 
-func NewNative(function NativeFn) *ObjNative {
-	return &ObjNative{
-		Function: function,
-	}
+type ObjUpvalue struct {
+	Obj
+	Location *Value
+	Closed   Value
+	Next     *ObjUpvalue
+}
+
+type ObjClosure struct {
+	Obj
+	Function     *ObjFunction
+	Upvalues     []*ObjUpvalue
+	UpvalueCount int
 }
 
 type ObjFunction struct {
-	Obj   Obj
-	Arity int
-	Chunk Chunk
-	Name  *ObjString
-}
-
-func NewFunction() *ObjFunction {
-	function := &ObjFunction{}
-	function.Arity = 0
-	function.Name = nil
-	function.Chunk = *New()
-	return function
+	Obj          Obj
+	Arity        int
+	UpvalueCount int // Added for closures
+	Chunk        Chunk
+	Name         *ObjString
 }
 
 type ObjString struct {
@@ -53,6 +56,40 @@ type ObjString struct {
 }
 
 var strings = make(map[uint32]*ObjString)
+
+func NewNative(function NativeFn) *ObjNative {
+	return &ObjNative{
+		Function: function,
+	}
+}
+
+func NewUpvalue(location *Value) *ObjUpvalue {
+	return &ObjUpvalue{
+		Obj:      Obj{Type: OBJ_UPVALUE},
+		Location: location,
+		Closed:   Value{Type: VAL_NULL},
+		Next:     nil,
+	}
+}
+
+func NewClosure(function *ObjFunction) *ObjClosure {
+	upvalues := make([]*ObjUpvalue, function.UpvalueCount)
+	return &ObjClosure{
+		Obj:          Obj{Type: OBJ_CLOSURE},
+		Function:     function,
+		Upvalues:     upvalues,
+		UpvalueCount: function.UpvalueCount,
+	}
+}
+
+func NewFunction() *ObjFunction {
+	function := &ObjFunction{}
+	function.Arity = 0
+	function.UpvalueCount = 0
+	function.Name = nil
+	function.Chunk = *New()
+	return function
+}
 
 func NewObjString(s string) *ObjString {
 	hash := hashString(s)
@@ -78,6 +115,12 @@ func CopyString(s string) *ObjString {
 
 func PrintObject(obj interface{}) {
 	switch o := obj.(type) {
+	case *ObjClosure:
+		if o.Function.Name == nil {
+			fmt.Print("<script>")
+		} else {
+			fmt.Printf("<fn %s>", o.Function.Name.Chars)
+		}
 	case *ObjFunction:
 		if o.Name == nil {
 			fmt.Print("<script>")

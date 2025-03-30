@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/cryptrunner49/gorex/internal/common"
 	"github.com/cryptrunner49/gorex/internal/compiler"
@@ -18,9 +19,9 @@ const (
 )
 
 type CallFrame struct {
-	function *runtime.ObjFunction
-	ip       int
-	slots    int
+	closure *runtime.ObjClosure // Changed from ObjFunction
+	ip      int
+	slots   int
 }
 
 type InterpretResult int
@@ -32,15 +33,14 @@ const (
 )
 
 type VM struct {
-	frames     [FRAMES_MAX]CallFrame
-	frameCount int
-	chunk      *runtime.Chunk
-	ip         int
-	stack      [STACK_MAX]runtime.Value
-	stackTop   int
-	objects    *runtime.Obj
-	globals    map[*runtime.ObjString]runtime.Value
-	strings    map[uint32]*runtime.ObjString
+	frames       [FRAMES_MAX]CallFrame
+	frameCount   int
+	stack        [STACK_MAX]runtime.Value
+	stackTop     int
+	objects      *runtime.Obj
+	globals      map[*runtime.ObjString]runtime.Value
+	strings      map[uint32]*runtime.ObjString
+	openUpvalues *runtime.ObjUpvalue // Added for upvalues
 }
 
 var vm VM
@@ -50,7 +50,6 @@ func InitVM() {
 	vm.objects = nil
 	vm.globals = make(map[*runtime.ObjString]runtime.Value)
 	vm.strings = make(map[uint32]*runtime.ObjString)
-
 	defineNative("clock", clockNative)
 }
 
@@ -63,6 +62,7 @@ func FreeVM() {
 func resetStack() {
 	vm.stackTop = 0
 	vm.frameCount = 0
+	vm.openUpvalues = nil // Added for upvalues
 }
 
 func Push(val runtime.Value) {
@@ -80,41 +80,32 @@ func peek(distance int) runtime.Value {
 }
 
 func Interpret(source string) InterpretResult {
-	resetStack() // Reset stack and frame count before interpretation
-
+	resetStack()
 	function := compiler.Compile(source)
 	if function == nil {
 		return INTERPRET_COMPILE_ERROR
 	}
-
-	// Push the function onto the stack as an object.
-	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: function})
-	callValue(runtime.Value{Type: runtime.VAL_OBJ, Obj: function}, 0)
-
+	closure := runtime.NewClosure(function) // Create closure for top-level function
+	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure})
+	callValue(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure}, 0)
 	return run()
 }
 
 func runtimeError(format string, args ...interface{}) InterpretResult {
 	fmt.Fprintf(os.Stderr, format, args...)
 	fmt.Fprintln(os.Stderr)
-
 	for i := vm.frameCount - 1; i >= 0; i-- {
 		frame := &vm.frames[i]
-		function := frame.function
-
-		// -1 because the IP is sitting on the next instruction to be executed.
+		function := frame.closure.Function // Updated to use closure
 		instruction := frame.ip - 1
 		line := function.Chunk.Lines()[instruction]
-
 		fmt.Fprintf(os.Stderr, "[line %d] in ", line)
-
 		if function.Name == nil {
 			fmt.Fprintln(os.Stderr, "script")
 		} else {
 			fmt.Fprintf(os.Stderr, "%s()\n", function.Name.Chars)
 		}
 	}
-
 	resetStack()
 	return INTERPRET_RUNTIME_ERROR
 }
@@ -142,21 +133,49 @@ func crop() {
 	}
 }
 
+func captureUpvalue(local *runtime.Value) *runtime.ObjUpvalue {
+	var prevUpvalue *runtime.ObjUpvalue
+	upvalue := vm.openUpvalues
+	for upvalue != nil && uintptr(unsafe.Pointer(upvalue.Location)) > uintptr(unsafe.Pointer(local)) {
+		prevUpvalue = upvalue
+		upvalue = upvalue.Next
+	}
+	if upvalue != nil && upvalue.Location == local {
+		return upvalue
+	}
+	createdUpvalue := runtime.NewUpvalue(local)
+	createdUpvalue.Next = upvalue
+	if prevUpvalue == nil {
+		vm.openUpvalues = createdUpvalue
+	} else {
+		prevUpvalue.Next = createdUpvalue
+	}
+	return createdUpvalue
+}
+
+func closeUpvalues(last *runtime.Value) {
+	for vm.openUpvalues != nil && uintptr(unsafe.Pointer(vm.openUpvalues.Location)) >= uintptr(unsafe.Pointer(last)) {
+		upvalue := vm.openUpvalues
+		upvalue.Closed = *upvalue.Location
+		upvalue.Location = &upvalue.Closed
+		vm.openUpvalues = upvalue.Next
+	}
+}
+
 func run() InterpretResult {
-	// Helper functions to read instructions (adjusted to take frame as parameter)
 	readByte := func(frame *CallFrame) uint8 {
-		b := frame.function.Chunk.Code()[frame.ip]
+		b := frame.closure.Function.Chunk.Code()[frame.ip] // Updated to use closure
 		frame.ip++
 		return b
 	}
 	readShort := func(frame *CallFrame) int {
-		b1 := frame.function.Chunk.Code()[frame.ip]
-		b2 := frame.function.Chunk.Code()[frame.ip+1]
+		b1 := frame.closure.Function.Chunk.Code()[frame.ip]
+		b2 := frame.closure.Function.Chunk.Code()[frame.ip+1]
 		frame.ip += 2
 		return int(b1)<<8 | int(b2)
 	}
 	readConstant := func(frame *CallFrame) runtime.Value {
-		return frame.function.Chunk.Constants().Values()[readByte(frame)]
+		return frame.closure.Function.Chunk.Constants().Values()[readByte(frame)]
 	}
 	readString := func(frame *CallFrame) *runtime.ObjString {
 		return readConstant(frame).Obj.(*runtime.ObjString)
@@ -180,7 +199,6 @@ func run() InterpretResult {
 			return INTERPRET_OK
 		}
 		frame := &vm.frames[vm.frameCount-1]
-
 		if common.DebugTraceExecution {
 			fmt.Print("      ")
 			for i := 0; i < vm.stackTop; i++ {
@@ -189,7 +207,7 @@ func run() InterpretResult {
 				fmt.Print(" ]")
 			}
 			fmt.Println()
-			debug.DisassembleInstruction(&frame.function.Chunk, frame.ip)
+			debug.DisassembleInstruction(&frame.closure.Function.Chunk, frame.ip)
 		}
 
 		instruction := readByte(frame)
@@ -227,6 +245,14 @@ func run() InterpretResult {
 			} else {
 				return runtimeError("Undefined variable '%s'.", name.Chars)
 			}
+		case uint8(runtime.OP_GET_UPVALUE): // Added for upvalues
+			slot := readByte(frame)
+			upvalue := frame.closure.Upvalues[slot]
+			Push(*upvalue.Location)
+		case uint8(runtime.OP_SET_UPVALUE): // Added for upvalues
+			slot := readByte(frame)
+			upvalue := frame.closure.Upvalues[slot]
+			*upvalue.Location = peek(0)
 		case uint8(runtime.OP_EQUAL):
 			b := Pop()
 			a := Pop()
@@ -305,18 +331,33 @@ func run() InterpretResult {
 			if !callValue(peek(argCount), argCount) {
 				return INTERPRET_RUNTIME_ERROR
 			}
+		case uint8(runtime.OP_CLOSURE): // Added for closures
+			function := readConstant(frame).Obj.(*runtime.ObjFunction)
+			closure := runtime.NewClosure(function)
+			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure})
+			for i := 0; i < closure.UpvalueCount; i++ {
+				isLocal := readByte(frame)
+				index := readByte(frame)
+				if isLocal != 0 {
+					closure.Upvalues[i] = captureUpvalue(&vm.stack[frame.slots+int(index)])
+				} else {
+					closure.Upvalues[i] = frame.closure.Upvalues[index]
+				}
+			}
+		case uint8(runtime.OP_CLOSE_UPVALUE): // Added for upvalues
+			closeUpvalues(&vm.stack[vm.stackTop-1])
+			Pop()
 		case uint8(runtime.OP_RETURN):
 			result := Pop()
+			closeUpvalues(&vm.stack[frame.slots]) // Added for upvalues
 			vm.frameCount--
-
 			if vm.frameCount == 0 {
 				Pop()
 				return INTERPRET_OK
 			} else {
 				vm.stackTop = frame.slots
 				Push(result)
-
-				frame = &vm.frames[vm.frameCount]
+				frame = &vm.frames[vm.frameCount-1]
 			}
 		}
 	}
@@ -329,55 +370,45 @@ func isFalsey(val runtime.Value) bool {
 func callValue(callee runtime.Value, argCount int) bool {
 	if callee.Type == runtime.VAL_OBJ {
 		switch obj := callee.Obj.(type) {
-		case *runtime.ObjFunction:
+		case *runtime.ObjClosure: // Updated to use ObjClosure
 			return call(obj, argCount)
 		case *runtime.ObjNative:
-			native := callee.Obj.(*runtime.ObjNative).Function
-			result := native(argCount, vm.stack[vm.stackTop-argCount:])
+			native := obj.Function
+			result := native(argCount, vm.stack[vm.stackTop-argCount:vm.stackTop])
 			vm.stackTop -= argCount + 1
 			Push(result)
 			return true
 		default:
-			// Non-callable object type.
+			// Non-callable object type
 		}
 	}
 	runtimeError("Can only call functions and classes.")
 	return false
 }
 
-func call(function *runtime.ObjFunction, argCount int) bool {
-	if argCount != function.Arity {
-		runtimeError("Expected %d arguments but got %d", function.Arity, argCount)
+func call(closure *runtime.ObjClosure, argCount int) bool {
+	if argCount != closure.Function.Arity { // Updated to use closure
+		runtimeError("Expected %d arguments but got %d", closure.Function.Arity, argCount)
 		return false
 	}
 	if vm.frameCount >= FRAMES_MAX {
 		runtimeError("Stack overflow.")
 		return false
 	}
-
 	frame := &vm.frames[vm.frameCount]
 	vm.frameCount++
-
-	frame.function = function
-	frame.ip = 0 // Assuming `ip` should start at 0 for new functions
+	frame.closure = closure
+	frame.ip = 0
 	frame.slots = vm.stackTop - argCount - 1
-
 	return true
 }
 
 func defineNative(name string, function runtime.NativeFn) {
-	// Create a new ObjString for the function name.
 	nameObj := runtime.NewObjString(name)
 	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: nameObj})
-
-	// Create a new ObjNative function object.
 	nativeObj := &runtime.ObjNative{Function: function}
 	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: nativeObj})
-
-	// Store the function in the global variables table.
 	vm.globals[nameObj] = vm.stack[vm.stackTop-1]
-
-	// Pop the function and its name from the stack.
 	Pop()
 	Pop()
 }
@@ -385,6 +416,6 @@ func defineNative(name string, function runtime.NativeFn) {
 func clockNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{
 		Type:   runtime.VAL_NUMBER,
-		Number: float64(time.Now().UnixNano()) / 1e9, // Convert nanoseconds to seconds
+		Number: float64(time.Now().UnixNano()) / 1e9,
 	}
 }

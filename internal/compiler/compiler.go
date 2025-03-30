@@ -27,18 +27,24 @@ type Parser struct {
 }
 
 type Local struct {
-	name  token.Token
-	depth int
+	name       token.Token
+	depth      int
+	isCaptured bool // Added for upvalues
+}
+
+type Upvalue struct { // Added for upvalues
+	index   uint8
+	isLocal bool
 }
 
 type Compiler struct {
 	enclosing    *Compiler
 	function     *runtime.ObjFunction
 	functionType FunctionType
-
-	locals     [256]Local
-	localCount int
-	scopeDepth int
+	locals       [256]Local
+	localCount   int
+	upvalues     [256]Upvalue // Added for upvalues
+	scopeDepth   int
 }
 
 var parser Parser
@@ -127,7 +133,7 @@ func errorAt(t token.Token, message string) {
 	if t.Type == token.TOKEN_EOF {
 		fmt.Fprintf(os.Stderr, " at end")
 	} else if t.Type == token.TOKEN_ERROR {
-		// Nothing.
+		// Nothing
 	} else {
 		fmt.Fprintf(os.Stderr, " at '%s'", t.Start)
 	}
@@ -191,7 +197,6 @@ func emitReturn() {
 func endCompiler() *runtime.ObjFunction {
 	emitReturn()
 	function := current.function
-
 	if common.DebugPrintCode && !parser.hadError {
 		name := "<script>"
 		if function.Name != nil {
@@ -199,7 +204,6 @@ func endCompiler() *runtime.ObjFunction {
 		}
 		debug.Disassemble(currentChunk(), name)
 	}
-
 	current = current.enclosing
 	return function
 }
@@ -211,7 +215,11 @@ func beginScope() {
 func endScope() {
 	current.scopeDepth--
 	for current.localCount > 0 && current.locals[current.localCount-1].depth > current.scopeDepth {
-		emitByte(byte(runtime.OP_POP))
+		if current.locals[current.localCount-1].isCaptured {
+			emitByte(byte(runtime.OP_CLOSE_UPVALUE)) // Updated for upvalues
+		} else {
+			emitByte(byte(runtime.OP_POP))
+		}
 		current.localCount--
 	}
 }
@@ -244,7 +252,6 @@ func returnStatement() {
 	if current.functionType == TYPE_SCRIPT {
 		error("Can't return from top-level code.")
 	}
-
 	if match(token.TOKEN_SEMICOLON) {
 		emitReturn()
 	} else {
@@ -314,7 +321,6 @@ func argumentList() uint8 {
 	if !check(token.TOKEN_RIGHT_PAREN) {
 		for {
 			expression()
-
 			if argCount == 255 {
 				error("Can't have more than 255 arguments.")
 			}
@@ -352,13 +358,11 @@ func parsePrecedence(precedence Precedence) {
 	}
 	canAssign := precedence <= PREC_ASSIGNMENT
 	prefixRule(canAssign)
-
 	for precedence <= getRule(parser.current.Type).Precedence {
 		advance()
 		infixRule := getRule(parser.previous.Type).Infix
 		infixRule(canAssign)
 	}
-
 	if canAssign && match(token.TOKEN_EQUAL) {
 		error("Invalid assignment target.")
 	}
@@ -379,7 +383,8 @@ func addLocal(name token.Token) {
 	}
 	local := &current.locals[current.localCount]
 	local.name = name
-	local.depth = -1 // Uninitialized
+	local.depth = -1
+	local.isCaptured = false // Initialize isCaptured
 	current.localCount++
 }
 
@@ -420,8 +425,6 @@ func function(funcType FunctionType) {
 	var compiler Compiler
 	initCompiler(&compiler, funcType)
 	beginScope()
-
-	// Compile the parameter list
 	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after function name.")
 	if !check(token.TOKEN_RIGHT_PAREN) {
 		for {
@@ -437,14 +440,22 @@ func function(funcType FunctionType) {
 		}
 	}
 	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after parameters.")
-
-	// The body
 	consume(token.TOKEN_LEFT_BRACE, "Expect '{' before function body.")
 	block()
-
-	// Create the function object
 	function := endCompiler()
-	emitBytes(byte(runtime.OP_CONSTANT), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function})) // Changed from function.Obj to function
+	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function})) // Changed to OP_CLOSURE
+	for i := 0; i < function.UpvalueCount; i++ {                                                           // Emit upvalue info
+		isLocal := compiler.upvalues[i].isLocal
+		index := compiler.upvalues[i].index
+		var byteToEmit byte
+		if isLocal {
+			byteToEmit = 1
+		} else {
+			byteToEmit = 0
+		}
+		emitByte(byteToEmit)
+		emitByte(index)
+	}
 }
 
 func defineVariable(global uint8) {
@@ -538,9 +549,9 @@ func literal(canAssign bool) {
 	}
 }
 
-func resolveLocal(name token.Token) int {
-	for i := current.localCount - 1; i >= 0; i-- {
-		local := current.locals[i]
+func resolveLocal(comp *Compiler, name token.Token) int {
+	for i := comp.localCount - 1; i >= 0; i-- {
+		local := comp.locals[i]
 		if identifiersEqual(name, local.name) {
 			if local.depth == -1 {
 				error("Can't read local variable in its own initializer.")
@@ -551,12 +562,50 @@ func resolveLocal(name token.Token) int {
 	return -1
 }
 
+func addUpvalue(compiler *Compiler, index uint8, isLocal bool) int {
+	upvalueCount := compiler.function.UpvalueCount
+	for i := 0; i < upvalueCount; i++ {
+		upvalue := compiler.upvalues[i]
+		if upvalue.index == index && upvalue.isLocal == isLocal {
+			return i
+		}
+	}
+	if upvalueCount == 256 {
+		error("Too many closure variables in function.")
+		return 0
+	}
+	compiler.upvalues[upvalueCount] = Upvalue{index: index, isLocal: isLocal}
+	compiler.function.UpvalueCount++
+	return upvalueCount
+}
+
+func resolveUpvalue(compiler *Compiler, name token.Token) int {
+	if compiler.enclosing == nil {
+		return -1
+	}
+	local := resolveLocal(compiler.enclosing, name)
+	if local != -1 {
+		compiler.enclosing.locals[local].isCaptured = true
+		return addUpvalue(compiler, uint8(local), true)
+	}
+	upvalue := resolveUpvalue(compiler.enclosing, name)
+	if upvalue != -1 {
+		return addUpvalue(compiler, uint8(upvalue), false)
+	}
+	return -1
+}
+
 func namedVariable(name token.Token, canAssign bool) {
 	var getOp, setOp uint8
-	arg := resolveLocal(name)
-	if arg != -1 {
+	var arg int
+	if localArg := resolveLocal(current, name); localArg != -1 {
+		arg = localArg
 		getOp = byte(runtime.OP_GET_LOCAL)
 		setOp = byte(runtime.OP_SET_LOCAL)
+	} else if upvalueArg := resolveUpvalue(current, name); upvalueArg != -1 {
+		arg = upvalueArg
+		getOp = byte(runtime.OP_GET_UPVALUE)
+		setOp = byte(runtime.OP_SET_UPVALUE)
 	} else {
 		arg = int(identifierConstant(name))
 		getOp = byte(runtime.OP_GET_GLOBAL)
@@ -586,14 +635,13 @@ func initCompiler(compiler *Compiler, funcType FunctionType) {
 	compiler.scopeDepth = 0
 	compiler.function = runtime.NewFunction()
 	current = compiler
-
 	if funcType != TYPE_SCRIPT {
 		current.function.Name = runtime.CopyString(parser.previous.Start)
 	}
-
 	current.localCount++
-	local := &current.locals[current.localCount]
+	local := &current.locals[current.localCount-1] // Adjusted index
 	local.depth = 0
+	local.isCaptured = false
 	local.name.Start = ""
 	local.name.Length = 0
 }
@@ -608,7 +656,6 @@ func Compile(source string) *runtime.ObjFunction {
 	for !match(token.TOKEN_EOF) {
 		declaration()
 	}
-
 	function := endCompiler()
 	if !parser.hadError {
 		return function

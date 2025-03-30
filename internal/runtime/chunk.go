@@ -17,6 +17,8 @@ const (
 	OP_DEFINE_GLOBAL
 	OP_SET_GLOBAL
 	OP_GET_GLOBAL
+	OP_GET_UPVALUE // Added for closures
+	OP_SET_UPVALUE // Added for closures
 	OP_EQUAL
 	OP_GREATER
 	OP_LESS
@@ -31,6 +33,8 @@ const (
 	OP_JUMP_IF_FALSE
 	OP_LOOP
 	OP_CALL
+	OP_CLOSURE       // Added for closures
+	OP_CLOSE_UPVALUE // Added for closures
 	OP_RETURN
 )
 

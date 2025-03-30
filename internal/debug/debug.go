@@ -43,6 +43,10 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return constantInstruction("OP_SET_GLOBAL", ch, offset)
 	case uint8(runtime.OP_GET_GLOBAL):
 		return constantInstruction("OP_GET_GLOBAL", ch, offset)
+	case uint8(runtime.OP_GET_UPVALUE): // Added for upvalues
+		return byteInstruction("OP_GET_UPVALUE", ch, offset)
+	case uint8(runtime.OP_SET_UPVALUE): // Added for upvalues
+		return byteInstruction("OP_SET_UPVALUE", ch, offset)
 	case uint8(runtime.OP_EQUAL):
 		return simpleInstruction("OP_EQUAL", offset)
 	case uint8(runtime.OP_GREATER):
@@ -65,6 +69,30 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return simpleInstruction("OP_PRINT", offset)
 	case uint8(runtime.OP_CALL):
 		return byteInstruction("OP_CALL", ch, offset)
+	case uint8(runtime.OP_CLOSURE): // Added for closures
+		offset++
+		constant := ch.Code()[offset]
+		offset++
+		fmt.Printf("%-16s %4d ", "OP_CLOSURE", constant)
+		runtime.PrintValue(ch.Constants().Values()[constant])
+		fmt.Println()
+		function := ch.Constants().Values()[constant].Obj.(*runtime.ObjFunction)
+		for j := 0; j < function.UpvalueCount; j++ {
+			isLocal := ch.Code()[offset]
+			offset++
+			index := ch.Code()[offset]
+			offset++
+			var upvalueType string
+			if isLocal != 0 {
+				upvalueType = "local"
+			} else {
+				upvalueType = "upvalue"
+			}
+			fmt.Printf("%04d      | %s %d\n", offset-2, upvalueType, index)
+		}
+		return offset
+	case uint8(runtime.OP_CLOSE_UPVALUE): // Added for upvalues
+		return simpleInstruction("OP_CLOSE_UPVALUE", offset)
 	case uint8(runtime.OP_RETURN):
 		return simpleInstruction("OP_RETURN", offset)
 	case uint8(runtime.OP_JUMP):
