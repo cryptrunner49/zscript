@@ -1,1 +1,1 @@
-# Go Rex
+# Go Implementation of the Seed VM
