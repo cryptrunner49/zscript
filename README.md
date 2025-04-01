@@ -1,1 +1,1 @@
-# Go Implementation of the Seed VM
+# SeedVM - Go Edition
