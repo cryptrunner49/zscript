@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 	"unsafe"
 
 	"github.com/cryptrunner49/goseedvm/internal/common"
@@ -50,7 +49,7 @@ func InitVM() {
 	vm.objects = nil
 	vm.globals = make(map[*runtime.ObjString]runtime.Value)
 	vm.strings = make(map[uint32]*runtime.ObjString)
-	defineNative("clock", clockNative)
+	defineAllNatives()
 }
 
 func FreeVM() {
@@ -85,13 +84,14 @@ func Interpret(source string) InterpretResult {
 	if function == nil {
 		return INTERPRET_COMPILE_ERROR
 	}
-	closure := runtime.NewClosure(function) // Create closure for top-level function
+	closure := runtime.NewClosure(function)
 	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure})
 	callValue(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure}, 0)
 	return run()
 }
 
 func runtimeError(format string, args ...interface{}) InterpretResult {
+	fmt.Fprintf(os.Stderr, "Runtime Error: ")
 	fmt.Fprintf(os.Stderr, format, args...)
 	fmt.Fprintln(os.Stderr)
 	for i := vm.frameCount - 1; i >= 0; i-- {
@@ -99,11 +99,11 @@ func runtimeError(format string, args ...interface{}) InterpretResult {
 		function := frame.closure.Function
 		instruction := frame.ip - 1
 		line := function.Chunk.Lines()[instruction]
-		fmt.Fprintf(os.Stderr, "[line %d] in ", line)
+		fmt.Fprintf(os.Stderr, "  at [line %d] in ", line)
 		if function.Name == nil {
-			fmt.Fprintln(os.Stderr, "script")
+			fmt.Fprintln(os.Stderr, "top-level script")
 		} else {
-			fmt.Fprintf(os.Stderr, "%s()\n", function.Name.Chars)
+			fmt.Fprintf(os.Stderr, "function '%s()'\n", function.Name.Chars)
 		}
 	}
 	resetStack()
@@ -180,12 +180,11 @@ func run() InterpretResult {
 	readString := func(frame *CallFrame) *runtime.ObjString {
 		return readConstant(frame).Obj.(*runtime.ObjString)
 	}
-	binaryOp := func(op func(a, b float64) float64) InterpretResult {
+	binaryOp := func(op func(a, b float64) float64, opName string) InterpretResult {
 		top := peek(0)
 		next := peek(1)
 		if top.Type != runtime.VAL_NUMBER || next.Type != runtime.VAL_NUMBER {
-			runtimeError("Operands must be numbers.")
-			return INTERPRET_RUNTIME_ERROR
+			return runtimeError("Both operands for '%s' must be numbers (got %s and %s).", opName, typeName(top), typeName(next))
 		}
 		b := Pop().Number
 		a := Pop().Number
@@ -235,7 +234,7 @@ func run() InterpretResult {
 		case uint8(runtime.OP_SET_GLOBAL):
 			name := readString(frame)
 			if _, exists := vm.globals[name]; !exists {
-				return runtimeError("Undefined variable '%s'.", name.Chars)
+				return runtimeError("Cannot assign to undefined global variable '%s'.", name.Chars)
 			}
 			vm.globals[name] = peek(0)
 		case uint8(runtime.OP_GET_GLOBAL):
@@ -243,7 +242,7 @@ func run() InterpretResult {
 			if val, exists := vm.globals[name]; exists {
 				Push(val)
 			} else {
-				return runtimeError("Undefined variable '%s'.", name.Chars)
+				return runtimeError("Global variable '%s' is not defined.", name.Chars)
 			}
 		case uint8(runtime.OP_GET_UPVALUE):
 			slot := readByte(frame)
@@ -254,35 +253,28 @@ func run() InterpretResult {
 			upvalue := frame.closure.Upvalues[slot]
 			*upvalue.Location = peek(0)
 		case uint8(runtime.OP_GET_PROPERTY):
-			// Ensure the top of the stack is an instance.
 			instVal := peek(0)
-			instance, ok := instVal.Obj.(*runtime.ObjInstance)
-			if !ok {
-				return runtimeError("Only instances have properties.")
+			if _, ok := instVal.Obj.(*runtime.ObjInstance); !ok {
+				return runtimeError("Cannot access property on %s; only struct instances have properties.", typeName(instVal))
 			}
-			// Read the property name from the chunk.
+			instance := instVal.Obj.(*runtime.ObjInstance)
 			name := readString(frame)
-			// Look up the property value in the instance's fields.
 			if value, found := instance.Fields[name]; found {
-				Pop() // Pop the instance.
+				Pop()
 				Push(value)
-				break
+			} else {
+				return runtimeError("Property '%s' does not exist on this instance.", name.Chars)
 			}
-			return runtimeError("Undefined property '%s'.", name.Chars)
 		case uint8(runtime.OP_SET_PROPERTY):
-			// Ensure that the value below the top of the stack is an instance.
 			instVal := peek(1)
-			instance, ok := instVal.Obj.(*runtime.ObjInstance)
-			if !ok {
-				return runtimeError("Only instances have fields.")
+			if _, ok := instVal.Obj.(*runtime.ObjInstance); !ok {
+				return runtimeError("Cannot set property on %s; only struct instances have fields.", typeName(instVal))
 			}
-			// Read the property name.
+			instance := instVal.Obj.(*runtime.ObjInstance)
 			name := readString(frame)
-			// Set the property in the instance.
 			instance.Fields[name] = peek(0)
-			// For assignment, pop the value and the instance, then push the value back.
-			value := Pop() // Pop the value.
-			Pop()          // Pop the instance.
+			value := Pop()
+			Pop()
 			Push(value)
 		case uint8(runtime.OP_EQUAL):
 			b := Pop()
@@ -290,14 +282,14 @@ func run() InterpretResult {
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: runtime.Equal(a, b)})
 		case uint8(runtime.OP_GREATER):
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Operands must be numbers.")
+				return runtimeError("Both operands for '>' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
 			b := Pop()
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: a.Number > b.Number})
 		case uint8(runtime.OP_LESS):
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Operands must be numbers.")
+				return runtimeError("Both operands for '<' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
 			b := Pop()
 			a := Pop()
@@ -306,9 +298,9 @@ func run() InterpretResult {
 			if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
 				concatenate()
 			} else if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				binaryOp(func(a, b float64) float64 { return a + b })
+				binaryOp(func(a, b float64) float64 { return a + b }, "+")
 			} else {
-				return runtimeError("Operands must be two numbers or two strings.")
+				return runtimeError("Operator '+' requires two numbers or two strings (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
 		case uint8(runtime.OP_SUBTRACT):
 			if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
@@ -318,20 +310,23 @@ func run() InterpretResult {
 				a := Pop()
 				Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number - b.Number})
 			} else {
-				return runtimeError("Operands must be two numbers or two strings.")
+				return runtimeError("Operator '-' requires two numbers or two strings (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
 		case uint8(runtime.OP_MULTIPLY):
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Operands must be numbers.")
+				return runtimeError("Both operands for '*' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
 			b := Pop()
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number * b.Number})
 		case uint8(runtime.OP_DIVIDE):
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Operands must be numbers.")
+				return runtimeError("Both operands for '/' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
 			b := Pop()
+			if b.Number == 0 {
+				return runtimeError("Division by zero is not allowed.")
+			}
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number / b.Number})
 		case uint8(runtime.OP_NOT):
@@ -339,7 +334,7 @@ func run() InterpretResult {
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: isFalsey(val)})
 		case uint8(runtime.OP_NEGATE):
 			if peek(0).Type != runtime.VAL_NUMBER {
-				return runtimeError("Operand must be a number.")
+				return runtimeError("Unary '-' requires a number (got %s).", typeName(peek(0)))
 			}
 			val := Pop()
 			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: -val.Number})
@@ -404,6 +399,36 @@ func run() InterpretResult {
 	}
 }
 
+func typeName(val runtime.Value) string {
+	switch val.Type {
+	case runtime.VAL_BOOL:
+		return "boolean"
+	case runtime.VAL_NULL:
+		return "null"
+	case runtime.VAL_NUMBER:
+		return "number"
+	case runtime.VAL_OBJ:
+		switch val.Obj.(type) {
+		case *runtime.ObjString:
+			return "string"
+		case *runtime.ObjFunction:
+			return "function"
+		case *runtime.ObjClosure:
+			return "closure"
+		case *runtime.ObjNative:
+			return "native function"
+		case *runtime.ObjStruct:
+			return "struct"
+		case *runtime.ObjInstance:
+			return "instance"
+		default:
+			return "object"
+		}
+	default:
+		return "unknown"
+	}
+}
+
 func isFalsey(val runtime.Value) bool {
 	return val.Type == runtime.VAL_NULL || (val.Type == runtime.VAL_BOOL && !val.Bool)
 }
@@ -420,24 +445,23 @@ func callValue(callee runtime.Value, argCount int) bool {
 			Push(result)
 			return true
 		case *runtime.ObjStruct:
-			// Create a new instance of the structure.
 			vm.stack[vm.stackTop-argCount-1] = runtime.ObjVal(runtime.NewInstance(obj))
 			return true
 		default:
 			// Non-callable object type
 		}
 	}
-	runtimeError("Can only call functions and classes.")
+	runtimeError("Cannot call %s; only functions and structs are callable.", typeName(callee))
 	return false
 }
 
 func call(closure *runtime.ObjClosure, argCount int) bool {
 	if argCount != closure.Function.Arity {
-		runtimeError("Expected %d arguments but got %d", closure.Function.Arity, argCount)
+		runtimeError("Function '%s' expects %d arguments but got %d.", closure.Function.Name.Chars, closure.Function.Arity, argCount)
 		return false
 	}
 	if vm.frameCount >= FRAMES_MAX {
-		runtimeError("Stack overflow.")
+		runtimeError("Stack overflow; too many nested function calls (max %d).", FRAMES_MAX)
 		return false
 	}
 	frame := &vm.frames[vm.frameCount]
@@ -446,21 +470,4 @@ func call(closure *runtime.ObjClosure, argCount int) bool {
 	frame.ip = 0
 	frame.slots = vm.stackTop - argCount - 1
 	return true
-}
-
-func defineNative(name string, function runtime.NativeFn) {
-	nameObj := runtime.NewObjString(name)
-	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: nameObj})
-	nativeObj := &runtime.ObjNative{Function: function}
-	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: nativeObj})
-	vm.globals[nameObj] = vm.stack[vm.stackTop-1]
-	Pop()
-	Pop()
-}
-
-func clockNative(argCount int, args []runtime.Value) runtime.Value {
-	return runtime.Value{
-		Type:   runtime.VAL_NUMBER,
-		Number: float64(time.Now().UnixNano()) / 1e9,
-	}
 }

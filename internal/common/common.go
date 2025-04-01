@@ -1,6 +1,4 @@
 package common
 
-const (
-	DebugPrintCode      = true
-	DebugTraceExecution = true
-)
+var DebugPrintCode bool = false
+var DebugTraceExecution bool = false

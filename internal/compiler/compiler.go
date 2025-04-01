@@ -126,7 +126,7 @@ func currentChunk() *runtime.Chunk {
 }
 
 func dot(canAssign bool) {
-	consume(token.TOKEN_IDENTIFIER, "Expect property name after '.'.")
+	consume(token.TOKEN_IDENTIFIER, "Expected a property name after '.' (e.g., 'object.field').")
 	name := identifierConstant(parser.previous)
 	if canAssign && match(token.TOKEN_EQUAL) {
 		expression()
@@ -143,9 +143,9 @@ func errorAt(t token.Token, message string) {
 	parser.panicMode = true
 	fmt.Fprintf(os.Stderr, "[line %d] Error", t.Line)
 	if t.Type == token.TOKEN_EOF {
-		fmt.Fprintf(os.Stderr, " at end")
+		fmt.Fprintf(os.Stderr, " at end of file")
 	} else if t.Type == token.TOKEN_ERROR {
-		// Nothing
+		// Lexer error already reported
 	} else {
 		fmt.Fprintf(os.Stderr, " at '%s'", t.Start)
 	}
@@ -168,7 +168,7 @@ func advance() {
 		if parser.current.Type != token.TOKEN_ERROR {
 			break
 		}
-		errorAtCurrent(parser.current.Start)
+		errorAtCurrent(fmt.Sprintf("Invalid token '%s' encountered.", parser.current.Start))
 	}
 }
 
@@ -262,13 +262,13 @@ func statement() {
 
 func returnStatement() {
 	if current.functionType == TYPE_SCRIPT {
-		error("Can't return from top-level code.")
+		error("Cannot use 'return' outside a function at top-level code.")
 	}
 	if match(token.TOKEN_SEMICOLON) {
 		emitReturn()
 	} else {
 		expression()
-		consume(token.TOKEN_SEMICOLON, "Expect ';' after return value.")
+		consume(token.TOKEN_SEMICOLON, "Expected ';' after return value (e.g., 'return 42;').")
 		emitByte(byte(runtime.OP_RETURN))
 	}
 }
@@ -277,31 +277,25 @@ func block() {
 	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
 		declaration()
 	}
-	consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after block.")
+	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close block (unmatched '{').")
 }
 
 func structDeclaration() {
-	// Parse struct name.
-	consume(token.TOKEN_IDENTIFIER, "Expect struct name.")
+	consume(token.TOKEN_IDENTIFIER, "Expected a struct name after 'struct' (e.g., 'struct Point').")
 	nameConstant := identifierConstant(parser.previous)
 	declareVariable()
 
-	// Check if this is a brace-enclosed struct or a semicolon-terminated struct.
 	if match(token.TOKEN_LEFT_BRACE) {
-		// Collect fields and their default values.
 		fieldCount := 0
 		fieldNames := make([]*runtime.ObjString, 0)
 		fieldDefaults := make([]runtime.Value, 0)
 
-		// Only parse fields if we haven't immediately hit the closing brace.
 		if !check(token.TOKEN_RIGHT_BRACE) {
 			for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
-				// Parse field name.
-				consume(token.TOKEN_IDENTIFIER, "Expect field name.")
+				consume(token.TOKEN_IDENTIFIER, "Expected a field name in struct (e.g., 'x' in 'x = 0').")
 				fieldName := runtime.NewObjString(parser.previous.Start)
 				fieldNames = append(fieldNames, fieldName)
 
-				// Parse optional initializer.
 				var defaultValue runtime.Value
 				if match(token.TOKEN_EQUAL) {
 					if match(token.TOKEN_NUMBER) {
@@ -309,7 +303,6 @@ func structDeclaration() {
 						defaultValue = runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
 					} else if match(token.TOKEN_STRING) {
 						text := parser.previous.Start
-						// Remove quotes.
 						str := text[1 : len(text)-1]
 						defaultValue = runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
 					} else if match(token.TOKEN_TRUE) {
@@ -319,7 +312,7 @@ func structDeclaration() {
 					} else if match(token.TOKEN_NULL) {
 						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
 					} else {
-						error("Expect literal value for field initializer.")
+						error("Expected a literal value (number, string, true, false, null) for field default.")
 						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
 					}
 				} else {
@@ -328,16 +321,14 @@ func structDeclaration() {
 				fieldDefaults = append(fieldDefaults, defaultValue)
 				fieldCount++
 
-				// Handle field separators.
 				if !match(token.TOKEN_COMMA) && !check(token.TOKEN_RIGHT_BRACE) {
-					consume(token.TOKEN_SEMICOLON, "Expect ',' or '}' after field declaration.")
+					consume(token.TOKEN_SEMICOLON, "Expected ',' between fields or '}' to end struct.")
 				}
 			}
 		}
 
-		consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after struct body.")
+		consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close struct body (unmatched '{').")
 
-		// Emit the complete struct definition.
 		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
 		emitByte(byte(fieldCount))
 		for i := 0; i < fieldCount; i++ {
@@ -347,11 +338,9 @@ func structDeclaration() {
 			emitByte(defaultConst)
 		}
 	} else {
-		// Semicolon-terminated empty struct (e.g., "struct Vector2D;").
-		consume(token.TOKEN_SEMICOLON, "Expect '{' or ';' after struct name.")
-		// Emit an empty struct definition (fieldCount = 0).
+		consume(token.TOKEN_SEMICOLON, "Expected '{' to define fields or ';' for an empty struct.")
 		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
-		emitByte(0) // fieldCount = 0
+		emitByte(0)
 	}
 
 	defineVariable(nameConstant)
@@ -373,32 +362,32 @@ func declaration() {
 }
 
 func fnDeclaration() {
-	global := parseVariable("Expect function name.")
+	global := parseVariable("Expected a function name after 'fn' (e.g., 'fn myFunc()').")
 	markInitialized()
 	function(TYPE_FUNCTION)
 	defineVariable(global)
 }
 
 func varDeclaration() {
-	global := parseVariable("Expect variable name.")
+	global := parseVariable("Expected a variable name after 'var' (e.g., 'var x').")
 	if match(token.TOKEN_EQUAL) {
 		expression()
 	} else {
 		emitByte(byte(runtime.OP_NULL))
 	}
-	consume(token.TOKEN_SEMICOLON, "Expect ';' after variable declaration.")
+	consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration (e.g., 'var x = 5;').")
 	defineVariable(global)
 }
 
 func printStatement() {
 	expression()
-	consume(token.TOKEN_SEMICOLON, "Expect ';' after value.")
+	consume(token.TOKEN_SEMICOLON, "Expected ';' after value in print statement (e.g., 'print x;').")
 	emitByte(byte(runtime.OP_PRINT))
 }
 
 func expressionStatement() {
 	expression()
-	consume(token.TOKEN_SEMICOLON, "Expect ';' after expression.")
+	consume(token.TOKEN_SEMICOLON, "Expected ';' after expression (e.g., 'x + 1;').")
 	emitByte(byte(runtime.OP_POP))
 }
 
@@ -413,7 +402,7 @@ func argumentList() uint8 {
 		for {
 			expression()
 			if argCount == 255 {
-				error("Can't have more than 255 arguments.")
+				error("Function call cannot have more than 255 arguments.")
 			}
 			argCount++
 			if !match(token.TOKEN_COMMA) {
@@ -421,7 +410,7 @@ func argumentList() uint8 {
 			}
 		}
 	}
-	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after arguments.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close argument list (e.g., 'func(a, b)').")
 	return argCount
 }
 
@@ -444,7 +433,7 @@ func parsePrecedence(precedence Precedence) {
 	advance()
 	prefixRule := getRule(parser.previous.Type).Prefix
 	if prefixRule == nil {
-		error("Expect expression")
+		error("Expected an expression but found no valid starting token.")
 		return
 	}
 	canAssign := precedence <= PREC_ASSIGNMENT
@@ -455,7 +444,7 @@ func parsePrecedence(precedence Precedence) {
 		infixRule(canAssign)
 	}
 	if canAssign && match(token.TOKEN_EQUAL) {
-		error("Invalid assignment target.")
+		error("Invalid assignment target; only variables or properties can be assigned.")
 	}
 }
 
@@ -469,7 +458,7 @@ func identifiersEqual(a, b token.Token) bool {
 
 func addLocal(name token.Token) {
 	if current.localCount == 256 {
-		error("Too many local variables in function.")
+		error("Too many local variables in this scope (max 256).")
 		return
 	}
 	local := &current.locals[current.localCount]
@@ -490,7 +479,7 @@ func declareVariable() {
 			break
 		}
 		if identifiersEqual(name, local.name) {
-			error("Already variable with this name in this scope.")
+			error(fmt.Sprintf("Variable '%s' is already declared in this scope.", name.Start))
 		}
 	}
 	addLocal(name)
@@ -516,22 +505,22 @@ func function(funcType FunctionType) {
 	var compiler Compiler
 	initCompiler(&compiler, funcType)
 	beginScope()
-	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after function name.")
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name to start parameter list.")
 	if !check(token.TOKEN_RIGHT_PAREN) {
 		for {
 			current.function.Arity++
 			if current.function.Arity > 255 {
-				errorAtCurrent("Can't have more than 255 parameters.")
+				errorAtCurrent("Function cannot have more than 255 parameters.")
 			}
-			paramConstant := parseVariable("Expect parameter name.")
+			paramConstant := parseVariable("Expected a parameter name (e.g., 'x' in 'fn foo(x)').")
 			defineVariable(paramConstant)
 			if !match(token.TOKEN_COMMA) {
 				break
 			}
 		}
 	}
-	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after parameters.")
-	consume(token.TOKEN_LEFT_BRACE, "Expect '{' before function body.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close parameter list (e.g., 'fn foo()').")
+	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to start function body.")
 	block()
 	function := endCompiler()
 	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function}))
@@ -559,13 +548,13 @@ func defineVariable(global uint8) {
 
 func grouping(canAssign bool) {
 	expression()
-	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close grouped expression (unmatched '(').")
 }
 
 func stringLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
-		error("Invalid string literal.")
+		error("Invalid string literal; must be enclosed in quotes (e.g., \"hello\").")
 		return
 	}
 	str := text[1 : len(text)-1]
@@ -575,7 +564,7 @@ func stringLiteral(canAssign bool) {
 func makeConstant(val runtime.Value) uint8 {
 	constant := currentChunk().AddConstant(val)
 	if constant > 255 {
-		error("Too many constants in one runtime.")
+		error("Too many constants in this chunk (max 256). Consider splitting the code.")
 		return 0
 	}
 	return uint8(constant)
@@ -586,7 +575,11 @@ func emitConstant(val runtime.Value) {
 }
 
 func number(canAssign bool) {
-	val, _ := strconv.ParseFloat(parser.previous.Start, 64)
+	val, err := strconv.ParseFloat(parser.previous.Start, 64)
+	if err != nil {
+		error(fmt.Sprintf("Invalid number literal '%s'; must be a valid number.", parser.previous.Start))
+		return
+	}
 	emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
 }
 
@@ -645,7 +638,7 @@ func resolveLocal(comp *Compiler, name token.Token) int {
 		local := comp.locals[i]
 		if identifiersEqual(name, local.name) {
 			if local.depth == -1 {
-				error("Can't read local variable in its own initializer.")
+				error(fmt.Sprintf("Cannot use variable '%s' in its own initializer.", name.Start))
 			}
 			return i
 		}
@@ -662,7 +655,7 @@ func addUpvalue(compiler *Compiler, index uint8, isLocal bool) int {
 		}
 	}
 	if upvalueCount == 256 {
-		error("Too many closure variables in function.")
+		error("Too many upvalues in this function (max 256).")
 		return 0
 	}
 	compiler.upvalues[upvalueCount] = Upvalue{index: index, isLocal: isLocal}
@@ -765,7 +758,7 @@ func emitJump(instruction byte) int {
 func patchJump(offset int) {
 	jump := currentChunk().Count() - offset - 2
 	if jump > 65535 {
-		error("Too much code to jump over.")
+		error("Jump distance too large (max 65535 bytes). Simplify the code block.")
 	}
 	currentChunk().Code()[offset] = byte((jump >> 8) & 0xff)
 	currentChunk().Code()[offset+1] = byte(jump & 0xff)
@@ -788,9 +781,9 @@ func or(canAssign bool) {
 }
 
 func ifStatement() {
-	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'if'.")
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'if' to start condition.")
 	expression()
-	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after condition.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after if condition (e.g., 'if (x > 0)').")
 	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
 	statement()
@@ -807,7 +800,7 @@ func emitLoop(loopStart int) {
 	emitByte(byte(runtime.OP_LOOP))
 	offset := currentChunk().Count() - loopStart + 2
 	if offset > 65535 {
-		error("Loop body too large.")
+		error("Loop body too large (max 65535 bytes). Reduce loop size.")
 	}
 	emitByte(byte((offset >> 8) & 0xff))
 	emitByte(byte(offset & 0xff))
@@ -815,9 +808,9 @@ func emitLoop(loopStart int) {
 
 func whileStatement() {
 	loopStart := currentChunk().Count()
-	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'while'.")
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'while' to start condition.")
 	expression()
-	consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after condition.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after while condition (e.g., 'while (x < 10)').")
 	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
 	statement()
@@ -828,7 +821,7 @@ func whileStatement() {
 
 func forStatement() {
 	beginScope()
-	consume(token.TOKEN_LEFT_PAREN, "Expect '(' after 'for'.")
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'for' to start clauses.")
 	if match(token.TOKEN_SEMICOLON) {
 		// No initializer
 	} else if match(token.TOKEN_VAR) {
@@ -840,7 +833,7 @@ func forStatement() {
 	exitJump := -1
 	if !match(token.TOKEN_SEMICOLON) {
 		expression()
-		consume(token.TOKEN_SEMICOLON, "Expect ';' after loop condition.")
+		consume(token.TOKEN_SEMICOLON, "Expected ';' after for condition (e.g., 'for (i = 0; i < 10;)').")
 		exitJump = emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 		emitByte(byte(runtime.OP_POP))
 	}
@@ -849,7 +842,7 @@ func forStatement() {
 		incrementStart := currentChunk().Count()
 		expression()
 		emitByte(byte(runtime.OP_POP))
-		consume(token.TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.")
+		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after for increment (e.g., 'for (i = 0; i < 10; i = i + 1)').")
 		emitLoop(loopStart)
 		loopStart = incrementStart
 		patchJump(bodyJump)
