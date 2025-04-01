@@ -14,6 +14,7 @@ const (
 	TOKEN_PLUS
 	TOKEN_SEMICOLON
 	TOKEN_SLASH
+	TOKEN_PERCENT
 	TOKEN_STAR
 
 	// One or two character tokens

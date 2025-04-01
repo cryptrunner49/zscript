@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"unsafe"
@@ -329,6 +330,16 @@ func run() InterpretResult {
 			}
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number / b.Number})
+		case uint8(runtime.OP_MOD):
+			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
+				return runtimeError("Both operands for '%%' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			}
+			b := Pop()
+			if b.Number == 0 {
+				return runtimeError("Modulo by zero is not allowed.")
+			}
+			a := Pop()
+			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: math.Mod(a.Number, b.Number)})
 		case uint8(runtime.OP_NOT):
 			val := Pop()
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: isFalsey(val)})

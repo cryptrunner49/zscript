@@ -64,6 +64,8 @@ func ScanToken() token.Token {
 		return lexer.makeToken(token.TOKEN_PLUS)
 	case '/':
 		return lexer.makeToken(token.TOKEN_SLASH)
+	case '%':
+		return lexer.makeToken(token.TOKEN_PERCENT)
 	case '*':
 		return lexer.makeToken(token.TOKEN_STAR)
 	case '!':
@@ -236,7 +238,7 @@ func (l *Lexer) identifier() token.Token {
 
 func isOperatorRune(r rune) bool {
 	switch r {
-	case '(', ')', '{', '}', ';', ',', '.', '-', '+', '/', '*', '!', '=', '<', '>', '"':
+	case '(', ')', '{', '}', ';', ',', '.', '-', '+', '/', '%', '@', '#', '$', '*', '!', '=', '<', '>', '"':
 		return true
 	default:
 		return false
