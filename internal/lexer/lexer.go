@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
@@ -32,15 +33,17 @@ func ScanToken() token.Token {
 		return lexer.makeToken(token.TOKEN_EOF)
 	}
 
-	c := lexer.advance()
-	if unicode.IsLetter(rune(c)) {
-		return lexer.identifier()
-	}
-	if unicode.IsDigit(rune(c)) {
+	r := lexer.advance()
+	if unicode.IsDigit(r) {
 		return lexer.number()
 	}
 
-	switch c {
+	// Start an identifier if the rune is not an operator or whitespace
+	if !isOperatorRune(r) && !unicode.IsSpace(r) {
+		return lexer.identifier()
+	}
+
+	switch r {
 	case '(':
 		return lexer.makeToken(token.TOKEN_LEFT_PAREN)
 	case ')':
@@ -94,30 +97,44 @@ func (l *Lexer) isAtEnd() bool {
 	return l.current >= len(l.source)
 }
 
-func (l *Lexer) advance() byte {
-	l.current++
-	return l.source[l.current-1]
-}
-
-func (l *Lexer) peek() byte {
+func (l *Lexer) advance() rune {
 	if l.isAtEnd() {
 		return 0
 	}
-	return l.source[l.current]
+	r, size := utf8.DecodeRuneInString(l.source[l.current:])
+	l.current += size
+	return r
 }
 
-func (l *Lexer) peekNext() byte {
-	if l.current+1 >= len(l.source) {
+func (l *Lexer) peek() rune {
+	if l.isAtEnd() {
 		return 0
 	}
-	return l.source[l.current+1]
+	r, _ := utf8.DecodeRuneInString(l.source[l.current:])
+	return r
 }
 
-func (l *Lexer) match(expected byte) bool {
-	if l.isAtEnd() || l.source[l.current] != expected {
+func (l *Lexer) peekNext() rune {
+	if l.current >= len(l.source) {
+		return 0
+	}
+	_, size := utf8.DecodeRuneInString(l.source[l.current:])
+	if l.current+size >= len(l.source) {
+		return 0
+	}
+	r, _ := utf8.DecodeRuneInString(l.source[l.current+size:])
+	return r
+}
+
+func (l *Lexer) match(expected rune) bool {
+	if l.isAtEnd() {
 		return false
 	}
-	l.current++
+	r, size := utf8.DecodeRuneInString(l.source[l.current:])
+	if r != expected {
+		return false
+	}
+	l.current += size
 	return true
 }
 
@@ -141,14 +158,18 @@ func (l *Lexer) errorToken(message string) token.Token {
 
 func (l *Lexer) skipWhitespace() {
 	for {
-		c := l.peek()
-		switch c {
-		case ' ', '\r', '\t':
+		r := l.peek()
+		if r == 0 {
+			return
+		}
+		if unicode.IsSpace(r) {
+			if r == '\n' {
+				l.line++
+			}
 			l.advance()
-		case '\n':
-			l.line++
-			l.advance()
-		case '/':
+			continue
+		}
+		if r == '/' {
 			if l.peekNext() == '/' {
 				for l.peek() != '\n' && !l.isAtEnd() {
 					l.advance()
@@ -169,7 +190,7 @@ func (l *Lexer) skipWhitespace() {
 			} else {
 				return
 			}
-		default:
+		} else {
 			return
 		}
 	}
@@ -190,12 +211,12 @@ func (l *Lexer) string() token.Token {
 }
 
 func (l *Lexer) number() token.Token {
-	for unicode.IsDigit(rune(l.peek())) {
+	for unicode.IsDigit(l.peek()) {
 		l.advance()
 	}
-	if l.peek() == '.' && unicode.IsDigit(rune(l.peekNext())) {
+	if l.peek() == '.' && unicode.IsDigit(l.peekNext()) {
 		l.advance() // Consume '.'
-		for unicode.IsDigit(rune(l.peek())) {
+		for unicode.IsDigit(l.peek()) {
 			l.advance()
 		}
 	}
@@ -203,62 +224,59 @@ func (l *Lexer) number() token.Token {
 }
 
 func (l *Lexer) identifier() token.Token {
-	for unicode.IsLetter(rune(l.peek())) || unicode.IsDigit(rune(l.peek())) {
+	for {
+		r := l.peek()
+		if r == 0 || unicode.IsSpace(r) || isOperatorRune(r) {
+			break
+		}
 		l.advance()
 	}
 	return l.makeToken(l.identifierType())
 }
 
-func (l *Lexer) identifierType() token.TokenType {
-	switch l.source[l.start] {
-	case 'a':
-		return l.checkKeyword(1, "nd", token.TOKEN_AND)
-	case 'e':
-		return l.checkKeyword(1, "lse", token.TOKEN_ELSE)
-	case 'f':
-		if l.current-l.start > 1 {
-			switch l.source[l.start+1] {
-			case 'a':
-				return l.checkKeyword(2, "lse", token.TOKEN_FALSE)
-			case 'o':
-				return l.checkKeyword(2, "r", token.TOKEN_FOR)
-			case 'n':
-				return l.checkKeyword(1, "n", token.TOKEN_FN)
-			}
-		}
-	case 'i':
-		return l.checkKeyword(1, "f", token.TOKEN_IF)
-	case 'n':
-		return l.checkKeyword(1, "ull", token.TOKEN_NULL)
-	case 'o':
-		return l.checkKeyword(1, "r", token.TOKEN_OR)
-	case 'p':
-		return l.checkKeyword(1, "rint", token.TOKEN_PRINT)
-	case 'r':
-		return l.checkKeyword(1, "eturn", token.TOKEN_RETURN)
-	case 's':
-		return l.checkKeyword(1, "truct", token.TOKEN_STRUCT)
-	case 't':
-		if l.current-l.start > 1 {
-			switch l.source[l.start+1] {
-			case 'h':
-				return l.checkKeyword(2, "is", token.TOKEN_THIS)
-			case 'r':
-				return l.checkKeyword(2, "ue", token.TOKEN_TRUE)
-			}
-		}
-	case 'v':
-		return l.checkKeyword(1, "ar", token.TOKEN_VAR)
-	case 'w':
-		return l.checkKeyword(1, "hile", token.TOKEN_WHILE)
+func isOperatorRune(r rune) bool {
+	switch r {
+	case '(', ')', '{', '}', ';', ',', '.', '-', '+', '/', '*', '!', '=', '<', '>', '"':
+		return true
+	default:
+		return false
 	}
-	return token.TOKEN_IDENTIFIER
 }
 
-func (l *Lexer) checkKeyword(start int, rest string, typ token.TokenType) token.TokenType {
-	if l.current-l.start == start+len(rest) &&
-		l.source[l.start+start:l.current] == rest {
-		return typ
+func (l *Lexer) identifierType() token.TokenType {
+	startStr := l.source[l.start:l.current]
+	switch startStr {
+	case "and":
+		return token.TOKEN_AND
+	case "else":
+		return token.TOKEN_ELSE
+	case "false":
+		return token.TOKEN_FALSE
+	case "for":
+		return token.TOKEN_FOR
+	case "fn":
+		return token.TOKEN_FN
+	case "if":
+		return token.TOKEN_IF
+	case "null":
+		return token.TOKEN_NULL
+	case "or":
+		return token.TOKEN_OR
+	case "print":
+		return token.TOKEN_PRINT
+	case "return":
+		return token.TOKEN_RETURN
+	case "struct":
+		return token.TOKEN_STRUCT
+	case "this":
+		return token.TOKEN_THIS
+	case "true":
+		return token.TOKEN_TRUE
+	case "var":
+		return token.TOKEN_VAR
+	case "while":
+		return token.TOKEN_WHILE
+	default:
+		return token.TOKEN_IDENTIFIER
 	}
-	return token.TOKEN_IDENTIFIER
 }
