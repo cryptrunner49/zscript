@@ -21,15 +21,12 @@ import (
 )
 
 func main() {
-	vm.InitVM()
+	vm.InitVM(os.Args)
 
 	if len(os.Args) == 1 {
 		repl()
-	} else if len(os.Args) == 2 {
-		runFile(os.Args[1])
 	} else {
-		fmt.Fprintf(os.Stderr, "Usage: goseedvm [path]\n")
-		os.Exit(1)
+		runFile(os.Args[1])
 	}
 
 	vm.FreeVM()

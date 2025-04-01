@@ -1,0 +1,19 @@
+/*
+var verbose = false;
+for (var i = 0; i < args.length; i = i + 1) {
+    if (args._i == "--verbose") {
+        verbose = true;
+    }
+}
+
+if (verbose) {
+    print "Running in verbose mode!";
+} else {
+    print "Running in normal mode.";
+}
+*/
+
+print args.length;   // Prints the number of arguments
+print args._0;       // Prints the program name
+print args._1;       // Prints the first argument
+print args._2;       // Prints the second argument
