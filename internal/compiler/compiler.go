@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/cryptrunner49/goseedvm/internal/common"
@@ -136,12 +135,16 @@ func init() {
 	rules[token.TOKEN_TRUE] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_VAR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_WHILE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_BREAK] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_CONTINUE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_MATCH] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_WITH] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_THROUGH] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_RANDOM] = ParseRule{random, nil, PREC_NONE}
+	rules[token.TOKEN_IMPORT] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_EXPORT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_ERROR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_EOF] = ParseRule{nil, nil, PREC_NONE}
-}
-
-func currentChunk() *runtime.Chunk {
-	return &current.function.Chunk
 }
 
 func dot(canAssign bool) {
@@ -153,62 +156,6 @@ func dot(canAssign bool) {
 	} else {
 		emitBytes(byte(runtime.OP_GET_PROPERTY), name)
 	}
-}
-
-func errorAt(t token.Token, message string) {
-	if parser.panicMode {
-		return
-	}
-	parser.panicMode = true
-	fmt.Fprintf(os.Stderr, "[line %d] Error", t.Line)
-	if t.Type == token.TOKEN_EOF {
-		fmt.Fprintf(os.Stderr, " at end of file")
-	} else if t.Type == token.TOKEN_ERROR {
-		// Lexer error already reported
-	} else {
-		fmt.Fprintf(os.Stderr, " at '%s'", t.Start)
-	}
-	fmt.Fprintf(os.Stderr, ": %s\n", message)
-	parser.hadError = true
-}
-
-func error(message string) {
-	errorAt(parser.previous, message)
-}
-
-func errorAtCurrent(message string) {
-	errorAt(parser.current, message)
-}
-
-func advance() {
-	parser.previous = parser.current
-	for {
-		parser.current = lexer.ScanToken()
-		if parser.current.Type != token.TOKEN_ERROR {
-			break
-		}
-		errorAtCurrent(fmt.Sprintf("Invalid token '%s' encountered.", parser.current.Start))
-	}
-}
-
-func consume(typ token.TokenType, message string) {
-	if parser.current.Type == typ {
-		advance()
-		return
-	}
-	errorAtCurrent(message)
-}
-
-func check(typ token.TokenType) bool {
-	return parser.current.Type == typ
-}
-
-func match(typ token.TokenType) bool {
-	if !check(typ) {
-		return false
-	}
-	advance()
-	return true
 }
 
 func emitByte(b byte) {
@@ -237,6 +184,13 @@ func endCompiler() *runtime.ObjFunction {
 	}
 	current = current.enclosing
 	return function
+}
+
+func block() {
+	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+		declaration()
+	}
+	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close block (unmatched '{').")
 }
 
 func beginScope() {
@@ -274,6 +228,8 @@ func statement() {
 		continueStatement()
 	} else if match(token.TOKEN_RETURN) {
 		returnStatement()
+	} else if match(token.TOKEN_MATCH) {
+		matchStatement()
 	} else if match(token.TOKEN_LEFT_BRACE) {
 		beginScope()
 		block()
@@ -283,92 +239,6 @@ func statement() {
 	}
 }
 
-func returnStatement() {
-	if current.functionType == TYPE_SCRIPT {
-		error("Cannot use 'return' outside a function at top-level code.")
-	}
-	if match(token.TOKEN_SEMICOLON) {
-		emitReturn()
-	} else {
-		expression()
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after return value (e.g., 'return 42;').")
-		emitByte(byte(runtime.OP_RETURN))
-	}
-}
-
-func block() {
-	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
-		declaration()
-	}
-	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close block (unmatched '{').")
-}
-
-func structDeclaration() {
-	consume(token.TOKEN_IDENTIFIER, "Expected a struct name after 'struct' (e.g., 'struct Point').")
-	nameConstant := identifierConstant(parser.previous)
-	declareVariable()
-
-	if match(token.TOKEN_LEFT_BRACE) {
-		fieldCount := 0
-		fieldNames := make([]*runtime.ObjString, 0)
-		fieldDefaults := make([]runtime.Value, 0)
-
-		if !check(token.TOKEN_RIGHT_BRACE) {
-			for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
-				consume(token.TOKEN_IDENTIFIER, "Expected a field name in struct (e.g., 'x' in 'x = 0').")
-				fieldName := runtime.NewObjString(parser.previous.Start)
-				fieldNames = append(fieldNames, fieldName)
-
-				var defaultValue runtime.Value
-				if match(token.TOKEN_EQUAL) {
-					if match(token.TOKEN_NUMBER) {
-						val, _ := strconv.ParseFloat(parser.previous.Start, 64)
-						defaultValue = runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
-					} else if match(token.TOKEN_STRING) {
-						text := parser.previous.Start
-						str := text[1 : len(text)-1]
-						defaultValue = runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
-					} else if match(token.TOKEN_TRUE) {
-						defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
-					} else if match(token.TOKEN_FALSE) {
-						defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
-					} else if match(token.TOKEN_NULL) {
-						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
-					} else {
-						error("Expected a literal value (number, string, true, false, null) for field default.")
-						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
-					}
-				} else {
-					defaultValue = runtime.Value{Type: runtime.VAL_NULL}
-				}
-				fieldDefaults = append(fieldDefaults, defaultValue)
-				fieldCount++
-
-				if !match(token.TOKEN_COMMA) && !check(token.TOKEN_RIGHT_BRACE) {
-					consume(token.TOKEN_SEMICOLON, "Expected ',' between fields or '}' to end struct.")
-				}
-			}
-		}
-
-		consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close struct body (unmatched '{').")
-
-		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
-		emitByte(byte(fieldCount))
-		for i := 0; i < fieldCount; i++ {
-			nameConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fieldNames[i]})
-			defaultConst := makeConstant(fieldDefaults[i])
-			emitByte(nameConst)
-			emitByte(defaultConst)
-		}
-	} else {
-		consume(token.TOKEN_SEMICOLON, "Expected '{' to define fields or ';' for an empty struct.")
-		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
-		emitByte(0)
-	}
-
-	defineVariable(nameConstant)
-}
-
 func declaration() {
 	if match(token.TOKEN_STRUCT) {
 		structDeclaration()
@@ -376,6 +246,10 @@ func declaration() {
 		fnDeclaration()
 	} else if match(token.TOKEN_VAR) {
 		varDeclaration()
+	} else if match(token.TOKEN_IMPORT) {
+		importDeclaration()
+	} else if match(token.TOKEN_EXPORT) {
+		exportDeclaration()
 	} else {
 		statement()
 	}
@@ -384,72 +258,9 @@ func declaration() {
 	}
 }
 
-func fnDeclaration() {
-	global := parseVariable("Expected a function name after 'fn' (e.g., 'fn myFunc()').")
-	markInitialized()
-	function(TYPE_FUNCTION)
-	defineVariable(global)
-}
-
-func varDeclaration() {
-	global := parseVariable("Expected a variable name after 'var' (e.g., 'var x').")
-	if match(token.TOKEN_EQUAL) {
-		expression()
-	} else {
-		emitByte(byte(runtime.OP_NULL))
-	}
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration (e.g., 'var x = 5;').")
-	defineVariable(global)
-}
-
-func printStatement() {
-	expression()
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after value in print statement (e.g., 'print x;').")
-	emitByte(byte(runtime.OP_PRINT))
-}
-
-func expressionStatement() {
-	expression()
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after expression (e.g., 'x + 1;').")
-	emitByte(byte(runtime.OP_POP))
-}
-
 func call(canAssign bool) {
 	argCount := argumentList()
 	emitBytes(byte(runtime.OP_CALL), argCount)
-}
-
-func argumentList() uint8 {
-	var argCount uint8 = 0
-	if !check(token.TOKEN_RIGHT_PAREN) {
-		for {
-			expression()
-			if argCount == 255 {
-				error("Function call cannot have more than 255 arguments.")
-			}
-			argCount++
-			if !match(token.TOKEN_COMMA) {
-				break
-			}
-		}
-	}
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close argument list (e.g., 'func(a, b)').")
-	return argCount
-}
-
-func synchronize() {
-	parser.panicMode = false
-	for parser.current.Type != token.TOKEN_EOF {
-		if parser.previous.Type == token.TOKEN_SEMICOLON {
-			return
-		}
-		switch parser.current.Type {
-		case token.TOKEN_CLASS, token.TOKEN_FN, token.TOKEN_VAR, token.TOKEN_FOR,
-			token.TOKEN_IF, token.TOKEN_WHILE, token.TOKEN_PRINT, token.TOKEN_RETURN:
-			return
-		}
-		advance()
-	}
 }
 
 func parsePrecedence(precedence Precedence) {
@@ -469,14 +280,6 @@ func parsePrecedence(precedence Precedence) {
 	if canAssign && match(token.TOKEN_EQUAL) {
 		error("Invalid assignment target; only variables or properties can be assigned.")
 	}
-}
-
-func identifierConstant(name token.Token) uint8 {
-	return makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(name.Start)})
-}
-
-func identifiersEqual(a, b token.Token) bool {
-	return a.Start == b.Start
 }
 
 func addLocal(name token.Token) {
@@ -658,6 +461,10 @@ func literal(canAssign bool) {
 	}
 }
 
+func random(canAssign bool) {
+
+}
+
 func resolveLocal(comp *Compiler, name token.Token) int {
 	for i := comp.localCount - 1; i >= 0; i-- {
 		local := comp.locals[i]
@@ -805,22 +612,6 @@ func or(canAssign bool) {
 	patchJump(endJump)
 }
 
-func ifStatement() {
-	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'if' to start condition.")
-	expression()
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after if condition (e.g., 'if (x > 0)').")
-	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
-	emitByte(byte(runtime.OP_POP))
-	statement()
-	elseJump := emitJump(byte(runtime.OP_JUMP))
-	patchJump(thenJump)
-	emitByte(byte(runtime.OP_POP))
-	if match(token.TOKEN_ELSE) {
-		statement()
-	}
-	patchJump(elseJump)
-}
-
 func emitLoop(loopStart int) {
 	emitByte(byte(runtime.OP_LOOP))
 	offset := currentChunk().Count() - loopStart + 2
@@ -829,182 +620,4 @@ func emitLoop(loopStart int) {
 	}
 	emitByte(byte((offset >> 8) & 0xff))
 	emitByte(byte(offset & 0xff))
-}
-
-func whileStatement() {
-	beginScope()
-	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'while'.")
-
-	// Set loopStart before the condition
-	loopStart := currentChunk().Count() // Will be 0017
-
-	expression() // Emits condition (0017–0021)
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
-
-	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE)) // 0022
-	emitByte(byte(runtime.OP_POP))                       // 0025
-
-	// Track loop for continue/break
-	current.loops = append(current.loops, Loop{
-		loopType:        LOOP_WHILE,
-		start:           loopStart,
-		exitPatches:     make([]int, 0),
-		continuePatches: make([]int, 0),
-	})
-	currentLoop := &current.loops[len(current.loops)-1]
-
-	statement() // Body (0026–0056)
-
-	// Jump back to condition
-	emitLoop(loopStart) // Jumps to 0017
-
-	// Patch continue jumps to loopStart
-	for _, operandPos := range currentLoop.continuePatches {
-		opAddress := operandPos - 1
-		currentIPAfterOperand := opAddress + 3
-		offset := currentIPAfterOperand - loopStart
-		if offset < 0 || offset > 65535 {
-			error("Continue jump offset out of range.")
-		}
-		high := byte(offset >> 8)
-		low := byte(offset)
-		currentChunk().Code()[operandPos] = high
-		currentChunk().Code()[operandPos+1] = low
-	}
-
-	// Patch exit jump
-	patchJump(exitJump)
-	emitByte(byte(runtime.OP_POP))
-
-	// Patch break jumps
-	currentLoop.exitAddress = currentChunk().Count()
-	for _, patchPos := range currentLoop.exitPatches {
-		patchJump(patchPos)
-	}
-
-	current.loops = current.loops[:len(current.loops)-1]
-	endScope()
-}
-
-func forStatement() {
-	beginScope()
-	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'for'.")
-
-	if match(token.TOKEN_SEMICOLON) {
-		// No initializer
-	} else if match(token.TOKEN_VAR) {
-		varDeclaration()
-	} else {
-		expressionStatement()
-	}
-
-	loopStart := currentChunk().Count()
-	exitJump := -1
-
-	if !match(token.TOKEN_SEMICOLON) {
-		expression()
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after loop condition.")
-		exitJump = emitJump(byte(runtime.OP_JUMP_IF_FALSE))
-		emitByte(byte(runtime.OP_POP)) // Pop condition result
-	}
-
-	current.loops = append(current.loops, Loop{
-		loopType:        LOOP_FOR,
-		start:           loopStart,
-		exitPatches:     make([]int, 0),
-		continuePatches: make([]int, 0),
-		hasIncrement:    false,
-	})
-	currentLoop := &current.loops[len(current.loops)-1]
-
-	bodyJump := -1
-	incrementStart := -1
-	if !match(token.TOKEN_RIGHT_PAREN) {
-		bodyJump = emitJump(byte(runtime.OP_JUMP))
-		incrementStart = currentChunk().Count()
-
-		expression() // Increment part
-		emitByte(byte(runtime.OP_POP))
-		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after for clauses.")
-
-		emitLoop(loopStart)
-		loopStart = incrementStart
-		patchJump(bodyJump)
-
-		currentLoop.hasIncrement = true
-		currentLoop.incrementStart = incrementStart
-	}
-
-	statement() // Loop body
-
-	emitLoop(loopStart)
-
-	if exitJump != -1 {
-		patchJump(exitJump)
-		emitByte(byte(runtime.OP_POP)) // Pop condition result
-	}
-
-	currentLoop.exitAddress = currentChunk().Count()
-
-	for _, operandPos := range currentLoop.exitPatches {
-		opAddress := operandPos - 1
-		currentIPAfterOperand := opAddress + 3
-		offset := currentLoop.exitAddress - currentIPAfterOperand
-		high := byte(offset >> 8)
-		low := byte(offset)
-		currentChunk().Code()[operandPos] = high
-		currentChunk().Code()[operandPos+1] = low
-	}
-
-	for _, operandPos := range currentLoop.continuePatches {
-		opAddress := operandPos - 1
-		currentIPAfterOperand := opAddress + 3
-		target := currentLoop.start
-		if currentLoop.hasIncrement {
-			target = currentLoop.incrementStart
-		}
-		offset := currentIPAfterOperand - target
-		high := byte(offset >> 8)
-		low := byte(offset)
-		currentChunk().Code()[operandPos] = high
-		currentChunk().Code()[operandPos+1] = low
-	}
-
-	current.loops = current.loops[:len(current.loops)-1]
-	endScope()
-}
-
-func breakStatement() {
-	if len(current.loops) == 0 {
-		error("Cannot use 'break' outside of a loop.")
-		return
-	}
-	currentLoop := &current.loops[len(current.loops)-1]
-	emitByte(byte(runtime.OP_BREAK))
-	operandPos := currentChunk().Count()
-	emitByte(0xFF)
-	emitByte(0xFF)
-	currentLoop.exitPatches = append(currentLoop.exitPatches, operandPos)
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'break'.")
-}
-
-func continueStatement() {
-	if len(current.loops) == 0 {
-		error("Cannot use 'continue' outside of a loop.")
-		return
-	}
-	currentLoop := &current.loops[len(current.loops)-1]
-
-	// Emit continue instruction
-	emitByte(byte(runtime.OP_CONTINUE))
-
-	// Calculate jump offset (will be patched later)
-	jumpPos := currentChunk().Count()
-	emitByte(0xFF) // placeholder for jump offset
-	emitByte(0xFF)
-
-	// Record this continue for later patching
-	currentLoop.continuePatches = append(currentLoop.continuePatches, jumpPos)
-
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'continue'.")
 }
