@@ -106,7 +106,7 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 	case uint8(runtime.OP_LOOP):
 		return jumpInstruction("OP_LOOP", -1, ch, offset)
 	case uint8(runtime.OP_STRUCT):
-		return constantInstruction("OP_STRUCT", ch, offset)
+		return structInstruction(ch, offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1
@@ -136,4 +136,33 @@ func jumpInstruction(name string, sign int, ch *runtime.Chunk, offset int) int {
 	jump := int(ch.Code()[offset+1])<<8 | int(ch.Code()[offset+2])
 	fmt.Printf("%-16s %4d -> %d\n", name, offset, offset+3+sign*jump)
 	return offset + 3
+}
+
+func structInstruction(ch *runtime.Chunk, offset int) int {
+	// Read the struct name constant.
+	constant := ch.Code()[offset+1]
+	fmt.Printf("%-16s %4d '", "OP_STRUCT", constant)
+	runtime.PrintValue(ch.Constants().Values()[constant])
+	fmt.Println("'")
+	// Read the field count.
+	fieldCount := int(ch.Code()[offset+2])
+	fmt.Printf("          field count: %d\n", fieldCount)
+	// Advance past opcode, struct name, and field count.
+	offset += 3
+	// For each field, print the field name and its default value.
+	for i := 0; i < fieldCount; i++ {
+		// Field name constant.
+		nameConstant := ch.Code()[offset]
+		fmt.Printf("%04d      | field name constant %d: '", offset, nameConstant)
+		runtime.PrintValue(ch.Constants().Values()[nameConstant])
+		fmt.Println("'")
+		offset++
+		// Field default value constant.
+		defConstant := ch.Code()[offset]
+		fmt.Printf("%04d      | field default constant %d: '", offset, defConstant)
+		runtime.PrintValue(ch.Constants().Values()[defConstant])
+		fmt.Println("'")
+		offset++
+	}
+	return offset
 }

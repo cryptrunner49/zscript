@@ -58,8 +58,9 @@ type ObjString struct {
 }
 
 type ObjStruct struct {
-	Obj  Obj
-	Name *ObjString
+	Obj    Obj
+	Name   *ObjString
+	Fields map[*ObjString]Value // Map of field names to default values
 }
 
 type ObjInstance struct {
@@ -126,14 +127,6 @@ func CopyString(s string) *ObjString {
 	return NewObjString(s)
 }
 
-func NewStruct(name *ObjString) *ObjStruct {
-	instance := &ObjStruct{
-		Obj:  Obj{Type: OBJ_STRUCT},
-		Name: name,
-	}
-	return instance
-}
-
 func PrintObject(obj interface{}) {
 	switch o := obj.(type) {
 	case *ObjClosure:
@@ -169,10 +162,23 @@ func ObjVal(obj interface{}) Value {
 	return Value{Type: VAL_OBJ, Obj: obj}
 }
 
+func NewStruct(name *ObjString) *ObjStruct {
+	return &ObjStruct{
+		Obj:    Obj{Type: OBJ_STRUCT},
+		Name:   name,
+		Fields: make(map[*ObjString]Value),
+	}
+}
+
 func NewInstance(structure *ObjStruct) *ObjInstance {
-	return &ObjInstance{
+	instance := &ObjInstance{
 		Obj:       Obj{Type: OBJ_INSTANCE},
 		Structure: structure,
 		Fields:    make(map[*ObjString]Value),
 	}
+	// Initialize instance fields with default values from the struct
+	for name, value := range structure.Fields {
+		instance.Fields[name] = value
+	}
+	return instance
 }

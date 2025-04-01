@@ -1,9 +1,21 @@
+//go:build cgo
+// +build cgo
+
 package main
 
+/*
+#cgo pkg-config: readline
+#include <stdio.h>
+#include <stdlib.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+*/
+import "C"
+
 import (
-	"bufio"
 	"fmt"
 	"os"
+	"unsafe"
 
 	"github.com/cryptrunner49/gorex/internal/vm"
 )
@@ -16,7 +28,7 @@ func main() {
 	} else if len(os.Args) == 2 {
 		runFile(os.Args[1])
 	} else {
-		fmt.Fprintf(os.Stderr, "Usage: crex [path]\n")
+		fmt.Fprintf(os.Stderr, "Usage: goseedvm [path]\n")
 		os.Exit(1)
 	}
 
@@ -24,15 +36,27 @@ func main() {
 }
 
 func repl() {
-	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("> ")
-		line, err := reader.ReadString('\n')
-		if err != nil {
+		// Create a prompt string.
+		prompt := C.CString("> ")
+		// Call GNU readline to get input with history/navigation.
+		line := C.readline(prompt)
+		// Free the prompt string.
+		C.free(unsafe.Pointer(prompt))
+		if line == nil {
+			// EOF reached (e.g. Ctrl-D)
 			fmt.Println()
 			break
 		}
-		vm.Interpret(line)
+		// Convert C string to Go string.
+		input := C.GoString(line)
+		// Free the line allocated by readline.
+		C.free(unsafe.Pointer(line))
+		// Only add non-empty lines to history.
+		if len(input) > 0 {
+			C.add_history(C.CString(input))
+			vm.Interpret(input)
+		}
 	}
 }
 

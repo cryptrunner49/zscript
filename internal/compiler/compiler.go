@@ -281,15 +281,80 @@ func block() {
 }
 
 func structDeclaration() {
+	// Parse struct name.
 	consume(token.TOKEN_IDENTIFIER, "Expect struct name.")
 	nameConstant := identifierConstant(parser.previous)
 	declareVariable()
 
-	emitBytes(byte(runtime.OP_STRUCT), nameConstant)
-	defineVariable(nameConstant)
+	// Check if this is a brace-enclosed struct or a semicolon-terminated struct.
+	if match(token.TOKEN_LEFT_BRACE) {
+		// Collect fields and their default values.
+		fieldCount := 0
+		fieldNames := make([]*runtime.ObjString, 0)
+		fieldDefaults := make([]runtime.Value, 0)
 
-	consume(token.TOKEN_LEFT_BRACE, "Expect '{' before class body.")
-	consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after class body.")
+		// Only parse fields if we haven't immediately hit the closing brace.
+		if !check(token.TOKEN_RIGHT_BRACE) {
+			for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+				// Parse field name.
+				consume(token.TOKEN_IDENTIFIER, "Expect field name.")
+				fieldName := runtime.NewObjString(parser.previous.Start)
+				fieldNames = append(fieldNames, fieldName)
+
+				// Parse optional initializer.
+				var defaultValue runtime.Value
+				if match(token.TOKEN_EQUAL) {
+					if match(token.TOKEN_NUMBER) {
+						val, _ := strconv.ParseFloat(parser.previous.Start, 64)
+						defaultValue = runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
+					} else if match(token.TOKEN_STRING) {
+						text := parser.previous.Start
+						// Remove quotes.
+						str := text[1 : len(text)-1]
+						defaultValue = runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
+					} else if match(token.TOKEN_TRUE) {
+						defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
+					} else if match(token.TOKEN_FALSE) {
+						defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
+					} else if match(token.TOKEN_NULL) {
+						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
+					} else {
+						error("Expect literal value for field initializer.")
+						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
+					}
+				} else {
+					defaultValue = runtime.Value{Type: runtime.VAL_NULL}
+				}
+				fieldDefaults = append(fieldDefaults, defaultValue)
+				fieldCount++
+
+				// Handle field separators.
+				if !match(token.TOKEN_COMMA) && !check(token.TOKEN_RIGHT_BRACE) {
+					consume(token.TOKEN_SEMICOLON, "Expect ',' or '}' after field declaration.")
+				}
+			}
+		}
+
+		consume(token.TOKEN_RIGHT_BRACE, "Expect '}' after struct body.")
+
+		// Emit the complete struct definition.
+		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
+		emitByte(byte(fieldCount))
+		for i := 0; i < fieldCount; i++ {
+			nameConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fieldNames[i]})
+			defaultConst := makeConstant(fieldDefaults[i])
+			emitByte(nameConst)
+			emitByte(defaultConst)
+		}
+	} else {
+		// Semicolon-terminated empty struct (e.g., "struct Vector2D;").
+		consume(token.TOKEN_SEMICOLON, "Expect '{' or ';' after struct name.")
+		// Emit an empty struct definition (fieldCount = 0).
+		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
+		emitByte(0) // fieldCount = 0
+	}
+
+	defineVariable(nameConstant)
 }
 
 func declaration() {
@@ -469,8 +534,8 @@ func function(funcType FunctionType) {
 	consume(token.TOKEN_LEFT_BRACE, "Expect '{' before function body.")
 	block()
 	function := endCompiler()
-	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function})) // Changed to OP_CLOSURE
-	for i := 0; i < function.UpvalueCount; i++ {                                                           // Emit upvalue info
+	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function}))
+	for i := 0; i < function.UpvalueCount; i++ {
 		isLocal := compiler.upvalues[i].isLocal
 		index := compiler.upvalues[i].index
 		var byteToEmit byte

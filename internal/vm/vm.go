@@ -391,7 +391,14 @@ func run() InterpretResult {
 				frame = &vm.frames[vm.frameCount-1]
 			}
 		case uint8(runtime.OP_STRUCT):
-			objStruct := runtime.NewStruct(readString(frame))
+			name := readString(frame)
+			objStruct := runtime.NewStruct(name)
+			fieldCount := int(readByte(frame))
+			for i := 0; i < fieldCount; i++ {
+				fieldName := readConstant(frame).Obj.(*runtime.ObjString)
+				defaultValue := readConstant(frame)
+				objStruct.Fields[fieldName] = defaultValue
+			}
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objStruct})
 		}
 	}
