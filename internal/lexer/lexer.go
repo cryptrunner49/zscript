@@ -52,6 +52,10 @@ func ScanToken() token.Token {
 		return lexer.makeToken(token.TOKEN_LEFT_BRACE)
 	case '}':
 		return lexer.makeToken(token.TOKEN_RIGHT_BRACE)
+	case '[':
+		return lexer.makeToken(token.TOKEN_LEFT_BRACKET)
+	case ']':
+		return lexer.makeToken(token.TOKEN_RIGHT_BRACKET)
 	case ';':
 		return lexer.makeToken(token.TOKEN_SEMICOLON)
 	case ',':
@@ -90,6 +94,18 @@ func ScanToken() token.Token {
 		return lexer.makeToken(token.TOKEN_GREATER)
 	case '"':
 		return lexer.string()
+	case '\'':
+		return lexer.char()
+	case '|':
+		return lexer.makeToken(token.TOKEN_PIPE)
+	case '?':
+		return lexer.makeToken(token.TOKEN_QUESTION)
+	case '@':
+		return lexer.makeToken(token.TOKEN_AT)
+	case '#':
+		return lexer.makeToken(token.TOKEN_HASH)
+	case '$':
+		return lexer.makeToken(token.TOKEN_DOLLAR)
 	}
 
 	return lexer.errorToken("Unexpected character.")
@@ -212,6 +228,52 @@ func (l *Lexer) string() token.Token {
 	return l.makeToken(token.TOKEN_STRING)
 }
 
+func (l *Lexer) char() token.Token {
+	// If we reached the end, we have an error.
+	if l.isAtEnd() {
+		return l.errorToken("Unterminated character literal.")
+	}
+
+	// Read the character value (supporting escape sequences if your language allows them)
+	var value []rune
+
+	// Check for escape sequence:
+	if l.peek() == '\\' {
+		l.advance() // Consume the backslash
+		if l.isAtEnd() {
+			return l.errorToken("Unterminated escape sequence in character literal.")
+		}
+		// Consume escaped character (this is simplistic, adapt if you support more escapes)
+		value = append(value, rune(l.advance()))
+	} else {
+		// Normal character
+		value = append(value, rune(l.advance()))
+	}
+
+	// Make sure there is no more than one character for a valid character literal.
+	// Optionally: you might want to issue an error if more than one character is encountered
+	// before the closing quote.
+	if !l.isAtEnd() && l.peek() != '\'' {
+		// Optional: consume characters until the closing single quote (or end) to sync error recovery.
+		for l.peek() != '\'' && !l.isAtEnd() {
+			l.advance()
+		}
+		if l.isAtEnd() {
+			return l.errorToken("Unterminated character literal.")
+		}
+		return l.errorToken("Character literal must contain exactly one character.")
+	}
+
+	// Expect and consume the closing single quote.
+	if l.isAtEnd() || l.peek() != '\'' {
+		return l.errorToken("Unterminated character literal.")
+	}
+	l.advance() // Consume the closing quote
+
+	// Assuming that l.makeToken takes the token type and uses the text from start to the current position.
+	return l.makeToken(token.TOKEN_CHAR)
+}
+
 func (l *Lexer) number() token.Token {
 	for unicode.IsDigit(l.peek()) {
 		l.advance()
@@ -238,7 +300,7 @@ func (l *Lexer) identifier() token.Token {
 
 func isOperatorRune(r rune) bool {
 	switch r {
-	case '(', ')', '{', '}', ';', ',', '.', '-', '+', '/', '%', '@', '#', '$', '*', '!', '=', '<', '>', '"':
+	case '(', ')', '{', '}', '[', ']', '|', '?', ';', ',', '.', '-', '+', '/', '%', '@', '#', '$', '*', '!', '=', '<', '>', '"', '\'':
 		return true
 	default:
 		return false

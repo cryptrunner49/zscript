@@ -42,6 +42,8 @@ const (
 	OP_BREAK
 	OP_CONTINUE
 	OP_STRUCT
+	OP_ARRAY
+	OP_MAP
 )
 
 type Chunk struct {

@@ -99,6 +99,8 @@ func init() {
 	rules[token.TOKEN_RIGHT_PAREN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_LEFT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RIGHT_BRACE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_LEFT_BRACKET] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_RIGHT_BRACKET] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_COMMA] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_DOT] = ParseRule{nil, dot, PREC_CALL}
 	rules[token.TOKEN_MINUS] = ParseRule{unary, binary, PREC_TERM}
@@ -107,6 +109,11 @@ func init() {
 	rules[token.TOKEN_SLASH] = ParseRule{nil, binary, PREC_FACTOR}
 	rules[token.TOKEN_PERCENT] = ParseRule{nil, binary, PREC_FACTOR}
 	rules[token.TOKEN_STAR] = ParseRule{nil, binary, PREC_FACTOR}
+	rules[token.TOKEN_PIPE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_QUESTION] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_AT] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_HASH] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_DOLLAR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_BANG] = ParseRule{unary, nil, PREC_NONE}
 	rules[token.TOKEN_BANG_EQUAL] = ParseRule{nil, binary, PREC_EQUALITY}
 	rules[token.TOKEN_EQUAL] = ParseRule{nil, nil, PREC_NONE}
@@ -116,6 +123,7 @@ func init() {
 	rules[token.TOKEN_LESS] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_LESS_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_IDENTIFIER] = ParseRule{variable, nil, PREC_NONE}
+	rules[token.TOKEN_CHAR] = ParseRule{charLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_STRING] = ParseRule{stringLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_NUMBER] = ParseRule{number, nil, PREC_NONE}
 	rules[token.TOKEN_AND] = ParseRule{nil, and, PREC_AND}
@@ -381,6 +389,16 @@ func stringLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
 		error("Invalid string literal; must be enclosed in quotes (e.g., \"hello\").")
+		return
+	}
+	str := text[1 : len(text)-1]
+	emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)})
+}
+
+func charLiteral(canAssign bool) {
+	text := parser.previous.Start
+	if len(text) < 2 {
+		error("Invalid char literal; must be enclosed in quotes (e.g., 'a').")
 		return
 	}
 	str := text[1 : len(text)-1]
