@@ -1,15 +1,25 @@
-fn outer() {
-    var x = "value";
-    fn middle() {
-        fn inner() {
-            print x;
-        }
-        print "create inner closure";
-        return inner;
+// Unicode
+fn 计数器を作る() {
+    var 数値 = 0;
+    fn 増やす() {
+        数値 = 数値 + 1;
+        return 数値;
     }
-    print "return from outer";
-    return middle;
+    return 増やす;
 }
-var mid = outer();
-var in = mid();
-in();
+var 计数器 = 计数器を作る();
+print(计数器()); // Outputs: 1
+print(计数器()); // Outputs: 2
+
+// ASCII
+fn makeCounter() {
+    var value = 0;
+    fn increment() {
+        value = value + 1;
+        return value;
+    }
+    return increment;
+}
+var counter = makeCounter();
+print(counter()); // Outputs: 1
+print(counter()); // Outputs: 2

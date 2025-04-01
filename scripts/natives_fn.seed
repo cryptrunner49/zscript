@@ -1,0 +1,29 @@
+// Test clock
+var 時間 = clock();
+var ⏰ = clock();
+print(時間); // Outputs: e.g., 1712000000.123
+print(⏰);  // Outputs: e.g., 1712000000.124
+
+var time = clock();
+var now = clock();
+print(time); // Outputs: e.g., 1712000000.123
+print(now);  // Outputs: e.g., 1712000000.124
+
+// Test to_str with different types
+print to_str(42);          // Outputs: 42
+print to_str(true);        // Outputs: true
+print to_str(false);       // Outputs: false
+print to_str(null);        // Outputs: null
+print to_str("hello");     // Outputs: hello
+print to_str(clock);       // Outputs: <native fn>
+
+fn test() {
+    return "test";
+}
+print to_str(test);        // Outputs: <fn test>
+
+struct Test {}
+print to_str(Test);        // Outputs: <struct Test>
+
+var inst = Test();
+print to_str(inst);        // Outputs: <instance>

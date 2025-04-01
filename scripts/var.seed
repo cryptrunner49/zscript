@@ -1,0 +1,29 @@
+// Number
+var num = 42;
+print(num);  // Outputs: 42
+
+// String
+var message = "Hello, Seed!";
+print(message);  // Outputs: Hello, Seed!
+
+// Boolean
+var isTrue = true;
+print(isTrue);  // Outputs: true
+
+// Null
+var nothing = null;
+print(nothing);  // Outputs: null
+
+// Unicode variable names
+var π = 3.14;
+print(π);  // Outputs: 3.14
+
+var 挨拶 = "こんにちは";
+print(挨拶);  // Outputs: こんにちは
+
+// Emoji variable names
+var 🔢 = 100;
+print(🔢);  // Outputs: 100
+
+var 💬 = "Emoji!";
+print(💬);  // Outputs: Emoji!

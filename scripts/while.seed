@@ -1,0 +1,13 @@
+// Unicode
+var 计数 = 0;
+while (计数 < 3) {
+    print(to_str(计数) + "🔄"); // Outputs: 0🔄, 1🔄, 2🔄
+    计数 = 计数 + 1;
+}
+
+// ASCII
+var count = 0;
+while (count < 3) {
+    print(count); // Outputs: 0, 1, 2
+    count = count + 1;
+}

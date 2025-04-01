@@ -1,0 +1,15 @@
+// Unicode
+var 色 = "赤";
+if (色 == "赤") {
+    print("これは赤だ！"); // Outputs: これは赤だ！
+} else {
+    print("❌赤じゃない。");
+}
+
+// ASCII
+var color = "red";
+if (color == "red") {
+    print("This is red!"); // Outputs: This is red!
+} else {
+    print("Not red.");
+}

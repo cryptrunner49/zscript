@@ -1,0 +1,15 @@
+fn fib(n) {
+    if (n < 2) return n;
+    var a = 0;
+    var b = 1;
+    for (var i = 2; i <= n; i = i + 1) {
+        var temp = a + b;
+        a = b;
+        b = temp;
+    }
+    return b;
+}
+
+var start = clock();
+print fib(16);  // Outputs: 987
+print clock() - start;  // Outputs: time taken (faster than recursion)

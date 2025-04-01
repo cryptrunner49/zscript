@@ -1,0 +1,7 @@
+// Unicode
+var ❎ = -10;
+print(❎);  // Outputs: -10
+
+// ASCII
+var negative = -10;
+print(negative); // Outputs: -10

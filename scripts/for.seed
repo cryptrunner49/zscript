@@ -1,0 +1,9 @@
+// Unicode
+for (var 回 = 0; 回 < 3; 回 = 回 + 1) {
+    print(to_str(回) + "🔢"); // Outputs: 0🔢, 1🔢, 2🔢
+}
+
+// ASCII
+for (var i = 0; i < 3; i = i + 1) {
+    print(i); // Outputs: 0, 1, 2
+}

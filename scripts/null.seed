@@ -1,0 +1,11 @@
+// Unicode
+var 無 = null;
+var 🚫 = null;
+print(無);  // Outputs: null
+print(🚫);  // Outputs: null
+
+// ASCII
+var nothing = null;
+var none = null;
+print(nothing); // Outputs: null
+print(none);    // Outputs: null

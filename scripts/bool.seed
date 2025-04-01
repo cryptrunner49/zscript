@@ -1,0 +1,11 @@
+// Unicode
+var 真 = true;
+var ✅ = false;
+print(真); // Outputs: true
+print(✅); // Outputs: false
+
+// ASCII
+var truth = true;
+var ok = false;
+print(truth); // Outputs: true
+print(ok);    // Outputs: false

@@ -1,0 +1,27 @@
+// Unicode
+fn 挨拶する(名) {
+    return "こんにちは、" + 名 + "！";
+}
+var メッセージ = 挨拶する("🙋‍♂️");
+print(メッセージ); // Outputs: こんにちは、🙋‍♂️！
+
+// ASCII
+fn greet(name) {
+    return "Hello, " + name + "!";
+}
+var msg = greet("Seed");
+print(msg); // Outputs: Hello, Seed!
+
+// Unicode
+fn 加える(甲, 乙) {
+    return 甲 + 乙;
+}
+var 合計 = 加える(5, 3);
+print(合計); // Outputs: 8
+
+// ASCII
+fn add(a, b) {
+    return a + b;
+}
+var total = add(5, 3);
+print(total); // Outputs: 8

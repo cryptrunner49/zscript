@@ -5,10 +5,10 @@ fn outer() {
         var c = 3;
         var d = 4;
         fn inner() {
-            print a + c + b + d;
+            print a + c + b + d;  // Accesses variables from outer scopes
         }
         inner();
     }
     middle();
 }
-outer();
+outer();  // Outputs: 10 (1 + 3 + 2 + 4)

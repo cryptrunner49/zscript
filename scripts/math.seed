@@ -1,0 +1,51 @@
+// π
+var π = 3.14;
+var pi = 3.14;
+
+// Addition Unicode
+var 和 = 5 + 3;
+var ➕ = π + 2;
+print(和); // Outputs: 8
+print(➕); // Outputs: 5.14
+
+// Addition ASCII
+var sum = 5 + 3;
+var add = pi + 2;
+print(sum); // Outputs: 8
+print(add); // Outputs: 5.14
+
+// Subtraction Unicode
+var 差 = 10 - 4;
+var ➖ = 7 - π;
+print(差); // Outputs: 6
+print(➖); // Outputs: 3.86
+
+// Subtraction ASCII
+var diff = 10 - 4;
+var sub = 7 - pi;
+print(diff); // Outputs: 6
+print(sub);  // Outputs: 3.86
+
+// Multiplication Unicode
+var 積 = 6 * 7;
+var ✖️ = π * 2;
+print(積);  // Outputs: 42
+print(✖️);  // Outputs: 6.28
+
+// Multiplication ASCII
+var prod = 6 * 7;
+var mult = pi * 2;
+print(prod); // Outputs: 42
+print(mult); // Outputs: 6.28
+
+// Division Unicode
+var 商 = 15 / 3;
+var ➗ = 10 / π;
+print(商); // Outputs: 5
+print(➗); // Outputs: 3.183
+
+// Division ASCII
+var quot = 15 / 3;
+var div = 10 / pi;
+print(quot); // Outputs: 5
+print(div);  // Outputs: 3.183

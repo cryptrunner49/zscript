@@ -4,5 +4,5 @@ fn fib(n) {
 }
 
 var start = clock();
-print fib(16);
-print clock() - start;
+print fib(16);  // Outputs: 987
+print clock() - start;  // Outputs: time taken

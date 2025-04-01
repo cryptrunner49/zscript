@@ -1,0 +1,37 @@
+// Unicode
+var 挨拶 = "Hello, world!";
+var 💬 = "Chat!";
+print(挨拶); // Outputs: Hello, world!
+print(💬);   // Outputs: Chat!
+
+// ASCII
+var greeting = "Hello, world!";
+var message = "Chat!";
+print(greeting); // Outputs: Hello, world!
+print(message);  // Outputs: Chat!
+
+// Concatenation Unicode
+var 挨拶文 = "Hello, " + "Seed!";
+var 💬➕ = "Hi" + "!";
+print(挨拶文); // Outputs: Hello, Seed!
+print(💬➕);   // Outputs: Hi!
+
+// Concatenation ASCII
+var greetingText = "Hello, " + "Seed!";
+var msgAdd = "Hi" + "!";
+print(greetingText); // Outputs: Hello, Seed!
+print(msgAdd);       // Outputs: Hi!
+
+// Cropping Unicode
+var 文章 = "Hello, world!";
+var 切り取り = 文章 - "world";
+var ✂️ = "abcde" - "c";
+print(切り取り); // Outputs: Hello, !
+print(✂️);      // Outputs: abde
+
+// Cropping ASCII
+var text = "Hello, world!";
+var cropped = text - "world";
+var trim = "abcde" - "c";
+print(cropped); // Outputs: Hello, !
+print(trim);    // Outputs: abde
