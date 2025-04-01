@@ -5,11 +5,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cryptrunner49/gorex/internal/common"
-	"github.com/cryptrunner49/gorex/internal/debug"
-	"github.com/cryptrunner49/gorex/internal/lexer"
-	"github.com/cryptrunner49/gorex/internal/runtime"
-	"github.com/cryptrunner49/gorex/internal/token"
+	"github.com/cryptrunner49/goseedvm/internal/common"
+	"github.com/cryptrunner49/goseedvm/internal/debug"
+	"github.com/cryptrunner49/goseedvm/internal/lexer"
+	"github.com/cryptrunner49/goseedvm/internal/runtime"
+	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
 type FunctionType int

@@ -7,10 +7,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/cryptrunner49/gorex/internal/common"
-	"github.com/cryptrunner49/gorex/internal/compiler"
-	"github.com/cryptrunner49/gorex/internal/debug"
-	"github.com/cryptrunner49/gorex/internal/runtime"
+	"github.com/cryptrunner49/goseedvm/internal/common"
+	"github.com/cryptrunner49/goseedvm/internal/compiler"
+	"github.com/cryptrunner49/goseedvm/internal/debug"
+	"github.com/cryptrunner49/goseedvm/internal/runtime"
 )
 
 const (

@@ -1,0 +1,17 @@
+//🐱
+struct Cat {}
+var kitty = Cat();
+kitty.name = "Whiskers";
+kitty.age = 2;
+print(kitty.name);
+
+//🐶
+struct Dog { breed = "Labrador"; age = 3; color = "Golden"; }
+var buddy = Dog();
+print(buddy.breed);
+
+//🐰🥕
+struct Bunny;
+var thumper = Bunny();
+thumper.favoriteFood = "Carrots";
+print(thumper.favoriteFood);

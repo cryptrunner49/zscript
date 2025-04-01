@@ -3,7 +3,7 @@ package lexer
 import (
 	"unicode"
 
-	"github.com/cryptrunner49/gorex/internal/token"
+	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
 type Lexer struct {

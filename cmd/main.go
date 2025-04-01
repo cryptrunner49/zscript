@@ -17,7 +17,7 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/cryptrunner49/gorex/internal/vm"
+	"github.com/cryptrunner49/goseedvm/internal/vm"
 )
 
 func main() {
