@@ -49,3 +49,7 @@ var quot = 15 / 3;
 var div = 10 / pi;
 print(quot); // Outputs: 5
 print(div);  // Outputs: 3.183
+
+// Module
+var mod = 10 % 2;
+print(mod);

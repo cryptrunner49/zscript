@@ -363,6 +363,12 @@ func run() InterpretResult {
 		case uint8(runtime.OP_LOOP):
 			offset := int(readShort(frame))
 			frame.ip -= offset
+		case uint8(runtime.OP_BREAK):
+			offset := int(readShort(frame))
+			frame.ip += offset
+		case uint8(runtime.OP_CONTINUE):
+			offset := int(readShort(frame))
+			frame.ip -= offset
 		case uint8(runtime.OP_CALL):
 			argCount := int(readByte(frame))
 			if !callValue(peek(argCount), argCount) {

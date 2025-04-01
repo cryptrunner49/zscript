@@ -278,6 +278,20 @@ func (l *Lexer) identifierType() token.TokenType {
 		return token.TOKEN_VAR
 	case "while":
 		return token.TOKEN_WHILE
+	case "break":
+		return token.TOKEN_BREAK
+	case "continue":
+		return token.TOKEN_CONTINUE
+	case "match":
+		return token.TOKEN_MATCH
+	case "with":
+		return token.TOKEN_WITH
+	case "through":
+		return token.TOKEN_THROUGH
+	case "import":
+		return token.TOKEN_IMPORT
+	case "export":
+		return token.TOKEN_EXPORT
 	default:
 		return token.TOKEN_IDENTIFIER
 	}

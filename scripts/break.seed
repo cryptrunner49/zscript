@@ -1,0 +1,23 @@
+// Example with while and break
+var i = 0;
+print "While loop with break:";
+while (i < 10) {
+    print i;
+    i = i + 1;
+    if (i == 4) {
+        print "Breaking at i = 4";
+        break;
+    }
+}
+print "Exited while loop";
+
+// Example with for and break
+print "For loop with break:";
+for (var i = 0; i < 10; i = i + 1) {
+    print i;
+    if (i == 6) {
+        print "Breaking at i = 6";
+        break;
+    }
+}
+print "Exited for loop";
