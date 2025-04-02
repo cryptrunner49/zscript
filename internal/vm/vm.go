@@ -307,58 +307,343 @@ func run() InterpretResult {
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: a.Number < b.Number})
 		case uint8(runtime.OP_ADD):
-			// Addition: support both numeric addition and string concatenation.
-			if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				concatenate()
-			} else if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+			// Addition: support both numeric addition, string concatenation,
+			// and element-wise addition on arrays.
+			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+				// Simple numeric addition.
 				binaryOp(func(a, b float64) float64 { return a + b }, "+")
+			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
+				// Check if both operands are arrays.
+				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				if ok1 && ok2 {
+					len1 := len(arr1.Elements)
+					len2 := len(arr2.Elements)
+					maxLen := len1
+					if len2 > maxLen {
+						maxLen = len2
+					}
+					result := make([]runtime.Value, maxLen)
+					minLen := len1
+					if len2 < minLen {
+						minLen = len2
+					}
+					// Element-wise addition for indices present in both arrays.
+					for i := 0; i < minLen; i++ {
+						v1 := arr1.Elements[i]
+						v2 := arr2.Elements[i]
+						if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
+							result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number + v2.Number}
+						} else {
+							s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
+							s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
+							result[i] = runtime.ObjVal(runtime.NewObjString(s1 + s2))
+						}
+					}
+					// Copy the remaining elements from the longer array.
+					if len1 > len2 {
+						for i := minLen; i < len1; i++ {
+							result[i] = arr1.Elements[i]
+						}
+					} else {
+						for i := minLen; i < len2; i++ {
+							result[i] = arr2.Elements[i]
+						}
+					}
+					Pop() // Pop second array.
+					Pop() // Pop first array.
+					Push(runtime.ObjVal(runtime.NewArray(result)))
+				} else {
+					// Fallback: if not arrays, attempt string concatenation.
+					concatenate()
+				}
 			} else {
-				return runtimeError("Operator '+' requires two numbers or two strings (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+				// Mixed types: convert both to strings and concatenate.
+				s1 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
+				s2 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
+				Push(runtime.ObjVal(runtime.NewObjString(s2 + s1)))
 			}
 		case uint8(runtime.OP_SUBTRACT):
-			// Subtraction: supports numeric subtraction and a special "crop" operation for strings.
-			if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				crop()
-			} else if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+			// Subtraction: supports numeric subtraction, string cropping,
+			// and element-wise subtraction on arrays.
+			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+				// Simple numeric subtraction.
 				binaryOp(func(a, b float64) float64 { return a - b }, "-")
+			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
+				// Check if both operands are arrays.
+				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				if ok1 && ok2 {
+					len1 := len(arr1.Elements)
+					len2 := len(arr2.Elements)
+					maxLen := len1
+					if len2 > maxLen {
+						maxLen = len2
+					}
+					result := make([]runtime.Value, maxLen)
+					minLen := len1
+					if len2 < minLen {
+						minLen = len2
+					}
+					// Element-wise subtraction (or crop) for indices present in both arrays.
+					for i := 0; i < minLen; i++ {
+						v1 := arr1.Elements[i]
+						v2 := arr2.Elements[i]
+						if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
+							result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number - v2.Number}
+						} else {
+							s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
+							s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
+							idx := strings.Index(s1, s2)
+							if idx >= 0 {
+								result[i] = runtime.ObjVal(runtime.NewObjString(s1[:idx] + s1[idx+len(s2):]))
+							} else {
+								result[i] = runtime.ObjVal(runtime.NewObjString(s1))
+							}
+						}
+					}
+					// Copy the remaining elements from the longer array.
+					if len1 > len2 {
+						for i := minLen; i < len1; i++ {
+							result[i] = arr1.Elements[i]
+						}
+					} else {
+						for i := minLen; i < len2; i++ {
+							result[i] = arr2.Elements[i]
+						}
+					}
+					Pop()
+					Pop()
+					Push(runtime.ObjVal(runtime.NewArray(result)))
+				} else {
+					// Fallback to string crop.
+					crop()
+				}
 			} else {
-				return runtimeError("Operator '-' requires two numbers or two strings (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+				// Mixed types: convert both to strings and perform crop.
+				s1 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
+				s2 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
+				idx := strings.Index(s1, s2)
+				if idx >= 0 {
+					Push(runtime.ObjVal(runtime.NewObjString(s1[:idx] + s1[idx+len(s2):])))
+				} else {
+					Push(runtime.ObjVal(runtime.NewObjString(s1)))
+				}
 			}
 		case uint8(runtime.OP_MULTIPLY):
-			// Multiplication: only defined for numbers.
-			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Both operands for '*' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			// Multiplication: supports both numbers and arrays of numbers.
+			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+				binaryOp(func(a, b float64) float64 { return a * b }, "*")
+			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
+				// Both operands must be arrays.
+				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				if !ok1 || !ok2 {
+					return runtimeError("Both operands for '*' must be numbers or arrays of numbers.")
+				}
+				// Verify all elements are numbers.
+				for _, elem := range arr1.Elements {
+					if elem.Type != runtime.VAL_NUMBER {
+						return runtimeError("All elements in the first array must be numbers.")
+					}
+				}
+				for _, elem := range arr2.Elements {
+					if elem.Type != runtime.VAL_NUMBER {
+						return runtimeError("All elements in the second array must be numbers.")
+					}
+				}
+				len1 := len(arr1.Elements)
+				len2 := len(arr2.Elements)
+				maxLen := len1
+				if len2 > maxLen {
+					maxLen = len2
+				}
+				result := make([]runtime.Value, maxLen)
+				minLen := len1
+				if len2 < minLen {
+					minLen = len2
+				}
+				// Element-wise multiplication up to the shorter array length.
+				for i := 0; i < minLen; i++ {
+					a := arr1.Elements[i].Number
+					b := arr2.Elements[i].Number
+					result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: a * b}
+				}
+				// Copy the remaining elements from the longer array.
+				if len1 > len2 {
+					for i := minLen; i < len1; i++ {
+						result[i] = arr1.Elements[i]
+					}
+				} else {
+					for i := minLen; i < len2; i++ {
+						result[i] = arr2.Elements[i]
+					}
+				}
+				Pop() // Pop the top (second) array.
+				Pop() // Pop the first array.
+				Push(runtime.ObjVal(runtime.NewArray(result)))
+			} else {
+				return runtimeError("Operator '*' requires two numbers or two arrays of numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
-			binaryOp(func(a, b float64) float64 { return a * b }, "*")
 		case uint8(runtime.OP_DIVIDE):
-			// Division: check for division by zero.
-			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Both operands for '/' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			// Division: supports both numbers and arrays of numbers.
+			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+				// Check division by zero.
+				if peek(0).Number == 0 {
+					return runtimeError("Division by zero is not allowed.")
+				}
+				binaryOp(func(a, b float64) float64 { return a / b }, "/")
+			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
+				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				if !ok1 || !ok2 {
+					return runtimeError("Both operands for '/' must be numbers or arrays of numbers.")
+				}
+				for _, elem := range arr1.Elements {
+					if elem.Type != runtime.VAL_NUMBER {
+						return runtimeError("All elements in the first array must be numbers.")
+					}
+				}
+				for _, elem := range arr2.Elements {
+					if elem.Type != runtime.VAL_NUMBER {
+						return runtimeError("All elements in the second array must be numbers.")
+					}
+				}
+				len1 := len(arr1.Elements)
+				len2 := len(arr2.Elements)
+				maxLen := len1
+				if len2 > maxLen {
+					maxLen = len2
+				}
+				result := make([]runtime.Value, maxLen)
+				minLen := len1
+				if len2 < minLen {
+					minLen = len2
+				}
+				// Perform element-wise division with division-by-zero check.
+				for i := 0; i < minLen; i++ {
+					bVal := arr2.Elements[i].Number
+					if bVal == 0 {
+						return runtimeError("Division by zero is not allowed at index %d.", i)
+					}
+					aVal := arr1.Elements[i].Number
+					result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: aVal / bVal}
+				}
+				// Copy remaining elements from the longer array.
+				if len1 > len2 {
+					for i := minLen; i < len1; i++ {
+						result[i] = arr1.Elements[i]
+					}
+				} else {
+					for i := minLen; i < len2; i++ {
+						bVal := arr2.Elements[i].Number
+						if bVal == 0 {
+							return runtimeError("Division by zero is not allowed at index %d.", i)
+						}
+						result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: arr2.Elements[i].Number}
+					}
+				}
+				Pop()
+				Pop()
+				Push(runtime.ObjVal(runtime.NewArray(result)))
+			} else {
+				return runtimeError("Operator '/' requires two numbers or two arrays of numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
-			if peek(1).Number == 0 {
-				return runtimeError("Division by zero is not allowed.")
-			}
-			binaryOp(func(a, b float64) float64 { return a / b }, "/")
 		case uint8(runtime.OP_MOD):
-			// Modulo operation: check for modulo by zero.
-			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
-				return runtimeError("Both operands for '%%' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			// Modulo: supports both numbers and arrays of numbers.
+			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
+				if peek(0).Number == 0 {
+					return runtimeError("Modulo by zero is not allowed.")
+				}
+				binaryOp(func(a, b float64) float64 { return math.Mod(a, b) }, "%")
+			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
+				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				if !ok1 || !ok2 {
+					return runtimeError("Both operands for '%%' must be numbers or arrays of numbers.")
+				}
+				for _, elem := range arr1.Elements {
+					if elem.Type != runtime.VAL_NUMBER {
+						return runtimeError("All elements in the first array must be numbers.")
+					}
+				}
+				for _, elem := range arr2.Elements {
+					if elem.Type != runtime.VAL_NUMBER {
+						return runtimeError("All elements in the second array must be numbers.")
+					}
+				}
+				len1 := len(arr1.Elements)
+				len2 := len(arr2.Elements)
+				maxLen := len1
+				if len2 > maxLen {
+					maxLen = len2
+				}
+				result := make([]runtime.Value, maxLen)
+				minLen := len1
+				if len2 < minLen {
+					minLen = len2
+				}
+				// Perform element-wise modulo with check for division by zero.
+				for i := 0; i < minLen; i++ {
+					bVal := arr2.Elements[i].Number
+					if bVal == 0 {
+						return runtimeError("Modulo by zero is not allowed at index %d.", i)
+					}
+					aVal := arr1.Elements[i].Number
+					result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: math.Mod(aVal, bVal)}
+				}
+				// Copy remaining elements from the longer array.
+				if len1 > len2 {
+					for i := minLen; i < len1; i++ {
+						result[i] = arr1.Elements[i]
+					}
+				} else {
+					for i := minLen; i < len2; i++ {
+						bVal := arr2.Elements[i].Number
+						if bVal == 0 {
+							return runtimeError("Modulo by zero is not allowed at index %d.", i)
+						}
+						result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: math.Mod(arr2.Elements[i].Number, bVal)}
+					}
+				}
+				Pop()
+				Pop()
+				Push(runtime.ObjVal(runtime.NewArray(result)))
+			} else {
+				return runtimeError("Operator '%%' requires two numbers or two arrays of numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
-			if peek(1).Number == 0 {
-				return runtimeError("Modulo by zero is not allowed.")
-			}
-			binaryOp(func(a, b float64) float64 { return math.Mod(a, b) }, "%")
 		case uint8(runtime.OP_NOT):
 			// Logical NOT: converts a value to its boolean negation.
 			val := Pop()
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: isFalsey(val)})
 		case uint8(runtime.OP_NEGATE):
-			// Negation: applies unary minus to a number.
-			if peek(0).Type != runtime.VAL_NUMBER {
+			// Negation: applies unary minus to a number or an array of numbers.
+			if peek(0).Type == runtime.VAL_NUMBER {
+				val := Pop()
+				Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: -val.Number})
+			} else if peek(0).Type == runtime.VAL_OBJ {
+				// Check if the object is an array.
+				if array, ok := peek(0).Obj.(*runtime.ObjArray); ok {
+					// Verify that every element is a number.
+					for _, elem := range array.Elements {
+						if elem.Type != runtime.VAL_NUMBER {
+							return runtimeError("Unary '-' requires a number or an array of numbers (got non-number element).")
+						}
+					}
+					// Create a new array with negated numbers.
+					newElements := make([]runtime.Value, len(array.Elements))
+					for i, elem := range array.Elements {
+						newElements[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: -elem.Number}
+					}
+					// Pop the original array and push the new negated array.
+					Pop()
+					Push(runtime.ObjVal(runtime.NewArray(newElements)))
+				} else {
+					return runtimeError("Unary '-' requires a number or an array of numbers (got %s).", typeName(peek(0)))
+				}
+			} else {
 				return runtimeError("Unary '-' requires a number (got %s).", typeName(peek(0)))
 			}
-			val := Pop()
-			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: -val.Number})
 		case uint8(runtime.OP_PRINT):
 			// Print the top value on the stack.
 			runtime.PrintValue(Pop())
