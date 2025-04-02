@@ -320,9 +320,7 @@ func run() InterpretResult {
 			if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
 				crop()
 			} else if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				b := Pop()
-				a := Pop()
-				Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number - b.Number})
+				binaryOp(func(a, b float64) float64 { return a - b }, "-")
 			} else {
 				return runtimeError("Operator '-' requires two numbers or two strings (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
@@ -331,31 +329,25 @@ func run() InterpretResult {
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
 				return runtimeError("Both operands for '*' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
-			b := Pop()
-			a := Pop()
-			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number * b.Number})
+			binaryOp(func(a, b float64) float64 { return a * b }, "*")
 		case uint8(runtime.OP_DIVIDE):
 			// Division: check for division by zero.
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
 				return runtimeError("Both operands for '/' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
-			b := Pop()
-			if b.Number == 0 {
+			if peek(1).Number == 0 {
 				return runtimeError("Division by zero is not allowed.")
 			}
-			a := Pop()
-			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number / b.Number})
+			binaryOp(func(a, b float64) float64 { return a / b }, "/")
 		case uint8(runtime.OP_MOD):
 			// Modulo operation: check for modulo by zero.
 			if peek(0).Type != runtime.VAL_NUMBER || peek(1).Type != runtime.VAL_NUMBER {
 				return runtimeError("Both operands for '%%' must be numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
 			}
-			b := Pop()
-			if b.Number == 0 {
+			if peek(1).Number == 0 {
 				return runtimeError("Modulo by zero is not allowed.")
 			}
-			a := Pop()
-			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: math.Mod(a.Number, b.Number)})
+			binaryOp(func(a, b float64) float64 { return math.Mod(a, b) }, "%")
 		case uint8(runtime.OP_NOT):
 			// Logical NOT: converts a value to its boolean negation.
 			val := Pop()
