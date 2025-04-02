@@ -9,6 +9,7 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
+// errorAt reports an error at a specific token and prints the error message along with the line number.
 func errorAt(t token.Token, message string) {
 	if parser.panicMode {
 		return
@@ -18,7 +19,7 @@ func errorAt(t token.Token, message string) {
 	if t.Type == token.TOKEN_EOF {
 		fmt.Fprintf(os.Stderr, " at end of file")
 	} else if t.Type == token.TOKEN_ERROR {
-		// Lexer error already reported
+		// Lexer error already reported, no further action required.
 	} else {
 		fmt.Fprintf(os.Stderr, " at '%s'", t.Start)
 	}
@@ -26,18 +27,22 @@ func errorAt(t token.Token, message string) {
 	parser.hadError = true
 }
 
+// error reports an error using the previous token.
 func error(message string) {
 	errorAt(parser.previous, message)
 }
 
+// errorAtCurrent reports an error at the current token.
 func errorAtCurrent(message string) {
 	errorAt(parser.current, message)
 }
 
+// currentChunk retrieves the current chunk of bytecode being compiled.
 func currentChunk() *runtime.Chunk {
 	return &current.function.Chunk
 }
 
+// advance moves to the next token, skipping over any lexer errors and reporting them.
 func advance() {
 	parser.previous = parser.current
 	for {
@@ -49,6 +54,7 @@ func advance() {
 	}
 }
 
+// consume expects the current token to be of a specific type and advances, or reports an error.
 func consume(typ token.TokenType, message string) {
 	if parser.current.Type == typ {
 		advance()
@@ -57,10 +63,12 @@ func consume(typ token.TokenType, message string) {
 	errorAtCurrent(message)
 }
 
+// check returns true if the current token is of the expected type.
 func check(typ token.TokenType) bool {
 	return parser.current.Type == typ
 }
 
+// match checks for a token type match and advances if a match is found.
 func match(typ token.TokenType) bool {
 	if !check(typ) {
 		return false
@@ -69,6 +77,7 @@ func match(typ token.TokenType) bool {
 	return true
 }
 
+// argumentList compiles the list of arguments in a function call and returns the count.
 func argumentList() uint8 {
 	var argCount uint8 = 0
 	if !check(token.TOKEN_RIGHT_PAREN) {
@@ -87,6 +96,7 @@ func argumentList() uint8 {
 	return argCount
 }
 
+// synchronize discards tokens until it reaches a statement boundary, helping recover from errors.
 func synchronize() {
 	parser.panicMode = false
 	for parser.current.Type != token.TOKEN_EOF {
@@ -102,10 +112,12 @@ func synchronize() {
 	}
 }
 
+// identifierConstant creates a constant for an identifier (variable name) and returns its index.
 func identifierConstant(name token.Token) uint8 {
 	return makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(name.Start)})
 }
 
+// identifiersEqual checks if two identifier tokens are equal based on their string content.
 func identifiersEqual(a, b token.Token) bool {
 	return a.Start == b.Start
 }

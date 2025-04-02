@@ -1,3 +1,6 @@
+enable_debug();
+enable_trace();
+
 // Example with while and break
 var i = 0;
 print "While loop with break:";

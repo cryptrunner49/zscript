@@ -5,9 +5,6 @@ print len(arr);     // Prints 3
 push(arr, 4);       // Adds element
 print pop(arr);     // Prints and removes 4
 
-
-
-
 print "---for loop---";
 // Traditional for loop with index
 var arr = [10, 20, 30, 40];
@@ -18,21 +15,29 @@ for (var i = 0; i < len(arr); i = i + 1) {
 print "---iterator---";
 // Or using the iterator pattern
 var arr = [10, 20, 30, 40];
-var iter = array_iter(arr);
-while (!iter_done(iter)) {
-    var value = iter_value(iter);
+var it = array_iter(arr);
+while (!iter_done(it)) {
+    var value = iter_value(it);
     print value;
-    iter_next(iter);
+    iter_next(it);
 }
 
+print "---iterator---";
 var index = 0;
 while (index < len(arr)) {
     print arr[index];
     index = index + 1;
 }
 
-var iter = array_iter(arr);
-while (!iter_done(iter)) {
-    print iter_value(iter);
-    iter_next(iter);
+//enable_debug();
+//enable_trace();
+
+print "---iterator---";
+var it = array_iter(arr);
+while (!iter_done(it)) {
+    print iter_value(it);
+    iter_next(it);
 }
+
+print "---iterator---";
+iter (var item in [1, 2, 3]) { print item; }

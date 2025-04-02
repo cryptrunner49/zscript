@@ -5,80 +5,94 @@ import (
 	"hash/fnv"
 )
 
+// ObjType represents the different types of heap-allocated objects.
 type ObjType int
 
+// Enumeration of object types.
 const (
-	OBJ_UPVALUE ObjType = iota
-	OBJ_CLOSURE
-	OBJ_FUNCTION
-	OBJ_NATIVE
-	OBJ_STRING
-	OBJ_STRUCT
-	OBJ_INSTANCE
-	OBJ_ARRAY
-	OBJ_ARRAY_ITERATOR
+	OBJ_UPVALUE        ObjType = iota // Upvalue: a closed-over variable.
+	OBJ_CLOSURE                       // Closure: a function plus its captured environment.
+	OBJ_FUNCTION                      // Function: a user-defined function.
+	OBJ_NATIVE                        // Native: a built-in (native) function.
+	OBJ_STRING                        // String: an immutable string.
+	OBJ_STRUCT                        // Struct: a user-defined struct type.
+	OBJ_INSTANCE                      // Instance: an instance of a struct.
+	OBJ_ARRAY                         // Array: a dynamic array.
+	OBJ_ARRAY_ITERATOR                // Array Iterator: iterator for arrays.
 )
 
+// Obj is the header for all heap-allocated objects.
 type Obj struct {
-	Type ObjType
-	Next *Obj
+	Type ObjType // The type of the object.
+	Next *Obj    // Linked list pointer for garbage collection.
 }
 
+// NativeFn is the function signature for native (built-in) functions.
 type NativeFn func(argCount int, args []Value) Value
 
+// ObjNative represents a native (built-in) function object.
 type ObjNative struct {
 	Obj
-	Function NativeFn
+	Function NativeFn // Pointer to the native function implementation.
 }
 
+// ObjUpvalue represents a closed-over local variable.
 type ObjUpvalue struct {
 	Obj
-	Location *Value
-	Closed   Value
-	Next     *ObjUpvalue
+	Location *Value      // Points to the variable's slot on the VM stack.
+	Closed   Value       // Stores the closed-over value once the variable goes out of scope.
+	Next     *ObjUpvalue // Linked list pointer for open upvalues.
 }
 
+// ObjClosure represents a function along with its captured upvalues.
 type ObjClosure struct {
 	Obj
-	Function     *ObjFunction
-	Upvalues     []*ObjUpvalue
-	UpvalueCount int
+	Function     *ObjFunction  // The function object.
+	Upvalues     []*ObjUpvalue // Array of pointers to captured upvalues.
+	UpvalueCount int           // Number of upvalues captured.
 }
 
+// ObjFunction represents a user-defined function.
 type ObjFunction struct {
-	Obj          Obj
-	Arity        int
-	UpvalueCount int
-	Chunk        Chunk
-	Name         *ObjString
+	Obj          Obj        // Object header.
+	Arity        int        // Number of expected arguments.
+	UpvalueCount int        // Number of upvalues the function captures.
+	Chunk        Chunk      // Bytecode chunk containing the function's code.
+	Name         *ObjString // Optional function name.
 }
 
+// ObjString represents an immutable string.
 type ObjString struct {
 	Obj
-	Chars string
-	Hash  uint32
+	Chars string // The actual string characters.
+	Hash  uint32 // Cached hash value for quick comparisons.
 }
 
+// ObjStruct represents a struct type with named fields and default values.
 type ObjStruct struct {
 	Obj    Obj
-	Name   *ObjString
-	Fields map[*ObjString]Value // Map of field names to default values
+	Name   *ObjString           // The name of the struct.
+	Fields map[*ObjString]Value // Map of field names to their default values.
 }
 
+// ObjInstance represents an instance of a struct.
 type ObjInstance struct {
 	Obj       Obj
-	Structure *ObjStruct
-	Fields    map[*ObjString]Value
+	Structure *ObjStruct           // The struct type of the instance.
+	Fields    map[*ObjString]Value // Instance field values.
 }
 
+// Map to store interned strings for reuse.
 var strings = make(map[uint32]*ObjString)
 
+// NewNative creates a new ObjNative wrapping the given native function.
 func NewNative(function NativeFn) *ObjNative {
 	return &ObjNative{
 		Function: function,
 	}
 }
 
+// NewUpvalue creates a new upvalue object pointing to a given variable location.
 func NewUpvalue(location *Value) *ObjUpvalue {
 	return &ObjUpvalue{
 		Obj:      Obj{Type: OBJ_UPVALUE},
@@ -88,6 +102,8 @@ func NewUpvalue(location *Value) *ObjUpvalue {
 	}
 }
 
+// NewClosure creates a new closure object for a given function,
+// initializing its upvalue array based on the function's UpvalueCount.
 func NewClosure(function *ObjFunction) *ObjClosure {
 	upvalues := make([]*ObjUpvalue, function.UpvalueCount)
 	return &ObjClosure{
@@ -98,6 +114,7 @@ func NewClosure(function *ObjFunction) *ObjClosure {
 	}
 }
 
+// NewFunction creates a new function object with an empty bytecode chunk.
 func NewFunction() *ObjFunction {
 	function := &ObjFunction{}
 	function.Arity = 0
@@ -107,6 +124,7 @@ func NewFunction() *ObjFunction {
 	return function
 }
 
+// NewObjString creates (or returns an interned) ObjString for the given string.
 func NewObjString(s string) *ObjString {
 	hash := hashString(s)
 	if interned, exists := strings[hash]; exists {
@@ -121,14 +139,17 @@ func NewObjString(s string) *ObjString {
 	return objString
 }
 
+// TakeString returns a new ObjString from the given string (alias for NewObjString).
 func TakeString(s string) *ObjString {
 	return NewObjString(s)
 }
 
+// CopyString returns a new ObjString from the given string (alias for NewObjString).
 func CopyString(s string) *ObjString {
 	return NewObjString(s)
 }
 
+// PrintObject prints a representation of the object to stdout.
 func PrintObject(obj interface{}) {
 	switch o := obj.(type) {
 	case *ObjClosure:
@@ -165,16 +186,19 @@ func PrintObject(obj interface{}) {
 	}
 }
 
+// hashString computes a hash value for a string using the FNV-1a algorithm.
 func hashString(s string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(s))
 	return h.Sum32()
 }
 
+// ObjVal wraps an object into a Value of type VAL_OBJ.
 func ObjVal(obj interface{}) Value {
 	return Value{Type: VAL_OBJ, Obj: obj}
 }
 
+// NewStruct creates a new struct type with the given name and an empty field map.
 func NewStruct(name *ObjString) *ObjStruct {
 	return &ObjStruct{
 		Obj:    Obj{Type: OBJ_STRUCT},
@@ -183,24 +207,28 @@ func NewStruct(name *ObjString) *ObjStruct {
 	}
 }
 
+// NewInstance creates a new instance of a struct,
+// initializing its fields with the default values from the struct definition.
 func NewInstance(structure *ObjStruct) *ObjInstance {
 	instance := &ObjInstance{
 		Obj:       Obj{Type: OBJ_INSTANCE},
 		Structure: structure,
 		Fields:    make(map[*ObjString]Value),
 	}
-	// Initialize instance fields with default values from the struct
+	// Copy default values for each field.
 	for name, value := range structure.Fields {
 		instance.Fields[name] = value
 	}
 	return instance
 }
 
+// ObjArray represents an array object that holds a slice of values.
 type ObjArray struct {
 	Obj
-	Elements []Value
+	Elements []Value // The elements of the array.
 }
 
+// NewArray creates a new array object with the given elements.
 func NewArray(elements []Value) *ObjArray {
 	array := &ObjArray{
 		Elements: elements,
@@ -209,12 +237,14 @@ func NewArray(elements []Value) *ObjArray {
 	return array
 }
 
+// ObjArrayIterator represents an iterator for arrays.
 type ObjArrayIterator struct {
 	Obj
-	Array *ObjArray
-	Index int
+	Array *ObjArray // The array being iterated.
+	Index int       // Current index in the iteration.
 }
 
+// NewArrayIterator creates a new iterator for the given array.
 func NewArrayIterator(array *ObjArray) *ObjArrayIterator {
 	return &ObjArrayIterator{
 		Obj:   Obj{Type: OBJ_ARRAY_ITERATOR},

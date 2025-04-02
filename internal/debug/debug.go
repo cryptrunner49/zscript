@@ -103,10 +103,28 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return jumpInstruction("OP_JUMP", 1, ch, offset)
 	case uint8(runtime.OP_JUMP_IF_FALSE):
 		return jumpInstruction("OP_JUMP_IF_FALSE", 1, ch, offset)
+	case uint8(runtime.OP_JUMP_IF_TRUE):
+		return jumpInstruction("OP_JUMP_IF_TRUE", 1, ch, offset)
 	case uint8(runtime.OP_LOOP):
 		return jumpInstruction("OP_LOOP", -1, ch, offset)
+	case uint8(runtime.OP_BREAK):
+		return jumpInstruction("OP_BREAK", 1, ch, offset)
+	case uint8(runtime.OP_CONTINUE):
+		return jumpInstruction("OP_CONTINUE", 1, ch, offset)
 	case uint8(runtime.OP_STRUCT):
 		return structInstruction(ch, offset)
+	case uint8(runtime.OP_ARRAY):
+		return byteInstruction("OP_ARRAY", ch, offset)
+	case uint8(runtime.OP_ARRAY_GET):
+		return simpleInstruction("OP_ARRAY_GET", offset)
+	case uint8(runtime.OP_ARRAY_SET):
+		return simpleInstruction("OP_ARRAY_SET", offset)
+	case uint8(runtime.OP_ARRAY_LEN):
+		return simpleInstruction("OP_ARRAY_LEN", offset)
+	case uint8(runtime.OP_ARRAY_SLICE):
+		return simpleInstruction("OP_ARRAY_SLICE", offset)
+	case uint8(runtime.OP_MAP):
+		return simpleInstruction("OP_MAP", offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1

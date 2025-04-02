@@ -106,6 +106,8 @@ func ScanToken() token.Token {
 		return lexer.makeToken(token.TOKEN_HASH)
 	case '$':
 		return lexer.makeToken(token.TOKEN_DOLLAR)
+	case ':':
+		return lexer.makeToken(token.TOKEN_COLON)
 	}
 
 	return lexer.errorToken("Unexpected character.")
@@ -300,7 +302,7 @@ func (l *Lexer) identifier() token.Token {
 
 func isOperatorRune(r rune) bool {
 	switch r {
-	case '(', ')', '{', '}', '[', ']', '|', '?', ';', ',', '.', '-', '+', '/', '%', '@', '#', '$', '*', '!', '=', '<', '>', '"', '\'':
+	case '(', ')', '{', '}', '[', ']', '|', ':', '?', ';', ',', '.', '-', '+', '/', '%', '@', '#', '$', '*', '!', '=', '<', '>', '"', '\'':
 		return true
 	default:
 		return false
@@ -340,6 +342,10 @@ func (l *Lexer) identifierType() token.TokenType {
 		return token.TOKEN_VAR
 	case "while":
 		return token.TOKEN_WHILE
+	case "iter":
+		return token.TOKEN_ITER
+	case "in":
+		return token.TOKEN_IN
 	case "break":
 		return token.TOKEN_BREAK
 	case "continue":

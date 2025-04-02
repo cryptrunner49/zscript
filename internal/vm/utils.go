@@ -7,10 +7,18 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
 )
 
+// isFalsey returns true if a value is considered false in boolean context.
+// In this VM, only null and false are falsey.
 func isFalsey(val runtime.Value) bool {
 	return val.Type == runtime.VAL_NULL || (val.Type == runtime.VAL_BOOL && !val.Bool)
 }
 
+// isTruth returns true if a value is considered true in boolean context.
+func isTruth(val runtime.Value) bool {
+	return val.Type != runtime.VAL_NULL && (val.Type != runtime.VAL_BOOL || val.Bool)
+}
+
+// typeName returns a string representing the type name of a runtime value.
 func typeName(val runtime.Value) string {
 	switch val.Type {
 	case runtime.VAL_BOOL:
@@ -41,10 +49,13 @@ func typeName(val runtime.Value) string {
 	}
 }
 
+// runtimeError prints a formatted runtime error message along with a backtrace of call frames.
+// It then resets the VM's stack and returns an INTERPRET_RUNTIME_ERROR result.
 func runtimeError(format string, args ...interface{}) InterpretResult {
 	fmt.Fprintf(os.Stderr, "Runtime Error: ")
 	fmt.Fprintf(os.Stderr, format, args...)
 	fmt.Fprintln(os.Stderr)
+	// Print the call stack.
 	for i := vm.frameCount - 1; i >= 0; i-- {
 		frame := &vm.frames[i]
 		function := frame.closure.Function

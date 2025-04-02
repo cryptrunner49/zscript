@@ -11,88 +11,99 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
+// FunctionType is an enum used to differentiate between function declarations and top-level scripts.
 type FunctionType int
 
 const (
-	TYPE_FUNCTION FunctionType = iota
-	TYPE_SCRIPT
+	TYPE_FUNCTION FunctionType = iota // Regular function definition.
+	TYPE_SCRIPT                       // Top-level script execution.
 )
 
+// Parser holds the current and previous tokens and error flags for parsing.
 type Parser struct {
-	current   token.Token
-	previous  token.Token
-	hadError  bool
-	panicMode bool
+	current   token.Token // The current token being processed.
+	previous  token.Token // The previous token processed.
+	hadError  bool        // Flag indicating if a parsing error has occurred.
+	panicMode bool        // Flag to suppress cascading errors after an error is encountered.
 }
 
+// Local represents a local variable with its name, scope depth, and if it was captured by a closure.
 type Local struct {
-	name       token.Token
-	depth      int
-	isCaptured bool
+	name       token.Token // Token representing the variable's name.
+	depth      int         // Scope depth where the variable was declared.
+	isCaptured bool        // Indicates if the variable is captured by an enclosing function.
 }
 
+// Upvalue holds information about a variable captured by a closure.
 type Upvalue struct {
-	index   uint8
-	isLocal bool
+	index   uint8 // Index of the variable in the parent's local variables.
+	isLocal bool  // Indicates if the captured variable was a local variable.
 }
 
+// LoopType defines different kinds of loops.
 type LoopType int
 
 const (
-	LOOP_WHILE LoopType = iota
-	LOOP_FOR
+	LOOP_WHILE LoopType = iota // While loop.
+	LOOP_FOR                   // For loop.
 )
 
+// Loop is used to manage loop state during compilation, including jump patching.
 type Loop struct {
-	loopType        LoopType
-	start           int
-	exitPatches     []int
-	continuePatches []int
-	exitAddress     int
-	hasIncrement    bool
-	incrementStart  int
+	loopType        LoopType // Type of loop (while or for).
+	start           int      // Bytecode index where the loop begins.
+	exitPatches     []int    // List of jump offsets to patch for loop exit.
+	continuePatches []int    // List of jump offsets to patch for continue statements.
+	exitAddress     int      // Address to jump to when exiting the loop.
+	hasIncrement    bool     // Flag indicating if the loop has an increment expression.
+	incrementStart  int      // Bytecode index where the increment expression starts.
 }
 
+// Compiler holds the current state of the compilation process.
 type Compiler struct {
-	enclosing    *Compiler
-	function     *runtime.ObjFunction
-	functionType FunctionType
-	locals       [256]Local
-	localCount   int
-	upvalues     [256]Upvalue
-	scopeDepth   int
-	loops        []Loop
+	enclosing    *Compiler            // Reference to the parent compiler for nested functions.
+	function     *runtime.ObjFunction // The function object currently being compiled.
+	functionType FunctionType         // Type of function (regular or script).
+	locals       [256]Local           // Fixed array of local variables.
+	localCount   int                  // Current count of local variables.
+	upvalues     [256]Upvalue         // Fixed array of upvalues for closures.
+	scopeDepth   int                  // Current depth of local scope nesting.
+	loops        []Loop               // Stack of active loops for break/continue handling.
 }
 
-var parser Parser
-var current *Compiler
+var parser Parser     // Global parser state.
+var current *Compiler // Pointer to the current compiler instance.
 
+// Precedence defines operator precedence levels.
 type Precedence int
 
 const (
-	PREC_NONE Precedence = iota
-	PREC_ASSIGNMENT
-	PREC_OR
-	PREC_AND
-	PREC_EQUALITY
-	PREC_COMPARISON
-	PREC_TERM
-	PREC_FACTOR
-	PREC_UNARY
-	PREC_CALL
-	PREC_PRIMARY
+	PREC_NONE       Precedence = iota // No precedence.
+	PREC_ASSIGNMENT                   // Assignment operators.
+	PREC_OR                           // Logical OR.
+	PREC_AND                          // Logical AND.
+	PREC_EQUALITY                     // Equality operators.
+	PREC_COMPARISON                   // Comparison operators.
+	PREC_TERM                         // Term operators (addition, subtraction).
+	PREC_FACTOR                       // Factor operators (multiplication, division).
+	PREC_UNARY                        // Unary operators.
+	PREC_CALL                         // Call and subscript operators.
+	PREC_PRIMARY                      // Primary expressions.
 )
 
+// ParseFn represents a pointer to a parsing function.
 type ParseFn func(bool)
 
+// ParseRule defines the rules for parsing a token type: its prefix, infix parsing functions, and precedence.
 type ParseRule struct {
-	Prefix     ParseFn
-	Infix      ParseFn
-	Precedence Precedence
+	Prefix     ParseFn    // Function to call when token is used in a prefix context.
+	Infix      ParseFn    // Function to call when token is used in an infix context.
+	Precedence Precedence // Operator precedence level for the token.
 }
 
-var rules []ParseRule
+var rules []ParseRule // Table mapping token types to their parsing rules.
 
+// Initialize the parsing rules for each token type.
 func init() {
 	rules = make([]ParseRule, token.TOKEN_EOF+1)
 	rules[token.TOKEN_LEFT_PAREN] = ParseRule{grouping, call, PREC_CALL}
@@ -114,6 +125,7 @@ func init() {
 	rules[token.TOKEN_AT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_HASH] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_DOLLAR] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_COLON] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_BANG] = ParseRule{unary, nil, PREC_NONE}
 	rules[token.TOKEN_BANG_EQUAL] = ParseRule{nil, binary, PREC_EQUALITY}
 	rules[token.TOKEN_EQUAL] = ParseRule{nil, nil, PREC_NONE}
@@ -143,6 +155,7 @@ func init() {
 	rules[token.TOKEN_TRUE] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_VAR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_WHILE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_ITER] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_BREAK] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_CONTINUE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_MATCH] = ParseRule{nil, nil, PREC_NONE}
@@ -155,6 +168,7 @@ func init() {
 	rules[token.TOKEN_EOF] = ParseRule{nil, nil, PREC_NONE}
 }
 
+// dot handles property access on objects (e.g., object.field).
 func dot(canAssign bool) {
 	consume(token.TOKEN_IDENTIFIER, "Expected a property name after '.' (e.g., 'object.field').")
 	name := identifierConstant(parser.previous)
@@ -166,20 +180,24 @@ func dot(canAssign bool) {
 	}
 }
 
+// emitByte writes a single byte into the current chunk with the current line number.
 func emitByte(b byte) {
 	currentChunk().Write(b, parser.previous.Line)
 }
 
+// emitBytes writes two consecutive bytes to the current chunk.
 func emitBytes(b1, b2 byte) {
 	emitByte(b1)
 	emitByte(b2)
 }
 
+// emitReturn writes the return opcode to the chunk, ending the function.
 func emitReturn() {
 	emitByte(byte(runtime.OP_NULL))
 	emitByte(byte(runtime.OP_RETURN))
 }
 
+// endCompiler finishes the current function, emits a return, and optionally disassembles the code for debugging.
 func endCompiler() *runtime.ObjFunction {
 	emitReturn()
 	function := current.function
@@ -194,6 +212,7 @@ func endCompiler() *runtime.ObjFunction {
 	return function
 }
 
+// block compiles a block statement by repeatedly compiling declarations until a closing brace is found.
 func block() {
 	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
 		declaration()
@@ -201,10 +220,12 @@ func block() {
 	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close block (unmatched '{').")
 }
 
+// beginScope increases the scope depth, starting a new local variable scope.
 func beginScope() {
 	current.scopeDepth++
 }
 
+// endScope decreases the scope depth and removes local variables declared in that scope.
 func endScope() {
 	current.scopeDepth--
 	for current.localCount > 0 && current.locals[current.localCount-1].depth > current.scopeDepth {
@@ -217,10 +238,12 @@ func endScope() {
 	}
 }
 
+// expression compiles an expression using the assignment precedence level.
 func expression() {
 	parsePrecedence(PREC_ASSIGNMENT)
 }
 
+// statement compiles a statement, dispatching to the appropriate function based on the token.
 func statement() {
 	if match(token.TOKEN_PRINT) {
 		printStatement()
@@ -230,6 +253,8 @@ func statement() {
 		whileStatement()
 	} else if match(token.TOKEN_FOR) {
 		forStatement()
+	} else if match(token.TOKEN_ITER) {
+		iterStatement()
 	} else if match(token.TOKEN_BREAK) {
 		breakStatement()
 	} else if match(token.TOKEN_CONTINUE) {
@@ -247,6 +272,7 @@ func statement() {
 	}
 }
 
+// declaration compiles declarations like variables, functions, and structs.
 func declaration() {
 	if match(token.TOKEN_STRUCT) {
 		structDeclaration()
@@ -266,11 +292,13 @@ func declaration() {
 	}
 }
 
+// call compiles a function call by parsing the argument list and emitting the call opcode.
 func call(canAssign bool) {
 	argCount := argumentList()
 	emitBytes(byte(runtime.OP_CALL), argCount)
 }
 
+// parsePrecedence compiles an expression based on a minimum precedence, handling operators accordingly.
 func parsePrecedence(precedence Precedence) {
 	advance()
 	prefixRule := getRule(parser.previous.Type).Prefix
@@ -290,6 +318,7 @@ func parsePrecedence(precedence Precedence) {
 	}
 }
 
+// addLocal adds a new local variable to the current compiler state.
 func addLocal(name token.Token) {
 	if current.localCount == 256 {
 		error("Too many local variables in this scope (max 256).")
@@ -297,11 +326,12 @@ func addLocal(name token.Token) {
 	}
 	local := &current.locals[current.localCount]
 	local.name = name
-	local.depth = -1
+	local.depth = -1 // Uninitialized.
 	local.isCaptured = false
 	current.localCount++
 }
 
+// declareVariable handles variable declarations and checks for redeclaration in the same scope.
 func declareVariable() {
 	if current.scopeDepth == 0 {
 		return
@@ -319,6 +349,7 @@ func declareVariable() {
 	addLocal(name)
 }
 
+// parseVariable parses an identifier token for variable declarations.
 func parseVariable(errorMessage string) uint8 {
 	consume(token.TOKEN_IDENTIFIER, errorMessage)
 	declareVariable()
@@ -328,6 +359,7 @@ func parseVariable(errorMessage string) uint8 {
 	return identifierConstant(parser.previous)
 }
 
+// markInitialized marks the most recently added local variable as initialized.
 func markInitialized() {
 	if current.scopeDepth == 0 {
 		return
@@ -335,6 +367,7 @@ func markInitialized() {
 	current.locals[current.localCount-1].depth = current.scopeDepth
 }
 
+// function compiles a function declaration, including parameter parsing and function body.
 func function(funcType FunctionType) {
 	var compiler Compiler
 	initCompiler(&compiler, funcType)
@@ -372,6 +405,7 @@ func function(funcType FunctionType) {
 	}
 }
 
+// defineVariable either marks a variable as initialized in the local scope or emits a global definition.
 func defineVariable(global uint8) {
 	if current.scopeDepth > 0 {
 		markInitialized()
@@ -380,11 +414,13 @@ func defineVariable(global uint8) {
 	emitBytes(byte(runtime.OP_DEFINE_GLOBAL), global)
 }
 
+// grouping compiles a grouped expression enclosed in parentheses.
 func grouping(canAssign bool) {
 	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close grouped expression (unmatched '(').")
 }
 
+// stringLiteral compiles a string literal by removing the enclosing quotes and emitting a constant.
 func stringLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
@@ -395,6 +431,7 @@ func stringLiteral(canAssign bool) {
 	emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)})
 }
 
+// charLiteral compiles a character literal by removing the enclosing quotes.
 func charLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
@@ -405,6 +442,7 @@ func charLiteral(canAssign bool) {
 	emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)})
 }
 
+// makeConstant adds a constant value to the current chunk and returns its index.
 func makeConstant(val runtime.Value) uint8 {
 	constant := currentChunk().AddConstant(val)
 	if constant > 255 {
@@ -414,10 +452,12 @@ func makeConstant(val runtime.Value) uint8 {
 	return uint8(constant)
 }
 
+// emitConstant writes the constant opcode along with the index of the constant.
 func emitConstant(val runtime.Value) {
 	emitBytes(byte(runtime.OP_CONSTANT), makeConstant(val))
 }
 
+// number compiles a numeric literal by parsing it and emitting the constant.
 func number(canAssign bool) {
 	val, err := strconv.ParseFloat(parser.previous.Start, 64)
 	if err != nil {
@@ -427,6 +467,7 @@ func number(canAssign bool) {
 	emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
 }
 
+// unary compiles a unary operator expression.
 func unary(canAssign bool) {
 	operatorType := parser.previous.Type
 	parsePrecedence(PREC_UNARY)
@@ -438,6 +479,7 @@ func unary(canAssign bool) {
 	}
 }
 
+// binary compiles a binary operator expression.
 func binary(canAssign bool) {
 	operatorType := parser.previous.Type
 	rule := getRule(operatorType)
@@ -468,6 +510,7 @@ func binary(canAssign bool) {
 	}
 }
 
+// literal compiles literal tokens like false, null, or true.
 func literal(canAssign bool) {
 	switch parser.previous.Type {
 	case token.TOKEN_FALSE:
@@ -479,10 +522,12 @@ func literal(canAssign bool) {
 	}
 }
 
+// random compiles the random operator, currently a stub.
 func random(canAssign bool) {
 
 }
 
+// resolveLocal searches for a local variable by name in the given compiler and returns its index or -1 if not found.
 func resolveLocal(comp *Compiler, name token.Token) int {
 	for i := comp.localCount - 1; i >= 0; i-- {
 		local := comp.locals[i]
@@ -496,6 +541,7 @@ func resolveLocal(comp *Compiler, name token.Token) int {
 	return -1
 }
 
+// addUpvalue adds an upvalue to the compiler's list, avoiding duplicates.
 func addUpvalue(compiler *Compiler, index uint8, isLocal bool) int {
 	upvalueCount := compiler.function.UpvalueCount
 	for i := 0; i < upvalueCount; i++ {
@@ -513,6 +559,7 @@ func addUpvalue(compiler *Compiler, index uint8, isLocal bool) int {
 	return upvalueCount
 }
 
+// resolveUpvalue recursively resolves a variable from enclosing scopes and marks it as captured.
 func resolveUpvalue(compiler *Compiler, name token.Token) int {
 	if compiler.enclosing == nil {
 		return -1
@@ -529,6 +576,7 @@ func resolveUpvalue(compiler *Compiler, name token.Token) int {
 	return -1
 }
 
+// namedVariable compiles a variable access or assignment, handling locals, upvalues, or globals.
 func namedVariable(name token.Token, canAssign bool) {
 	var getOp, setOp uint8
 	var arg int
@@ -553,14 +601,17 @@ func namedVariable(name token.Token, canAssign bool) {
 	}
 }
 
+// variable is the entry point for parsing a variable expression.
 func variable(canAssign bool) {
 	namedVariable(parser.previous, canAssign)
 }
 
+// getRule retrieves the parsing rule for a given token type.
 func getRule(typ token.TokenType) ParseRule {
 	return rules[typ]
 }
 
+// initCompiler initializes a new compiler for a function or script and sets up the first local variable.
 func initCompiler(compiler *Compiler, funcType FunctionType) {
 	compiler.enclosing = current
 	compiler.function = nil
@@ -580,6 +631,8 @@ func initCompiler(compiler *Compiler, funcType FunctionType) {
 	local.name.Length = 0
 }
 
+// Compile is the entry point for compiling source code into a function object.
+// It initializes the lexer, sets up the compiler state, and processes all declarations.
 func Compile(source string) *runtime.ObjFunction {
 	lexer.InitLexer(source)
 	var compiler Compiler
@@ -598,6 +651,8 @@ func Compile(source string) *runtime.ObjFunction {
 	}
 }
 
+// emitJump writes a jump instruction with a placeholder for the jump offset.
+// Returns the offset index where the placeholder was written.
 func emitJump(instruction byte) int {
 	emitByte(instruction)
 	emitByte(0xff)
@@ -605,6 +660,7 @@ func emitJump(instruction byte) int {
 	return currentChunk().Count() - 2
 }
 
+// patchJump updates a previously emitted jump instruction with the correct jump offset.
 func patchJump(offset int) {
 	jump := currentChunk().Count() - offset - 2
 	if jump > 65535 {
@@ -614,6 +670,7 @@ func patchJump(offset int) {
 	currentChunk().Code()[offset+1] = byte(jump & 0xff)
 }
 
+// and compiles a logical AND operator by emitting short-circuit jump logic.
 func and(canAssign bool) {
 	endJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
@@ -621,6 +678,7 @@ func and(canAssign bool) {
 	patchJump(endJump)
 }
 
+// or compiles a logical OR operator by emitting appropriate jump instructions.
 func or(canAssign bool) {
 	elseJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	endJump := emitJump(byte(runtime.OP_JUMP))
@@ -630,6 +688,7 @@ func or(canAssign bool) {
 	patchJump(endJump)
 }
 
+// emitLoop writes a loop instruction that jumps back to the beginning of the loop.
 func emitLoop(loopStart int) {
 	emitByte(byte(runtime.OP_LOOP))
 	offset := currentChunk().Count() - loopStart + 2

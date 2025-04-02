@@ -5,7 +5,9 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
-// Add array literal parsing
+// arrayLiteral parses an array literal and emits the corresponding bytecode.
+// It collects the elements, enforces a maximum element count of 255, and then
+// emits an OP_ARRAY opcode with the element count.
 func arrayLiteral(canAssign bool) {
 	elementCount := 0
 	if !check(token.TOKEN_RIGHT_BRACKET) {
@@ -25,15 +27,40 @@ func arrayLiteral(canAssign bool) {
 	emitBytes(byte(runtime.OP_ARRAY), byte(elementCount))
 }
 
-// Add array subscript access
+// subscript parses array subscript expressions, handling both element access and slice syntax.
+// For slices, it expects an optional start expression, a colon, and an optional end expression.
+// It emits either an OP_ARRAY_SLICE or an OP_ARRAY_GET/OP_ARRAY_SET opcode depending on the context.
 func subscript(canAssign bool) {
-	expression()
-	consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after array index.")
-
-	if canAssign && match(token.TOKEN_EQUAL) {
+	// Determine if there is a start index specified.
+	hasStart := !check(token.TOKEN_COLON) && !check(token.TOKEN_RIGHT_BRACKET)
+	if hasStart {
 		expression()
-		emitByte(byte(runtime.OP_ARRAY_SET))
 	} else {
-		emitByte(byte(runtime.OP_ARRAY_GET))
+		// If no start index is provided, push null as default.
+		emitConstant(runtime.Value{Type: runtime.VAL_NULL})
+	}
+
+	if match(token.TOKEN_COLON) {
+		// Slice syntax detected; check for an end index.
+		hasEnd := !check(token.TOKEN_RIGHT_BRACKET)
+		if hasEnd {
+			expression()
+		} else {
+			// If no end index is provided, push null as default.
+			emitConstant(runtime.Value{Type: runtime.VAL_NULL})
+		}
+		consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after slice indices.")
+		emitByte(byte(runtime.OP_ARRAY_SLICE))
+	} else {
+		// Regular array index access.
+		consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after array index.")
+		if canAssign && match(token.TOKEN_EQUAL) {
+			// Assignment to an array element.
+			expression()
+			emitByte(byte(runtime.OP_ARRAY_SET))
+		} else {
+			// Retrieve an array element.
+			emitByte(byte(runtime.OP_ARRAY_GET))
+		}
 	}
 }
