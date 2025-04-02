@@ -263,18 +263,29 @@ func run() InterpretResult {
 			upvalue := frame.closure.Upvalues[slot]
 			*upvalue.Location = peek(0)
 		case uint8(runtime.OP_GET_PROPERTY):
-			// Access a property from a struct instance.
+			// Access a property from an object.
 			instVal := peek(0)
-			if _, ok := instVal.Obj.(*runtime.ObjInstance); !ok {
-				return runtimeError("Cannot access property on %s; only struct instances have properties.", typeName(instVal))
-			}
-			instance := instVal.Obj.(*runtime.ObjInstance)
-			name := readString(frame)
-			if value, found := instance.Fields[name]; found {
-				Pop()
-				Push(value)
-			} else {
-				return runtimeError("Property '%s' does not exist on this instance.", name.Chars)
+			switch obj := instVal.Obj.(type) {
+			case *runtime.ObjInstance:
+				// For struct instances, look up the property in the fields map.
+				name := readString(frame)
+				if value, found := obj.Fields[name]; found {
+					Pop()
+					Push(value)
+				} else {
+					return runtimeError("Property '%s' does not exist on this instance.", name.Chars)
+				}
+			case *runtime.ObjArray:
+				// Allow arrays to expose a "length" property.
+				name := readString(frame)
+				if name.Chars == "length" {
+					Pop() // Remove the array from the stack.
+					Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(len(obj.Elements))})
+				} else {
+					return runtimeError("Cannot access property '%s' on array; only 'length' is supported.", name.Chars)
+				}
+			default:
+				return runtimeError("Cannot access property on %s; only struct instances and arrays have properties.", typeName(instVal))
 			}
 		case uint8(runtime.OP_SET_PROPERTY):
 			// Set a property on a struct instance.
