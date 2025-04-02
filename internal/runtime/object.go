@@ -15,6 +15,8 @@ const (
 	OBJ_STRING
 	OBJ_STRUCT
 	OBJ_INSTANCE
+	OBJ_ARRAY
+	OBJ_ARRAY_ITERATOR
 )
 
 type Obj struct {
@@ -147,6 +149,17 @@ func PrintObject(obj interface{}) {
 		fmt.Print(o.Chars)
 	case *ObjStruct:
 		fmt.Print(o.Name.Chars)
+	case *ObjArray:
+		fmt.Print("[")
+		for i, elem := range o.Elements {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			PrintValue(elem)
+		}
+		fmt.Print("]")
+	case *ObjArrayIterator:
+		fmt.Printf("<array iterator at %d>", o.Index)
 	default:
 		fmt.Print("unknown object")
 	}
@@ -181,4 +194,31 @@ func NewInstance(structure *ObjStruct) *ObjInstance {
 		instance.Fields[name] = value
 	}
 	return instance
+}
+
+type ObjArray struct {
+	Obj
+	Elements []Value
+}
+
+func NewArray(elements []Value) *ObjArray {
+	array := &ObjArray{
+		Elements: elements,
+	}
+	array.Type = OBJ_ARRAY
+	return array
+}
+
+type ObjArrayIterator struct {
+	Obj
+	Array *ObjArray
+	Index int
+}
+
+func NewArrayIterator(array *ObjArray) *ObjArrayIterator {
+	return &ObjArrayIterator{
+		Obj:   Obj{Type: OBJ_ARRAY_ITERATOR},
+		Array: array,
+		Index: 0,
+	}
 }

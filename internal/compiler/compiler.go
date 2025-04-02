@@ -99,7 +99,7 @@ func init() {
 	rules[token.TOKEN_RIGHT_PAREN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_LEFT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RIGHT_BRACE] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_LEFT_BRACKET] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_LEFT_BRACKET] = ParseRule{arrayLiteral, subscript, PREC_CALL}
 	rules[token.TOKEN_RIGHT_BRACKET] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_COMMA] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_DOT] = ParseRule{nil, dot, PREC_CALL}

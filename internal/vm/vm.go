@@ -394,6 +394,71 @@ func run() InterpretResult {
 				objStruct.Fields[fieldName] = defaultValue
 			}
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objStruct})
+		case uint8(runtime.OP_ARRAY_GET):
+			indexVal := Pop()
+			arrayVal := Pop()
+
+			if arrayVal.Type != runtime.VAL_OBJ {
+				return runtimeError("Only arrays can be indexed with [].")
+			}
+			array, ok := arrayVal.Obj.(*runtime.ObjArray)
+			if !ok {
+				return runtimeError("Only arrays can be indexed with [].")
+			}
+			if indexVal.Type != runtime.VAL_NUMBER {
+				return runtimeError("Array index must be a number.")
+			}
+
+			index := int(indexVal.Number)
+			if index < 0 || index >= len(array.Elements) {
+				return runtimeError("Array index out of bounds.")
+			}
+
+			Push(array.Elements[index])
+		case uint8(runtime.OP_ARRAY):
+			elementCount := int(readByte(frame))
+			elements := make([]runtime.Value, elementCount)
+			for i := elementCount - 1; i >= 0; i-- {
+				elements[i] = Pop()
+			}
+			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewArray(elements)})
+		case uint8(runtime.OP_ARRAY_SET):
+			value := Pop()
+			indexVal := Pop()
+			arrayVal := Pop()
+
+			if arrayVal.Type != runtime.VAL_OBJ {
+				return runtimeError("Only arrays can be indexed with [].")
+			}
+			array, ok := arrayVal.Obj.(*runtime.ObjArray)
+			if !ok {
+				return runtimeError("Only arrays can be indexed with [].")
+			}
+			if indexVal.Type != runtime.VAL_NUMBER {
+				return runtimeError("Array index must be a number.")
+			}
+
+			index := int(indexVal.Number)
+			if index < 0 || index >= len(array.Elements) {
+				return runtimeError("Array index out of bounds.")
+			}
+
+			array.Elements[index] = value
+			Push(value)
+
+		case uint8(runtime.OP_ARRAY_LEN):
+			arrayVal := Pop()
+			if arrayVal.Type != runtime.VAL_OBJ {
+				return runtimeError("Can only get length of arrays.")
+			}
+			array, ok := arrayVal.Obj.(*runtime.ObjArray)
+			if !ok {
+				return runtimeError("Can only get length of arrays.")
+			}
+			Push(runtime.Value{
+				Type:   runtime.VAL_NUMBER,
+				Number: float64(len(array.Elements)),
+			})
 		}
 	}
 }

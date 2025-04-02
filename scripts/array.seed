@@ -1,0 +1,38 @@
+var arr = [1, 2, 3];
+print arr[0];       // Prints 1
+arr[1] = 42;        // Assigns new value
+print len(arr);     // Prints 3
+push(arr, 4);       // Adds element
+print pop(arr);     // Prints and removes 4
+
+
+
+
+print "---for loop---";
+// Traditional for loop with index
+var arr = [10, 20, 30, 40];
+for (var i = 0; i < len(arr); i = i + 1) {
+    print arr[i];
+}
+
+print "---iterator---";
+// Or using the iterator pattern
+var arr = [10, 20, 30, 40];
+var iter = array_iter(arr);
+while (!iter_done(iter)) {
+    var value = iter_value(iter);
+    print value;
+    iter_next(iter);
+}
+
+var index = 0;
+while (index < len(arr)) {
+    print arr[index];
+    index = index + 1;
+}
+
+var iter = array_iter(arr);
+while (!iter_done(iter)) {
+    print iter_value(iter);
+    iter_next(iter);
+}
