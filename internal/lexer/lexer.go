@@ -23,6 +23,22 @@ func InitLexer(source string) {
 		current: 0,
 		line:    1,
 	}
+
+	// Skip shebang line if present
+	if len(source) >= 2 && source[0] == '#' && source[1] == '!' {
+		// Find the end of the first line
+		for i := 0; i < len(source); i++ {
+			if source[i] == '\n' {
+				lexer.current = i + 1 // Move past the newline
+				lexer.line = 2        // Actual code starts on line 2
+				break
+			}
+		}
+		// If no newline is found, skip the entire source
+		if lexer.current == 0 {
+			lexer.current = len(source)
+		}
+	}
 }
 
 func ScanToken() token.Token {
