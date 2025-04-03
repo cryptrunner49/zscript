@@ -2,7 +2,9 @@ package compiler
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/cryptrunner49/goseedvm/internal/lexer"
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
@@ -28,7 +30,7 @@ func errorAt(t token.Token, message string) {
 }
 
 // error reports an error using the previous token.
-func error(message string) {
+func reportError(message string) {
 	errorAt(parser.previous, message)
 }
 
@@ -84,7 +86,7 @@ func argumentList() uint8 {
 		for {
 			expression()
 			if argCount == 255 {
-				error("Function call cannot have more than 255 arguments.")
+				reportError("Function call cannot have more than 255 arguments.")
 			}
 			argCount++
 			if !match(token.TOKEN_COMMA) {
@@ -120,4 +122,14 @@ func identifierConstant(name token.Token) uint8 {
 // identifiersEqual checks if two identifier tokens are equal based on their string content.
 func identifiersEqual(a, b token.Token) bool {
 	return a.Start == b.Start
+}
+
+// loadFile resolves the file path relative to the main script's directory
+func loadFile(filename string) (string, error) {
+	fullPath := filepath.Join(current.scriptDir, filename)
+	data, err := ioutil.ReadFile(fullPath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }

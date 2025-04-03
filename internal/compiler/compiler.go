@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 
 	"github.com/cryptrunner49/goseedvm/internal/common"
@@ -10,6 +11,8 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
+
+var compiledFiles = make(map[string]*runtime.ObjFunction)
 
 // FunctionType is an enum used to differentiate between function declarations and top-level scripts.
 type FunctionType int
@@ -69,6 +72,7 @@ type Compiler struct {
 	upvalues     [256]Upvalue         // Fixed array of upvalues for closures.
 	scopeDepth   int                  // Current depth of local scope nesting.
 	loops        []Loop               // Stack of active loops for break/continue handling.
+	scriptDir    string
 }
 
 var parser Parser     // Global parser state.
@@ -164,6 +168,9 @@ func init() {
 	rules[token.TOKEN_RANDOM] = ParseRule{random, nil, PREC_NONE}
 	rules[token.TOKEN_IMPORT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_EXPORT] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_USE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_MOD] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_AS] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_ERROR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_EOF] = ParseRule{nil, nil, PREC_NONE}
 }
@@ -280,10 +287,12 @@ func declaration() {
 		fnDeclaration()
 	} else if match(token.TOKEN_VAR) {
 		varDeclaration()
+	} else if match(token.TOKEN_MOD) {
+		modDeclaration()
 	} else if match(token.TOKEN_IMPORT) {
 		importDeclaration()
-	} else if match(token.TOKEN_EXPORT) {
-		exportDeclaration()
+	} else if match(token.TOKEN_USE) {
+		useDeclaration()
 	} else {
 		statement()
 	}
@@ -303,7 +312,7 @@ func parsePrecedence(precedence Precedence) {
 	advance()
 	prefixRule := getRule(parser.previous.Type).Prefix
 	if prefixRule == nil {
-		error("Expected an expression but found no valid starting token.")
+		reportError("Expected an expression but found no valid starting token.")
 		return
 	}
 	canAssign := precedence <= PREC_ASSIGNMENT
@@ -314,14 +323,14 @@ func parsePrecedence(precedence Precedence) {
 		infixRule(canAssign)
 	}
 	if canAssign && match(token.TOKEN_EQUAL) {
-		error("Invalid assignment target; only variables or properties can be assigned.")
+		reportError("Invalid assignment target; only variables or properties can be assigned.")
 	}
 }
 
 // addLocal adds a new local variable to the current compiler state.
 func addLocal(name token.Token) {
 	if current.localCount == 256 {
-		error("Too many local variables in this scope (max 256).")
+		reportError("Too many local variables in this scope (max 256).")
 		return
 	}
 	local := &current.locals[current.localCount]
@@ -343,7 +352,7 @@ func declareVariable() {
 			break
 		}
 		if identifiersEqual(name, local.name) {
-			error(fmt.Sprintf("Variable '%s' is already declared in this scope.", name.Start))
+			reportError(fmt.Sprintf("Variable '%s' is already declared in this scope.", name.Start))
 		}
 	}
 	addLocal(name)
@@ -370,7 +379,7 @@ func markInitialized() {
 // function compiles a function declaration, including parameter parsing and function body.
 func function(funcType FunctionType) {
 	var compiler Compiler
-	initCompiler(&compiler, funcType)
+	initCompiler(&compiler, funcType, current.scriptDir) // Regular function: no module context
 	beginScope()
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name to start parameter list.")
 	if !check(token.TOKEN_RIGHT_PAREN) {
@@ -405,13 +414,12 @@ func function(funcType FunctionType) {
 	}
 }
 
-// defineVariable either marks a variable as initialized in the local scope or emits a global definition.
 func defineVariable(global uint8) {
 	if current.scopeDepth > 0 {
 		markInitialized()
-		return
+	} else {
+		emitBytes(byte(runtime.OP_DEFINE_GLOBAL), global)
 	}
-	emitBytes(byte(runtime.OP_DEFINE_GLOBAL), global)
 }
 
 // grouping compiles a grouped expression enclosed in parentheses.
@@ -424,7 +432,7 @@ func grouping(canAssign bool) {
 func stringLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
-		error("Invalid string literal; must be enclosed in quotes (e.g., \"hello\").")
+		reportError("Invalid string literal; must be enclosed in quotes (e.g., \"hello\").")
 		return
 	}
 	str := text[1 : len(text)-1]
@@ -435,7 +443,7 @@ func stringLiteral(canAssign bool) {
 func charLiteral(canAssign bool) {
 	text := parser.previous.Start
 	if len(text) < 2 {
-		error("Invalid char literal; must be enclosed in quotes (e.g., 'a').")
+		reportError("Invalid char literal; must be enclosed in quotes (e.g., 'a').")
 		return
 	}
 	str := text[1 : len(text)-1]
@@ -446,7 +454,7 @@ func charLiteral(canAssign bool) {
 func makeConstant(val runtime.Value) uint8 {
 	constant := currentChunk().AddConstant(val)
 	if constant > 255 {
-		error("Too many constants in this chunk (max 256). Consider splitting the code.")
+		reportError("Too many constants in this chunk (max 256). Consider splitting the code.")
 		return 0
 	}
 	return uint8(constant)
@@ -461,7 +469,7 @@ func emitConstant(val runtime.Value) {
 func number(canAssign bool) {
 	val, err := strconv.ParseFloat(parser.previous.Start, 64)
 	if err != nil {
-		error(fmt.Sprintf("Invalid number literal '%s'; must be a valid number.", parser.previous.Start))
+		reportError(fmt.Sprintf("Invalid number literal '%s'; must be a valid number.", parser.previous.Start))
 		return
 	}
 	emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
@@ -533,7 +541,7 @@ func resolveLocal(comp *Compiler, name token.Token) int {
 		local := comp.locals[i]
 		if identifiersEqual(name, local.name) {
 			if local.depth == -1 {
-				error(fmt.Sprintf("Cannot use variable '%s' in its own initializer.", name.Start))
+				reportError(fmt.Sprintf("Cannot use variable '%s' in its own initializer.", name.Start))
 			}
 			return i
 		}
@@ -551,7 +559,7 @@ func addUpvalue(compiler *Compiler, index uint8, isLocal bool) int {
 		}
 	}
 	if upvalueCount == 256 {
-		error("Too many upvalues in this function (max 256).")
+		reportError("Too many upvalues in this function (max 256).")
 		return 0
 	}
 	compiler.upvalues[upvalueCount] = Upvalue{index: index, isLocal: isLocal}
@@ -612,13 +620,13 @@ func getRule(typ token.TokenType) ParseRule {
 }
 
 // initCompiler initializes a new compiler for a function or script and sets up the first local variable.
-func initCompiler(compiler *Compiler, funcType FunctionType) {
+func initCompiler(compiler *Compiler, funcType FunctionType, scriptDir string) {
 	compiler.enclosing = current
-	compiler.function = nil
+	compiler.function = runtime.NewFunction()
 	compiler.functionType = funcType
 	compiler.localCount = 0
 	compiler.scopeDepth = 0
-	compiler.function = runtime.NewFunction()
+	compiler.scriptDir = scriptDir
 	current = compiler
 	if funcType != TYPE_SCRIPT {
 		current.function.Name = runtime.CopyString(parser.previous.Start)
@@ -633,10 +641,11 @@ func initCompiler(compiler *Compiler, funcType FunctionType) {
 
 // Compile is the entry point for compiling source code into a function object.
 // It initializes the lexer, sets up the compiler state, and processes all declarations.
-func Compile(source string) *runtime.ObjFunction {
+func Compile(source string, scriptPath string) *runtime.ObjFunction {
 	lexer.InitLexer(source)
 	var compiler Compiler
-	initCompiler(&compiler, TYPE_SCRIPT)
+	scriptDir := filepath.Dir(scriptPath)
+	initCompiler(&compiler, TYPE_SCRIPT, scriptDir) // Top-level: no module path
 	parser.hadError = false
 	parser.panicMode = false
 	advance()
@@ -664,7 +673,7 @@ func emitJump(instruction byte) int {
 func patchJump(offset int) {
 	jump := currentChunk().Count() - offset - 2
 	if jump > 65535 {
-		error("Jump distance too large (max 65535 bytes). Simplify the code block.")
+		reportError("Jump distance too large (max 65535 bytes). Simplify the code block.")
 	}
 	currentChunk().Code()[offset] = byte((jump >> 8) & 0xff)
 	currentChunk().Code()[offset+1] = byte(jump & 0xff)
@@ -693,7 +702,7 @@ func emitLoop(loopStart int) {
 	emitByte(byte(runtime.OP_LOOP))
 	offset := currentChunk().Count() - loopStart + 2
 	if offset > 65535 {
-		error("Loop body too large (max 65535 bytes). Reduce loop size.")
+		reportError("Loop body too large (max 65535 bytes). Reduce loop size.")
 	}
 	emitByte(byte((offset >> 8) & 0xff))
 	emitByte(byte(offset & 0xff))

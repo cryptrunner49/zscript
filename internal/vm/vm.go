@@ -3,6 +3,7 @@ package vm
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"unsafe"
 
@@ -94,9 +95,9 @@ func peek(distance int) runtime.Value {
 
 // Interpret compiles the source code and executes it in the VM.
 // It returns an interpretation result indicating success or type of error.
-func Interpret(source string) InterpretResult {
+func Interpret(source string, scriptPath string) InterpretResult {
 	resetStack()
-	function := compiler.Compile(source)
+	function := compiler.Compile(source, scriptPath)
 	if function == nil {
 		return INTERPRET_COMPILE_ERROR
 	}
@@ -270,7 +271,7 @@ func run() InterpretResult {
 				// For struct instances, look up the property in the fields map.
 				name := readString(frame)
 				if value, found := obj.Fields[name]; found {
-					Pop()
+					Pop() // Remove the array from the stack.
 					Push(value)
 				} else {
 					return runtimeError("Property '%s' does not exist on this instance.", name.Chars)
@@ -279,26 +280,27 @@ func run() InterpretResult {
 				// Allow arrays to expose a "length" property.
 				name := readString(frame)
 				if name.Chars == "length" {
-					Pop() // Remove the array from the stack.
+					Pop()
 					Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(len(obj.Elements))})
 				} else {
 					return runtimeError("Cannot access property '%s' on array; only 'length' is supported.", name.Chars)
 				}
 			default:
-				return runtimeError("Cannot access property on %s; only struct instances and arrays have properties.", typeName(instVal))
+				return runtimeError("Cannot access property on %s; only struct instances, arrays, and modules have properties.", typeName(instVal))
 			}
 		case uint8(runtime.OP_SET_PROPERTY):
 			// Set a property on a struct instance.
 			instVal := peek(1)
-			if _, ok := instVal.Obj.(*runtime.ObjInstance); !ok {
-				return runtimeError("Cannot set property on %s; only struct instances have fields.", typeName(instVal))
+			switch obj := instVal.Obj.(type) {
+			case *runtime.ObjInstance:
+				name := readString(frame)
+				obj.Fields[name] = peek(0)
+				value := Pop()
+				Pop()
+				Push(value)
+			default:
+				return runtimeError("Cannot set property on %s; only struct instances and modules have fields.", typeName(instVal))
 			}
-			instance := instVal.Obj.(*runtime.ObjInstance)
-			name := readString(frame)
-			instance.Fields[name] = peek(0)
-			value := Pop()
-			Pop()
-			Push(value)
 		case uint8(runtime.OP_EQUAL):
 			b := Pop()
 			a := Pop()
@@ -863,48 +865,36 @@ func run() InterpretResult {
 			elements := array.Elements[start:end]
 			newArray := runtime.NewArray(elements)
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: newArray})
+
+		case uint8(runtime.OP_MODULE):
+			// TODO
+
+		case uint8(runtime.OP_DEFINE_MODULE):
+			// TODO
+
+		case uint8(runtime.OP_IMPORT):
+			path := readString(frame).Chars
+			pathObj := runtime.NewObjString(path)
+			if cached, exists := vm.globals[pathObj]; exists {
+				Push(cached)
+				break
+			}
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return runtimeError("Failed to load module '%s': %v", path, err)
+			}
+			function := compiler.Compile(string(content), path)
+			if function == nil {
+				return INTERPRET_COMPILE_ERROR
+			}
+			closure := runtime.NewClosure(function)
+			vm.globals[pathObj] = runtime.ObjVal(closure)
+			Push(runtime.ObjVal(closure))
+			if !callValue(runtime.ObjVal(closure), 0) {
+				return INTERPRET_RUNTIME_ERROR
+			}
+			Pop()                     // Pop the null return value
+			Push(vm.globals[pathObj]) // Push the closure back
 		}
 	}
-}
-
-// callValue attempts to call a value, which can be a function, native function, or struct constructor.
-func callValue(callee runtime.Value, argCount int) bool {
-	if callee.Type == runtime.VAL_OBJ {
-		switch obj := callee.Obj.(type) {
-		case *runtime.ObjClosure:
-			return call(obj, argCount)
-		case *runtime.ObjNative:
-			native := obj.Function
-			result := native(argCount, vm.stack[vm.stackTop-argCount:vm.stackTop])
-			vm.stackTop -= argCount + 1
-			Push(result)
-			return true
-		case *runtime.ObjStruct:
-			// For struct constructors, create a new instance.
-			vm.stack[vm.stackTop-argCount-1] = runtime.ObjVal(runtime.NewInstance(obj))
-			return true
-		default:
-			// Non-callable object type.
-		}
-	}
-	runtimeError("Cannot call %s; only functions and structs are callable.", typeName(callee))
-	return false
-}
-
-// call sets up a new call frame for a closure, verifying the argument count.
-func call(closure *runtime.ObjClosure, argCount int) bool {
-	if argCount != closure.Function.Arity {
-		runtimeError("Function '%s' expects %d arguments but got %d.", closure.Function.Name.Chars, closure.Function.Arity, argCount)
-		return false
-	}
-	if vm.frameCount >= FRAMES_MAX {
-		runtimeError("Stack overflow; too many nested function calls (max %d).", FRAMES_MAX)
-		return false
-	}
-	frame := &vm.frames[vm.frameCount]
-	vm.frameCount++
-	frame.closure = closure
-	frame.ip = 0
-	frame.slots = vm.stackTop - argCount - 1
-	return true
 }

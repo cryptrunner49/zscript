@@ -376,6 +376,12 @@ func (l *Lexer) identifierType() token.TokenType {
 		return token.TOKEN_IMPORT
 	case "export":
 		return token.TOKEN_EXPORT
+	case "use":
+		return token.TOKEN_USE
+	case "mod":
+		return token.TOKEN_MOD
+	case "as":
+		return token.TOKEN_AS
 	default:
 		return token.TOKEN_IDENTIFIER
 	}

@@ -52,7 +52,7 @@ func repl() {
 		// Only add non-empty lines to history.
 		if len(input) > 0 {
 			C.add_history(C.CString(input))
-			vm.Interpret(input)
+			vm.Interpret(input, ".")
 		}
 	}
 }
@@ -63,7 +63,7 @@ func runFile(path string) {
 		fmt.Fprintf(os.Stderr, "Could not open file \"%s\": %v\n", path, err)
 		os.Exit(74)
 	}
-	result := vm.Interpret(string(source))
+	result := vm.Interpret(string(source), path)
 	if result == vm.INTERPRET_COMPILE_ERROR {
 		os.Exit(65)
 	}

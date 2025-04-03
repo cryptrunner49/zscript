@@ -15,7 +15,7 @@ func arrayLiteral(canAssign bool) {
 			expression()
 			elementCount++
 			if elementCount == 255 {
-				error("Array literal cannot have more than 255 elements.")
+				reportError("Array literal cannot have more than 255 elements.")
 			}
 			if !match(token.TOKEN_COMMA) {
 				break

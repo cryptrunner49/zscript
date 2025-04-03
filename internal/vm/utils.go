@@ -71,3 +71,45 @@ func runtimeError(format string, args ...interface{}) InterpretResult {
 	resetStack()
 	return INTERPRET_RUNTIME_ERROR
 }
+
+// callValue attempts to call a value, which can be a function, native function, or struct constructor.
+func callValue(callee runtime.Value, argCount int) bool {
+	if callee.Type == runtime.VAL_OBJ {
+		switch obj := callee.Obj.(type) {
+		case *runtime.ObjClosure:
+			return call(obj, argCount)
+		case *runtime.ObjNative:
+			native := obj.Function
+			result := native(argCount, vm.stack[vm.stackTop-argCount:vm.stackTop])
+			vm.stackTop -= argCount + 1
+			Push(result)
+			return true
+		case *runtime.ObjStruct:
+			// For struct constructors, create a new instance.
+			vm.stack[vm.stackTop-argCount-1] = runtime.ObjVal(runtime.NewInstance(obj))
+			return true
+		default:
+			// Non-callable object type.
+		}
+	}
+	runtimeError("Cannot call %s; only functions and structs are callable.", typeName(callee))
+	return false
+}
+
+// call sets up a new call frame for a closure, verifying the argument count.
+func call(closure *runtime.ObjClosure, argCount int) bool {
+	if argCount != closure.Function.Arity {
+		runtimeError("Function '%s' expects %d arguments but got %d.", closure.Function.Name.Chars, closure.Function.Arity, argCount)
+		return false
+	}
+	if vm.frameCount >= FRAMES_MAX {
+		runtimeError("Stack overflow; too many nested function calls (max %d).", FRAMES_MAX)
+		return false
+	}
+	frame := &vm.frames[vm.frameCount]
+	vm.frameCount++
+	frame.closure = closure
+	frame.ip = 0
+	frame.slots = vm.stackTop - argCount - 1
+	return true
+}

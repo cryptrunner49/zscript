@@ -1,0 +1,12 @@
+// main.seed
+
+//enable_debug();
+//enable_trace();
+
+print("---START---");
+
+import "math.seed";
+print add(2, 3);  // Outputs: 5
+print PI;         // Outputs: 3.14159
+
+print("---END---");

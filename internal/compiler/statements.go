@@ -66,7 +66,7 @@ func whileStatement() {
 		currentIPAfterOperand := opAddress + 3
 		offset := currentIPAfterOperand - loopStart
 		if offset < 0 || offset > 65535 {
-			error("Continue jump offset out of range.")
+			reportError("Continue jump offset out of range.")
 		}
 		high := byte(offset >> 8)
 		low := byte(offset)
@@ -178,7 +178,7 @@ func forStatement() {
 
 func breakStatement() {
 	if len(current.loops) == 0 {
-		error("Cannot use 'break' outside of a loop.")
+		reportError("Cannot use 'break' outside of a loop.")
 		return
 	}
 	currentLoop := &current.loops[len(current.loops)-1]
@@ -192,7 +192,7 @@ func breakStatement() {
 
 func continueStatement() {
 	if len(current.loops) == 0 {
-		error("Cannot use 'continue' outside of a loop.")
+		reportError("Cannot use 'continue' outside of a loop.")
 		return
 	}
 	currentLoop := &current.loops[len(current.loops)-1]
@@ -213,7 +213,7 @@ func continueStatement() {
 
 func returnStatement() {
 	if current.functionType == TYPE_SCRIPT {
-		error("Cannot use 'return' outside a function at top-level code.")
+		reportError("Cannot use 'return' outside a function at top-level code.")
 	}
 	if match(token.TOKEN_SEMICOLON) {
 		emitReturn()
@@ -254,7 +254,7 @@ func iterStatement() {
 
 	// Ensure 'var' keyword follows '(' to declare the iterator variable.
 	if !match(token.TOKEN_VAR) {
-		error("Expected 'var' after '(' in iter statement.")
+		reportError("Expected 'var' after '(' in iter statement.")
 	}
 
 	// Declare the iterator variable (e.g., 'item') and get its slot in the local scope.

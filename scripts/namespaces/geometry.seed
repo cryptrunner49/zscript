@@ -1,0 +1,7 @@
+mod Geometry {
+    mod Shapes {
+        fn area(r) { return 3.14 * r * r; }
+    }
+
+    var PI = 3.14;
+}

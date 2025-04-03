@@ -25,12 +25,10 @@ func defineAllNatives() {
 	defineNative("iter_value", iterValueNative)
 	defineNative("iter_done", iterDoneNative)
 	defineNative("to_chars", toCharsNative)
-	// New native functions:
 	defineNative("array_sort", arraySortNative)
 	defineNative("array_split", arraySplitNative)
 	defineNative("array_join", arrayJoinNative)
 	defineNative("array_sorted_push", arraySortedPushNative)
-	// New search functions:
 	defineNative("array_linear_search", arrayLinearSearchNative)
 	defineNative("array_binary_search", arrayBinarySearchNative)
 }
