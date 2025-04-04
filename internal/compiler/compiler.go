@@ -169,6 +169,7 @@ func init() {
 	rules[token.TOKEN_IMPORT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_EXPORT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_USE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_DEF] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_MOD] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_AS] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_ERROR] = ParseRule{nil, nil, PREC_NONE}
@@ -287,6 +288,8 @@ func declaration() {
 		fnDeclaration()
 	} else if match(token.TOKEN_VAR) {
 		varDeclaration()
+	} else if match(token.TOKEN_DEF) {
+		defDeclaration()
 	} else if match(token.TOKEN_MOD) {
 		modDeclaration()
 	} else if match(token.TOKEN_IMPORT) {

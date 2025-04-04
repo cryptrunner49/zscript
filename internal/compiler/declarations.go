@@ -92,18 +92,6 @@ func structDeclaration() {
 	defineVariable(nameConstant)
 }
 
-// captureTop emits an opcode to capture the value at the top of the stack as a constant.
-// (It does not actually pop it; the VM’s OP_COPY_TOP will later copy the top value.)
-func captureTop() uint8 {
-	// Here we simulate capturing the value on top by emitting a dummy opcode.
-	// In our design, we assume that the value produced by OP_MODULE is in the constant pool.
-	// For example, we might emit an OP_COPY_TOP opcode (which our VM would implement to
-	// copy the top-of-stack value into a constant slot).
-	// For simplicity, we simply add a constant with a dummy value (the value will be overwritten at runtime).
-	// In a real implementation you would design an opcode for this purpose.
-	return makeConstant(runtime.Value{Type: runtime.VAL_NULL})
-}
-
 func compileModuleFunction() runtime.Value {
 	var fnCompiler Compiler
 	// Initialize a new compiler for this function.
@@ -219,26 +207,86 @@ func modDeclarationField() (*runtime.ObjString, runtime.Value) {
 	}
 	// Add the module object to the constant pool.
 	// (This is a compile-time constant representing the nested module.)
-	_ = makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule})
+	//_ = makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule})
 	// Return the nested module's name and its module value.
 	return nestedName, runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule}
 }
 
+func defDeclaration() {
+	// Parse the module path (e.g., position, position.x, position.x.z).
+	var modulePathParts []string
+	consume(token.TOKEN_IDENTIFIER, "Expected an identifier after 'def' (e.g., 'def position' or 'def position.x').")
+	modulePathParts = append(modulePathParts, parser.previous.Start)
+	for match(token.TOKEN_DOT) {
+		consume(token.TOKEN_IDENTIFIER, "Expected identifier after '.' in path (e.g., 'def position.x').")
+		modulePathParts = append(modulePathParts, parser.previous.Start)
+	}
+
+	// Require 'as' keyword.
+	if !match(token.TOKEN_AS) {
+		reportError("Expected 'as' after module path in 'def' declaration (e.g., 'def position.x as pos;').")
+		return
+	}
+
+	// Parse the alias name.
+	consume(token.TOKEN_IDENTIFIER, "Expected alias name after 'as' (e.g., 'def position.x as pos;').")
+	aliasConstant := identifierConstant(parser.previous)
+
+	// Resolve the module path.
+	emitBytes(byte(runtime.OP_GET_GLOBAL), identifierConstant(token.Token{Start: modulePathParts[0]}))
+	for i := 1; i < len(modulePathParts); i++ {
+		emitBytes(byte(runtime.OP_GET_PROPERTY), identifierConstant(token.Token{Start: modulePathParts[i]}))
+	}
+
+	// Define the alias in the current scope.
+	defineVariable(aliasConstant)
+
+	// Require semicolon to terminate the declaration.
+	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'def' alias declaration (e.g., 'def position.x as pos;').")
+}
+
 func modDeclaration() {
-	// Parse the module name.
-	consume(token.TOKEN_IDENTIFIER, "Expected a module name after 'mod'.")
-	nameConstant := identifierConstant(parser.previous)
+	// Parse the module path (e.g., Geometry.Shapes).
+	var modulePathParts []string
+	consume(token.TOKEN_IDENTIFIER, "Expected module name after 'mod'.")
+	modulePathParts = append(modulePathParts, parser.previous.Start)
+	for match(token.TOKEN_DOT) {
+		consume(token.TOKEN_IDENTIFIER, "Expected identifier after '.' in module path.")
+		modulePathParts = append(modulePathParts, parser.previous.Start)
+	}
+
+	// Check for alias syntax: "as <alias_name>".
+	if match(token.TOKEN_AS) {
+		consume(token.TOKEN_IDENTIFIER, "Expected alias name after 'as'.")
+		aliasConstant := identifierConstant(parser.previous)
+
+		// Resolve the module path.
+		emitBytes(byte(runtime.OP_GET_GLOBAL), identifierConstant(token.Token{Start: modulePathParts[0]}))
+		for i := 1; i < len(modulePathParts); i++ {
+			emitBytes(byte(runtime.OP_GET_PROPERTY), identifierConstant(token.Token{Start: modulePathParts[i]}))
+		}
+
+		// Define the alias in the current scope.
+		defineVariable(aliasConstant)
+		consume(token.TOKEN_SEMICOLON, "Expected ';' after module alias declaration.")
+		return
+	}
+
+	// If no alias, proceed with module definition
+	if !check(token.TOKEN_LEFT_BRACE) {
+		reportError("Expected '{' to define module body or 'as' for aliasing after module name.")
+		return
+	}
+
+	moduleName := modulePathParts[0]
+	nameConstant := identifierConstant(token.Token{Start: moduleName})
 	declareVariable() // Reserve the module name in the current scope.
 
-	// The module must have a body.
 	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to define module body.")
-
-	// Prepare slices to record field names and their default (initializer) values.
 	fieldNames := make([]*runtime.ObjString, 0)
 	fieldDefaults := make([]runtime.Value, 0)
 
-	// Parse declarations (fields) inside the module.
-	// A module field can be either a variable declaration, a function declaration, or a nested module.
+	// Parse module body
 	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
 		if match(token.TOKEN_VAR) {
 			consume(token.TOKEN_IDENTIFIER, "Expected variable name in module declaration.")
@@ -273,35 +321,15 @@ func modDeclaration() {
 			fName := runtime.NewObjString(parser.previous.Start)
 			markInitialized()
 			fnCVal := compileModuleFunction()
-			// Optionally consume a semicolon.
 			match(token.TOKEN_SEMICOLON)
 			fieldNames = append(fieldNames, fName)
 			fieldDefaults = append(fieldDefaults, fnCVal)
 		} else if match(token.TOKEN_MOD) {
-			// Nested module: "mod d { ... }"
-			// Compile the nested module immediately.
+			// Nested module
 			nestedName, nestedVal := modDeclarationField()
 			fieldNames = append(fieldNames, nestedName)
 			fieldDefaults = append(fieldDefaults, nestedVal)
-			// Optionally consume a semicolon.
 			match(token.TOKEN_SEMICOLON)
-			/*
-				} else if match(token.TOKEN_MOD) {
-					// Nested module.
-					nestedFieldName, nestedModuleConst := modDeclarationNested()
-					// Optionally consume a semicolon.
-					match(token.TOKEN_SEMICOLON)
-					fieldNames = append(fieldNames, nestedFieldName)
-					// Use the constant index returned by captureTop() as the field default.
-					fieldDefaults = append(fieldDefaults, runtime.Value{Type: runtime.VAL_OBJ, Obj: nil}) // placeholder
-					// We then emit an extra opcode to load the nested module.
-					// For simplicity, we assume that the constant index in nestedModuleConst
-					// will be used at runtime to load the nested module.
-					// (In a complete solution, you'd design an opcode (e.g. OP_LOAD_NESTED)
-					// that fetches the already–compiled module object.)
-					// Here we simulate that by replacing the placeholder with a special marker.
-					fieldDefaults[len(fieldDefaults)-1] = runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(fmt.Sprintf("nested:%d", nestedModuleConst))}
-			*/
 		} else {
 			reportError("Expected 'var', 'fn', or 'mod' declaration in module body.")
 			synchronize()
@@ -309,10 +337,9 @@ func modDeclaration() {
 	}
 	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close module body.")
 
-	// Emit the module creation opcode.
+	// Emit module creation
 	emitBytes(byte(runtime.OP_MODULE), nameConstant)
-	emitByte(byte(len(fieldNames))) // Number of fields
-
+	emitByte(byte(len(fieldNames)))
 	for i := 0; i < len(fieldNames); i++ {
 		nameConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fieldNames[i]})
 		defConst := makeConstant(fieldDefaults[i])
