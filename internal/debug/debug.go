@@ -131,6 +131,30 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return constantInstruction("OP_DEFINE_MODULE", ch, offset)
 	case uint8(runtime.OP_IMPORT):
 		return constantInstruction("OP_IMPORT", ch, offset)
+	case uint8(runtime.OP_USE):
+		return constantInstruction("OP_USE", ch, offset)
+	case uint8(runtime.OP_DEFINE_EXTERN):
+		offset++
+		returnTypeIdx := int(ch.Code()[offset])
+		fmt.Printf("%-16s return type: %d '", "OP_DEFINE_EXTERN", returnTypeIdx)
+		runtime.PrintValue(ch.Constants().Values()[returnTypeIdx])
+		fmt.Println("'")
+		offset++
+		paramCount := int(ch.Code()[offset])
+		fmt.Printf("          param count: %d\n", paramCount)
+		offset++
+		for i := 0; i < paramCount; i++ {
+			paramTypeIdx := int(ch.Code()[offset])
+			fmt.Printf("          param %d: %d '", i, paramTypeIdx)
+			runtime.PrintValue(ch.Constants().Values()[paramTypeIdx])
+			fmt.Println("'")
+			offset++
+		}
+		funcNameIdx := int(ch.Code()[offset])
+		fmt.Printf("          function name: %d '", funcNameIdx)
+		runtime.PrintValue(ch.Constants().Values()[funcNameIdx])
+		fmt.Println("'")
+		return offset + 1
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1

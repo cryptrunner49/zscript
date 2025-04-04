@@ -382,6 +382,59 @@ func importDeclaration() {
 }
 
 func useDeclaration() {
-	// TODO
-	reportError("The 'use' keyword is not yet implemented.")
+	// Parse library name: use "mylib"
+	consume(token.TOKEN_STRING, "Expected a string literal after 'use' (e.g., 'use \"mylib\";').")
+	libName := parser.previous.Start[1 : len(parser.previous.Start)-1] // Remove quotes
+	libPathConstant := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(libName)})
+
+	// Parse opening brace: {
+	consume(token.TOKEN_LEFT_BRACE, "Expected '{' after library name in 'use' statement.")
+
+	// Emit OP_USE with library name
+	emitBytes(byte(runtime.OP_USE), libPathConstant)
+
+	// Parse function declarations until '}'
+	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+		// Parse return type (e.g., "int", "bool", "size_t")
+		consume(token.TOKEN_IDENTIFIER, "Expected return type before function name.")
+		returnType := parser.previous.Start
+		returnTypeConstant := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(returnType)})
+
+		// Parse function name
+		consume(token.TOKEN_IDENTIFIER, "Expected function name after return type.")
+		funcName := parser.previous.Start
+		funcNameConstant := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(funcName)})
+
+		// Parse parameters: (int, double, etc.)
+		consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name.")
+		var paramTypes []string
+		if !check(token.TOKEN_RIGHT_PAREN) {
+			consume(token.TOKEN_IDENTIFIER, "Expected parameter type.")
+			paramTypes = append(paramTypes, parser.previous.Start)
+			for match(token.TOKEN_COMMA) {
+				consume(token.TOKEN_IDENTIFIER, "Expected parameter type after ','.")
+				paramTypes = append(paramTypes, parser.previous.Start)
+			}
+		}
+		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after parameters.")
+
+		// Emit OP_DEFINE_C_FUNC with function details
+		emitByte(byte(runtime.OP_DEFINE_EXTERN))
+		emitByte(returnTypeConstant)
+		emitByte(byte(len(paramTypes)))
+		for _, pt := range paramTypes {
+			paramTypeConstant := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(pt)})
+			emitByte(paramTypeConstant)
+		}
+		emitByte(funcNameConstant)
+
+		// Expect semicolon after each function declaration
+		consume(token.TOKEN_SEMICOLON, "Expected ';' after function declaration.")
+	}
+
+	// Parse closing brace: }
+	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' after function declarations.")
+
+	// Expect semicolon after use statement
+	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'use' statement.")
 }

@@ -1,5 +1,33 @@
 package vm
 
+/*
+#cgo pkg-config: readline
+#cgo LDFLAGS: -ldl
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <dlfcn.h>
+
+// Functions to load libraries and symbols
+void* load_library(const char* lib_name) {
+    void* handle = dlopen(lib_name, RTLD_LAZY);
+    if (!handle) {
+        fprintf(stderr, "Cannot load library '%s': %s\n", lib_name, dlerror());
+    }
+    return handle;
+}
+
+void* get_function(void* handle, const char* func_name) {
+    void* func = dlsym(handle, func_name);
+    if (!func) {
+        fprintf(stderr, "Cannot load function '%s': %s\n", func_name, dlerror());
+    }
+    return func;
+}
+*/
+import "C"
+
 import (
 	"fmt"
 	"math"
@@ -168,6 +196,8 @@ func closeUpvalues(last *runtime.Value) {
 
 // run executes the bytecode instructions in a loop and returns an interpretation result.
 func run() InterpretResult {
+	var currentLibHandle unsafe.Pointer
+
 	// Helper functions to read bytes and constants from the current call frame.
 	readByte := func(frame *CallFrame) uint8 {
 		b := frame.closure.Function.Chunk.Code()[frame.ip]
@@ -922,6 +952,32 @@ func run() InterpretResult {
 			}
 			Pop()                     // Pop the null return value
 			Push(vm.globals[pathObj]) // Push the closure back
+		case uint8(runtime.OP_USE):
+			libName := readString(frame).Chars
+			fullLibName := "lib" + libName + ".so" // Adjust for platform if needed
+			currentLibHandle = C.load_library(C.CString(fullLibName))
+			if currentLibHandle == nil {
+				return runtimeError("Failed to load library '%s'.", fullLibName)
+			}
+
+		case uint8(runtime.OP_DEFINE_EXTERN):
+			returnTypeConstant := readConstant(frame)
+			returnType := returnTypeConstant.Obj.(*runtime.ObjString).Chars
+			paramCount := int(readByte(frame))
+			paramTypes := make([]string, paramCount)
+			for i := 0; i < paramCount; i++ {
+				paramTypeConstant := readConstant(frame)
+				paramTypes[i] = paramTypeConstant.Obj.(*runtime.ObjString).Chars
+			}
+			funcNameConstant := readConstant(frame)
+			funcName := funcNameConstant.Obj.(*runtime.ObjString).Chars
+			cFunc := C.get_function(currentLibHandle, C.CString(funcName))
+			if cFunc == nil {
+				return runtimeError("Failed to load function '%s' from library.", funcName)
+			}
+			nativeFunc := createNativeFunc(funcName, cFunc, returnType, paramTypes)
+			nameObj := runtime.NewObjString(funcName)
+			vm.globals[nameObj] = runtime.Value{Type: runtime.VAL_OBJ, Obj: nativeFunc}
 		}
 	}
 }
