@@ -19,6 +19,7 @@ const (
 	OBJ_INSTANCE                      // Instance: an instance of a struct.
 	OBJ_ARRAY                         // Array: a dynamic array.
 	OBJ_ARRAY_ITERATOR                // Array Iterator: iterator for arrays.
+	OBJ_MODULE
 )
 
 // Obj is the header for all heap-allocated objects.
@@ -170,6 +171,8 @@ func PrintObject(obj interface{}) {
 		fmt.Print(o.Chars)
 	case *ObjStruct:
 		fmt.Print(o.Name.Chars)
+	case *ObjInstance:
+		fmt.Printf("<struct %s>", o.Structure.Name.Chars)
 	case *ObjArray:
 		fmt.Print("[")
 		for i, elem := range o.Elements {
@@ -181,6 +184,8 @@ func PrintObject(obj interface{}) {
 		fmt.Print("]")
 	case *ObjArrayIterator:
 		fmt.Printf("<array iterator at %d>", o.Index)
+	case *ObjModule:
+		fmt.Printf("<mod %s>", o.Name.Chars)
 	default:
 		fmt.Print("unknown object")
 	}
@@ -250,5 +255,21 @@ func NewArrayIterator(array *ObjArray) *ObjArrayIterator {
 		Obj:   Obj{Type: OBJ_ARRAY_ITERATOR},
 		Array: array,
 		Index: 0,
+	}
+}
+
+// ObjModule represents a module
+type ObjModule struct {
+	Obj    Obj
+	Name   *ObjString // The name of the module.
+	Fields map[*ObjString]Value
+}
+
+// NewModule creates a new module
+func NewModule(name *ObjString) *ObjModule {
+	return &ObjModule{
+		Obj:    Obj{Type: OBJ_MODULE},
+		Name:   name,
+		Fields: make(map[*ObjString]Value),
 	}
 }

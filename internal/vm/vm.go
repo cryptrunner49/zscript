@@ -276,6 +276,15 @@ func run() InterpretResult {
 				} else {
 					return runtimeError("Property '%s' does not exist on this instance.", name.Chars)
 				}
+			case *runtime.ObjModule:
+				// For struct instances, look up the property in the fields map.
+				name := readString(frame)
+				if value, found := obj.Fields[name]; found {
+					Pop() // Remove the array from the stack.
+					Push(value)
+				} else {
+					return runtimeError("Property '%s' does not exist on this instance.", name.Chars)
+				}
 			case *runtime.ObjArray:
 				// Allow arrays to expose a "length" property.
 				name := readString(frame)
@@ -293,6 +302,12 @@ func run() InterpretResult {
 			instVal := peek(1)
 			switch obj := instVal.Obj.(type) {
 			case *runtime.ObjInstance:
+				name := readString(frame)
+				obj.Fields[name] = peek(0)
+				value := Pop()
+				Pop()
+				Push(value)
+			case *runtime.ObjModule:
 				name := readString(frame)
 				obj.Fields[name] = peek(0)
 				value := Pop()
@@ -867,7 +882,19 @@ func run() InterpretResult {
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: newArray})
 
 		case uint8(runtime.OP_MODULE):
-			// TODO
+			// Create a new module type instance.
+			name := readString(frame)
+			objModule := runtime.NewModule(name)
+			fieldCount := int(readByte(frame))
+
+			// For each field, read its name and value from the stack in the correct order.
+			for i := 0; i < fieldCount; i++ {
+				fieldName := readConstant(frame).Obj.(*runtime.ObjString)
+				defaultValue := readConstant(frame)
+				objModule.Fields[fieldName] = defaultValue
+			}
+
+			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule})
 
 		case uint8(runtime.OP_DEFINE_MODULE):
 			// TODO
