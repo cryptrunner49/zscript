@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"hash/fnv"
+	"time"
 )
 
 // ObjType represents the different types of heap-allocated objects.
@@ -21,6 +22,9 @@ const (
 	OBJ_ARRAY_ITERATOR                // Array Iterator: iterator for arrays.
 	OBJ_MODULE                        // Module: a module containing functions, variables and other modules.
 	OBJ_MAP                           // Map: a key-value store.
+	OBJ_DATE                          // Date object (year, month, day)
+	OBJ_TIME                          // Time object (hour, minute, second)
+	OBJ_DATETIME                      // DateTime object (full date and time)
 )
 
 // Obj is the header for all heap-allocated objects.
@@ -211,6 +215,12 @@ func PrintObject(obj interface{}) {
 			first = false
 		}
 		fmt.Print("}")
+	case *ObjDate:
+		fmt.Printf("<Date %s>", o.Time.Format("2006-01-02"))
+	case *ObjTime:
+		fmt.Printf("<Time %s>", o.Time.Format("15:04:05"))
+	case *ObjDateTime:
+		fmt.Printf("<DateTime %s>", o.Time.Format("2006-01-02 15:04:05"))
 	default:
 		fmt.Print("unknown object")
 	}
@@ -310,5 +320,42 @@ func NewMap() *ObjMap {
 	return &ObjMap{
 		Obj:     Obj{Type: OBJ_MAP},
 		Entries: make(map[*ObjString]Value),
+	}
+}
+
+type ObjDate struct {
+	Obj
+	Time time.Time // Underlying Go time (time part ignored)
+}
+
+type ObjTime struct {
+	Obj
+	Time time.Time // Underlying Go time (date part ignored)
+}
+
+type ObjDateTime struct {
+	Obj
+	Time time.Time // Full date and time
+}
+
+// Helper functions to create instances
+func NewDate(year int, month time.Month, day int) *ObjDate {
+	return &ObjDate{
+		Obj:  Obj{Type: OBJ_DATE},
+		Time: time.Date(year, month, day, 0, 0, 0, 0, time.UTC),
+	}
+}
+
+func NewTime(hour, minute, second int) *ObjTime {
+	return &ObjTime{
+		Obj:  Obj{Type: OBJ_TIME},
+		Time: time.Date(0, 1, 1, hour, minute, second, 0, time.UTC),
+	}
+}
+
+func NewDateTime(year int, month time.Month, day, hour, minute, second int) *ObjDateTime {
+	return &ObjDateTime{
+		Obj:  Obj{Type: OBJ_DATETIME},
+		Time: time.Date(year, month, day, hour, minute, second, 0, time.UTC),
 	}
 }

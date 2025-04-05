@@ -2,9 +2,7 @@ package compiler
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/cryptrunner49/goseedvm/internal/lexer"
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
@@ -122,14 +120,4 @@ func identifierConstant(name token.Token) uint8 {
 // identifiersEqual checks if two identifier tokens are equal based on their string content.
 func identifiersEqual(a, b token.Token) bool {
 	return a.Start == b.Start
-}
-
-// loadFile resolves the file path relative to the main script's directory
-func loadFile(filename string) (string, error) {
-	fullPath := filepath.Join(current.scriptDir, filename)
-	data, err := ioutil.ReadFile(fullPath)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
 }

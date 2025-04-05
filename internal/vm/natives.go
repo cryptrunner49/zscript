@@ -68,6 +68,40 @@ func defineAllNatives() {
 	defineNative("map_keys", mapKeysNative)
 	defineNative("map_values", mapValuesNative)
 
+	// Date
+	defineNative("Date", dateNew)
+	defineNative("date_now", dateNow)
+	defineNative("date_parse_datetime", dateParseDateTime)
+	defineNative("date_format_datetime", dateFormatDateTime)
+	defineNative("date_add_datetime", dateAddDateTime)
+	defineNative("date_subtract_datetime", dateSubtractDateTime)
+	defineNative("date_get_component", dateGetDateTimeComponent)
+	defineNative("date_set_component", dateSetDateTimeComponent)
+	defineNative("date_add_days", dateAddDays)
+	defineNative("date_subtract_days", dateSubtractDays)
+
+	// Time
+	defineNative("Time", timeNew)
+	defineNative("time_now", timeNow)
+	defineNative("time_parse", timeParseTime)
+	defineNative("time_format", timeFormatTime)
+	defineNative("time_add", timeAddTime)
+	defineNative("time_subtract", timeSubtractTime)
+	defineNative("time_get_timezone", timeGetTimeZone)
+	defineNative("time_convert_timezone", timeConvertTimeZone)
+
+	// DateTime
+	defineNative("DateTime", dateTimeNew)
+	defineNative("datetime_now", dateTimeNow)
+	defineNative("datetime_parse", dateTimeParseDateTime)
+	defineNative("datetime_format", dateTimeFormatDateTime)
+	defineNative("datetime_add", dateTimeAddDateTime)
+	defineNative("datetime_subtract", dateTimeSubtractDateTime)
+	defineNative("datetime_get_component", dateTimeGetDateTimeComponent)
+	defineNative("datetime_set_component", dateTimeSetDateTimeComponent)
+	defineNative("datetime_add_days", dateTimeAddDays)
+	defineNative("datetime_subtract_days", dateTimeSubtractDays)
+
 	// Others
 	defineNative("clock", clockNative)
 }
@@ -1177,6 +1211,668 @@ func mapValuesNative(argCount int, args []runtime.Value) runtime.Value {
 		values = append(values, value)
 	}
 	return runtime.ObjVal(runtime.NewArray(values))
+}
+
+// ============================================================================
+// Native Functions: Date
+// ============================================================================
+
+func dateNew(argCount int, args []runtime.Value) runtime.Value {
+	switch argCount {
+	case 0:
+		// Return current date
+		now := time.Now()
+		year, month, day := now.Date()
+		return runtime.ObjVal(runtime.NewDate(year, month, day))
+	case 1:
+		// Set year, default month to January (1), day to 1
+		if args[0].Type != runtime.VAL_NUMBER {
+			runtimeError("Argument must be a number")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+		year := int(args[0].Number)
+		return runtime.ObjVal(runtime.NewDate(year, time.January, 1))
+	case 3:
+		// Set year, month, day
+		for i := 0; i < 3; i++ {
+			if args[i].Type != runtime.VAL_NUMBER {
+				runtimeError("Arguments must be numbers")
+				return runtime.Value{Type: runtime.VAL_NULL}
+			}
+		}
+		year := int(args[0].Number)
+		month := time.Month(args[1].Number) // Assumes month is 1-12
+		day := int(args[2].Number)
+		return runtime.ObjVal(runtime.NewDate(year, month, day))
+	default:
+		runtimeError("Date requires 0, 1, or 3 arguments")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+
+func dateNow(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		runtimeError("date_now() expects 0 arguments")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	now := time.Now()
+	year, month, day := now.Date()
+	return runtime.ObjVal(runtime.NewDate(year, month, day))
+}
+
+func dateParseDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("date_parse_datetime() expects 1 argument (string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_parse_datetime() expects a string argument")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	strObj, ok := args[0].Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("date_parse_datetime() expects a string argument")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	t, err := time.Parse("2006-01-02", strObj.Chars) // Standard date format
+	if err != nil {
+		runtimeError("Invalid date format: %s (use 'YYYY-MM-DD')", strObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.ObjVal(runtime.NewDate(t.Year(), t.Month(), t.Day()))
+}
+
+func dateFormatDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("date_format_datetime() expects 2 arguments (Date, format string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_format_datetime() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("date_format_datetime() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatted := dateObj.Time.Format(formatObj.Chars)
+	return runtime.ObjVal(runtime.NewObjString(formatted))
+}
+
+func dateAddDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 4 {
+		runtimeError("date_add_datetime() expects 4 arguments (Date, years, months, days)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_add_datetime() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	for i := 1; i < 4; i++ {
+		if args[i].Type != runtime.VAL_NUMBER {
+			runtimeError("date_add_datetime() arguments 2-4 must be numbers")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+	}
+	years := int(args[1].Number)
+	months := int(args[2].Number)
+	days := int(args[3].Number)
+	newTime := dateObj.Time.AddDate(years, months, days)
+	return runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day()))
+}
+
+func dateSubtractDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 4 {
+		runtimeError("date_subtract_datetime() expects 4 arguments (Date, years, months, days)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_subtract_datetime() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	for i := 1; i < 4; i++ {
+		if args[i].Type != runtime.VAL_NUMBER {
+			runtimeError("date_subtract_datetime() arguments 2-4 must be numbers")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+	}
+	years := int(args[1].Number)
+	months := int(args[2].Number)
+	days := int(args[3].Number)
+	newTime := dateObj.Time.AddDate(-years, -months, -days)
+	return runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day()))
+}
+
+func dateGetDateTimeComponent(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("date_get_component() expects 2 arguments (Date, component string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_get_component() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	compObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("date_get_component() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	switch compObj.Chars {
+	case "year":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dateObj.Time.Year())}
+	case "month":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dateObj.Time.Month())}
+	case "day":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dateObj.Time.Day())}
+	default:
+		runtimeError("Invalid component '%s' for Date (use 'year', 'month', 'day')", compObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+
+func dateSetDateTimeComponent(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 3 {
+		runtimeError("date_set_component() expects 3 arguments (Date, component string, value)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_set_component() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	compObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("date_set_component() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[2].Type != runtime.VAL_NUMBER {
+		runtimeError("date_set_component() third argument must be a number")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	value := int(args[2].Number)
+	switch compObj.Chars {
+	case "year":
+		dateObj.Time = time.Date(value, dateObj.Time.Month(), dateObj.Time.Day(), 0, 0, 0, 0, dateObj.Time.Location())
+	case "month":
+		dateObj.Time = time.Date(dateObj.Time.Year(), time.Month(value), dateObj.Time.Day(), 0, 0, 0, 0, dateObj.Time.Location())
+	case "day":
+		dateObj.Time = time.Date(dateObj.Time.Year(), dateObj.Time.Month(), value, 0, 0, 0, 0, dateObj.Time.Location())
+	default:
+		runtimeError("Invalid component '%s' for Date (use 'year', 'month', 'day')", compObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.ObjVal(dateObj)
+}
+
+func dateAddDays(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("date_add_days() expects 2 arguments (Date, days)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_add_days() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[1].Type != runtime.VAL_NUMBER {
+		runtimeError("date_add_days() second argument must be a number")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	days := int(args[1].Number)
+	newTime := dateObj.Time.AddDate(0, 0, days)
+	return runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day()))
+}
+
+func dateSubtractDays(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("date_subtract_days() expects 2 arguments (Date, days)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dateObj, ok := args[0].Obj.(*runtime.ObjDate)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("date_subtract_days() first argument must be a Date")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[1].Type != runtime.VAL_NUMBER {
+		runtimeError("date_subtract_days() second argument must be a number")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	days := int(args[1].Number)
+	newTime := dateObj.Time.AddDate(0, 0, -days)
+	return runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day()))
+}
+
+// ============================================================================
+// Native Functions: Time
+// ============================================================================
+
+func timeNew(argCount int, args []runtime.Value) runtime.Value {
+	switch argCount {
+	case 0:
+		// Return current time
+		now := time.Now()
+		hour, minute, second := now.Hour(), now.Minute(), now.Second()
+		return runtime.ObjVal(runtime.NewTime(hour, minute, second))
+	case 1:
+		// Set hour, default minute and second to 0
+		if args[0].Type != runtime.VAL_NUMBER {
+			runtimeError("Argument must be a number")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+		hour := int(args[0].Number)
+		return runtime.ObjVal(runtime.NewTime(hour, 0, 0))
+	case 3:
+		// Set hour, minute, second
+		for i := 0; i < 3; i++ {
+			if args[i].Type != runtime.VAL_NUMBER {
+				runtimeError("Arguments must be numbers")
+				return runtime.Value{Type: runtime.VAL_NULL}
+			}
+		}
+		hour := int(args[0].Number)
+		minute := int(args[1].Number)
+		second := int(args[2].Number)
+		return runtime.ObjVal(runtime.NewTime(hour, minute, second))
+	default:
+		runtimeError("Time requires 0, 1, or 3 arguments")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+
+func timeNow(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		runtimeError("time_now() expects 0 arguments")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	now := time.Now()
+	return runtime.ObjVal(runtime.NewTime(now.Hour(), now.Minute(), now.Second()))
+}
+
+func timeParseTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("time_parse() expects 1 argument (string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_OBJ {
+		runtimeError("time_parse() expects a string argument")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	strObj, ok := args[0].Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("time_parse() expects a string argument")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	t, err := time.Parse("15:04:05", strObj.Chars) // Standard time format
+	if err != nil {
+		runtimeError("Invalid time format: %s (use 'HH:MM:SS')", strObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.ObjVal(runtime.NewTime(t.Hour(), t.Minute(), t.Second()))
+}
+
+func timeFormatTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("time_format() expects 2 arguments (Time, format string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	timeObj, ok := args[0].Obj.(*runtime.ObjTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("time_format() first argument must be a Time")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("time_format() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatted := timeObj.Time.Format(formatObj.Chars)
+	return runtime.ObjVal(runtime.NewObjString(formatted))
+}
+
+func timeAddTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 4 {
+		runtimeError("time_add() expects 4 arguments (Time, hours, minutes, seconds)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	timeObj, ok := args[0].Obj.(*runtime.ObjTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("time_add() first argument must be a Time")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	for i := 1; i < 4; i++ {
+		if args[i].Type != runtime.VAL_NUMBER {
+			runtimeError("time_add() arguments 2-4 must be numbers")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+	}
+	hours := int(args[1].Number)
+	minutes := int(args[2].Number)
+	seconds := int(args[3].Number)
+	duration := time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+	newTime := timeObj.Time.Add(duration)
+	return runtime.ObjVal(runtime.NewTime(newTime.Hour(), newTime.Minute(), newTime.Second()))
+}
+
+func timeSubtractTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 4 {
+		runtimeError("time_subtract() expects 4 arguments (Time, hours, minutes, seconds)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	timeObj, ok := args[0].Obj.(*runtime.ObjTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("time_subtract() first argument must be a Time")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	for i := 1; i < 4; i++ {
+		if args[i].Type != runtime.VAL_NUMBER {
+			runtimeError("time_subtract() arguments 2-4 must be numbers")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+	}
+	hours := int(args[1].Number)
+	minutes := int(args[2].Number)
+	seconds := int(args[3].Number)
+	duration := time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second
+	newTime := timeObj.Time.Add(-duration)
+	return runtime.ObjVal(runtime.NewTime(newTime.Hour(), newTime.Minute(), newTime.Second()))
+}
+
+func timeGetTimeZone(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("time_get_timezone() expects 1 argument (Time)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	timeObj, ok := args[0].Obj.(*runtime.ObjTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("time_get_timezone() argument must be a Time")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	zone, _ := timeObj.Time.Zone()
+	return runtime.ObjVal(runtime.NewObjString(zone))
+}
+
+func timeConvertTimeZone(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("time_convert_timezone() expects 2 arguments (Time, timezone string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	timeObj, ok := args[0].Obj.(*runtime.ObjTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("time_convert_timezone() first argument must be a Time")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	tzObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("time_convert_timezone() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	loc, err := time.LoadLocation(tzObj.Chars)
+	if err != nil {
+		runtimeError("Invalid timezone: %s", tzObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	newTime := timeObj.Time.In(loc)
+	return runtime.ObjVal(runtime.NewTime(newTime.Hour(), newTime.Minute(), newTime.Second()))
+}
+
+// ============================================================================
+// Native Functions: DateTime
+// ============================================================================
+
+func dateTimeNew(argCount int, args []runtime.Value) runtime.Value {
+	switch argCount {
+	case 0:
+		// Return current datetime
+		now := time.Now()
+		year, month, day := now.Date()
+		hour, minute, second := now.Hour(), now.Minute(), now.Second()
+		return runtime.ObjVal(runtime.NewDateTime(year, month, day, hour, minute, second))
+	case 1:
+		// Set year, default rest to minimal values
+		if args[0].Type != runtime.VAL_NUMBER {
+			runtimeError("Argument must be a number")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+		year := int(args[0].Number)
+		return runtime.ObjVal(runtime.NewDateTime(year, time.January, 1, 0, 0, 0))
+	case 6:
+		// Set year, month, day, hour, minute, second
+		for i := 0; i < 6; i++ {
+			if args[i].Type != runtime.VAL_NUMBER {
+				runtimeError("Arguments must be numbers")
+				return runtime.Value{Type: runtime.VAL_NULL}
+			}
+		}
+		year := int(args[0].Number)
+		month := time.Month(args[1].Number) // Assumes month is 1-12
+		day := int(args[2].Number)
+		hour := int(args[3].Number)
+		minute := int(args[4].Number)
+		second := int(args[5].Number)
+		return runtime.ObjVal(runtime.NewDateTime(year, month, day, hour, minute, second))
+	default:
+		runtimeError("DateTime requires 0, 1, or 6 arguments")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+
+func dateTimeNow(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		runtimeError("datetime_now() expects 0 arguments")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	now := time.Now()
+	return runtime.ObjVal(runtime.NewDateTime(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second()))
+}
+
+func dateTimeParseDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("datetime_parse() expects 1 argument (string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_parse() expects a string argument")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	strObj, ok := args[0].Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("datetime_parse() expects a string argument")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	t, err := time.Parse("2006-01-02 15:04:05", strObj.Chars) // Standard datetime format
+	if err != nil {
+		runtimeError("Invalid datetime format: %s (use 'YYYY-MM-DD HH:MM:SS')", strObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.ObjVal(runtime.NewDateTime(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second()))
+}
+
+func dateTimeFormatDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("datetime_format() expects 2 arguments (DateTime, format string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_format() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_format() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatted := dtObj.Time.Format(formatObj.Chars)
+	return runtime.ObjVal(runtime.NewObjString(formatted))
+}
+
+func dateTimeAddDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 7 {
+		runtimeError("datetime_add() expects 7 arguments (DateTime, years, months, days, hours, minutes, seconds)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_add() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	for i := 1; i < 7; i++ {
+		if args[i].Type != runtime.VAL_NUMBER {
+			runtimeError("datetime_add() arguments 2-7 must be numbers")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+	}
+	years := int(args[1].Number)
+	months := int(args[2].Number)
+	days := int(args[3].Number)
+	hours := int(args[4].Number)
+	minutes := int(args[5].Number)
+	seconds := int(args[6].Number)
+	newTime := dtObj.Time.AddDate(years, months, days).Add(time.Duration(hours)*time.Hour + time.Duration(minutes)*time.Minute + time.Duration(seconds)*time.Second)
+	return runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second()))
+}
+
+func dateTimeSubtractDateTime(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 7 {
+		runtimeError("datetime_subtract() expects 7 arguments (DateTime, years, months, days, hours, minutes, seconds)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_subtract() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	for i := 1; i < 7; i++ {
+		if args[i].Type != runtime.VAL_NUMBER {
+			runtimeError("datetime_subtract() arguments 2-7 must be numbers")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+	}
+	years := int(args[1].Number)
+	months := int(args[2].Number)
+	days := int(args[3].Number)
+	hours := int(args[4].Number)
+	minutes := int(args[5].Number)
+	seconds := int(args[6].Number)
+	newTime := dtObj.Time.AddDate(-years, -months, -days).Add(-time.Duration(hours)*time.Hour - time.Duration(minutes)*time.Minute - time.Duration(seconds)*time.Second)
+	return runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second()))
+}
+
+func dateTimeGetDateTimeComponent(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("datetime_get_component() expects 2 arguments (DateTime, component string)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_get_component() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	compObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_get_component() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	switch compObj.Chars {
+	case "year":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dtObj.Time.Year())}
+	case "month":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dtObj.Time.Month())}
+	case "day":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dtObj.Time.Day())}
+	case "hour":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dtObj.Time.Hour())}
+	case "minute":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dtObj.Time.Minute())}
+	case "second":
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(dtObj.Time.Second())}
+	default:
+		runtimeError("Invalid component '%s' for DateTime (use 'year', 'month', 'day', 'hour', 'minute', 'second')", compObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+
+func dateTimeSetDateTimeComponent(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 3 {
+		runtimeError("datetime_set_component() expects 3 arguments (DateTime, component string, value)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_set_component() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	compObj, ok := args[1].Obj.(*runtime.ObjString)
+	if !ok || args[1].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_set_component() second argument must be a string")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[2].Type != runtime.VAL_NUMBER {
+		runtimeError("datetime_set_component() third argument must be a number")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	value := int(args[2].Number)
+	switch compObj.Chars {
+	case "year":
+		dtObj.Time = time.Date(value, dtObj.Time.Month(), dtObj.Time.Day(), dtObj.Time.Hour(), dtObj.Time.Minute(), dtObj.Time.Second(), dtObj.Time.Nanosecond(), dtObj.Time.Location())
+	case "month":
+		dtObj.Time = time.Date(dtObj.Time.Year(), time.Month(value), dtObj.Time.Day(), dtObj.Time.Hour(), dtObj.Time.Minute(), dtObj.Time.Second(), dtObj.Time.Nanosecond(), dtObj.Time.Location())
+	case "day":
+		dtObj.Time = time.Date(dtObj.Time.Year(), dtObj.Time.Month(), value, dtObj.Time.Hour(), dtObj.Time.Minute(), dtObj.Time.Second(), dtObj.Time.Nanosecond(), dtObj.Time.Location())
+	case "hour":
+		dtObj.Time = time.Date(dtObj.Time.Year(), dtObj.Time.Month(), dtObj.Time.Day(), value, dtObj.Time.Minute(), dtObj.Time.Second(), dtObj.Time.Nanosecond(), dtObj.Time.Location())
+	case "minute":
+		dtObj.Time = time.Date(dtObj.Time.Year(), dtObj.Time.Month(), dtObj.Time.Day(), dtObj.Time.Hour(), value, dtObj.Time.Second(), dtObj.Time.Nanosecond(), dtObj.Time.Location())
+	case "second":
+		dtObj.Time = time.Date(dtObj.Time.Year(), dtObj.Time.Month(), dtObj.Time.Day(), dtObj.Time.Hour(), dtObj.Time.Minute(), value, dtObj.Time.Nanosecond(), dtObj.Time.Location())
+	default:
+		runtimeError("Invalid component '%s' for DateTime (use 'year', 'month', 'day', 'hour', 'minute', 'second')", compObj.Chars)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.ObjVal(dtObj)
+}
+
+func dateTimeAddDays(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("datetime_add_days() expects 2 arguments (DateTime, days)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_add_days() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[1].Type != runtime.VAL_NUMBER {
+		runtimeError("datetime_add_days() second argument must be a number")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	days := int(args[1].Number)
+	newTime := dtObj.Time.AddDate(0, 0, days)
+	return runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second()))
+}
+
+func dateTimeSubtractDays(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("datetime_subtract_days() expects 2 arguments (DateTime, days)")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	dtObj, ok := args[0].Obj.(*runtime.ObjDateTime)
+	if !ok || args[0].Type != runtime.VAL_OBJ {
+		runtimeError("datetime_subtract_days() first argument must be a DateTime")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[1].Type != runtime.VAL_NUMBER {
+		runtimeError("datetime_subtract_days() second argument must be a number")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	days := int(args[1].Number)
+	newTime := dtObj.Time.AddDate(0, 0, -days)
+	return runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second()))
 }
 
 // ============================================================================

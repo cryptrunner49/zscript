@@ -54,6 +54,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/cryptrunner49/goseedvm/internal/common"
@@ -337,9 +338,65 @@ func run() InterpretResult {
 				} else {
 					return runtimeError("Cannot access property '%s' on array; only 'length' is supported.", name.Chars)
 				}
+			case *runtime.ObjDate:
+				name := readString(frame)
+				var value runtime.Value
+				switch name.Chars {
+				case "year":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Year())}
+				case "month":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Month())}
+				case "day":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Day())}
+				default:
+					return runtimeError("Property '%s' does not exist on Date.", name.Chars)
+				}
+				Pop() // Remove the Date object from the stack
+				Push(value)
+			case *runtime.ObjTime:
+				name := readString(frame)
+				var value runtime.Value
+				switch name.Chars {
+				case "hour":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Hour())}
+				case "minute":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Minute())}
+				case "second":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Second())}
+				case "nanosecond":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Nanosecond())}
+				default:
+					return runtimeError("Property '%s' does not exist on Time.", name.Chars)
+				}
+				Pop() // Remove the Time object from the stack
+				Push(value)
+			case *runtime.ObjDateTime:
+				name := readString(frame)
+				var value runtime.Value
+				switch name.Chars {
+				case "year":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Year())}
+				case "month":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Month())}
+				case "day":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Day())}
+				case "hour":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Hour())}
+				case "minute":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Minute())}
+				case "second":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Second())}
+				case "nanosecond":
+					value = runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(obj.Time.Nanosecond())}
+				default:
+					return runtimeError("Property '%s' does not exist on DateTime.", name.Chars)
+				}
+				Pop() // Remove the DateTime object from the stack
+				Push(value)
 			default:
 				return runtimeError("Cannot access property on %s; only struct instances, arrays, and modules have properties.", typeName(instVal))
 			}
+
 		case uint8(runtime.OP_SET_PROPERTY):
 			// Set a property on a struct instance.
 			instVal := peek(1)
@@ -354,6 +411,87 @@ func run() InterpretResult {
 				name := readString(frame)
 				obj.Fields[name] = peek(0)
 				value := Pop()
+				Pop()
+				Push(value)
+			case *runtime.ObjDate:
+				name := readString(frame)
+				value := peek(0)
+				if value.Type != runtime.VAL_NUMBER {
+					return runtimeError("Property '%s' must be a number.", name.Chars)
+				}
+				switch name.Chars {
+				case "year":
+					newYear := int(value.Number)
+					obj.Time = time.Date(newYear, obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "month":
+					newMonth := time.Month(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), newMonth, obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "day":
+					newDay := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), newDay, obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				default:
+					return runtimeError("Property '%s' does not exist on Date.", name.Chars)
+				}
+				value = Pop()
+				Pop()
+				Push(value)
+			case *runtime.ObjTime:
+				name := readString(frame)
+				value := peek(0)
+				if value.Type != runtime.VAL_NUMBER {
+					return runtimeError("Property '%s' must be a number.", name.Chars)
+				}
+				switch name.Chars {
+				case "hour":
+					newHour := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), newHour, obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "minute":
+					newMinute := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), newMinute, obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "second":
+					newSecond := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), newSecond, obj.Time.Nanosecond(), obj.Time.Location())
+				case "nanosecond":
+					newNano := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), newNano, obj.Time.Location())
+				default:
+					return runtimeError("Property '%s' does not exist on Time.", name.Chars)
+				}
+				value = Pop()
+				Pop()
+				Push(value)
+			case *runtime.ObjDateTime:
+				name := readString(frame)
+				value := peek(0)
+				if value.Type != runtime.VAL_NUMBER {
+					return runtimeError("Property '%s' must be a number.", name.Chars)
+				}
+				switch name.Chars {
+				case "year":
+					newYear := int(value.Number)
+					obj.Time = time.Date(newYear, obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "month":
+					newMonth := time.Month(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), newMonth, obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "day":
+					newDay := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), newDay, obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "hour":
+					newHour := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), newHour, obj.Time.Minute(), obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "minute":
+					newMinute := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), newMinute, obj.Time.Second(), obj.Time.Nanosecond(), obj.Time.Location())
+				case "second":
+					newSecond := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), newSecond, obj.Time.Nanosecond(), obj.Time.Location())
+				case "nanosecond":
+					newNano := int(value.Number)
+					obj.Time = time.Date(obj.Time.Year(), obj.Time.Month(), obj.Time.Day(), obj.Time.Hour(), obj.Time.Minute(), obj.Time.Second(), newNano, obj.Time.Location())
+				default:
+					return runtimeError("Property '%s' does not exist on DateTime.", name.Chars)
+				}
+				value = Pop()
 				Pop()
 				Push(value)
 			default:
@@ -433,7 +571,41 @@ func run() InterpretResult {
 			} else {
 				b := Pop()
 				a := Pop()
-				Push(addStrings(a, b)) // Mixed types fallback to string concatenation
+				if a.Type == runtime.VAL_OBJ && b.Type == runtime.VAL_NUMBER {
+					switch obj := a.Obj.(type) {
+					case *runtime.ObjDate:
+						days := int(b.Number)
+						newTime := obj.Time.AddDate(0, 0, days)
+						Push(runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day())))
+					case *runtime.ObjTime:
+						seconds := int64(b.Number)
+						newTime := obj.Time.Add(time.Duration(seconds) * time.Second)
+						Push(runtime.ObjVal(runtime.NewTime(newTime.Hour(), newTime.Minute(), newTime.Second())))
+					case *runtime.ObjDateTime:
+						seconds := int64(b.Number)
+						newTime := obj.Time.Add(time.Duration(seconds) * time.Second)
+						Push(runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second())))
+					default:
+						Push(addStrings(a, b)) // Mixed types fallback to string concatenation
+					}
+				} else if a.Type == runtime.VAL_NUMBER && b.Type == runtime.VAL_OBJ {
+					switch obj := b.Obj.(type) {
+					case *runtime.ObjDate:
+						days := int(a.Number)
+						newTime := obj.Time.AddDate(0, 0, days)
+						Push(runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day())))
+					case *runtime.ObjTime:
+						seconds := int64(a.Number)
+						newTime := obj.Time.Add(time.Duration(seconds) * time.Second)
+						Push(runtime.ObjVal(runtime.NewTime(newTime.Hour(), newTime.Minute(), newTime.Second())))
+					case *runtime.ObjDateTime:
+						seconds := int64(a.Number)
+						newTime := obj.Time.Add(time.Duration(seconds) * time.Second)
+						Push(runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second())))
+					default:
+						Push(addStrings(a, b)) // Mixed types fallback to string concatenation
+					}
+				}
 			}
 
 		case uint8(runtime.OP_SUBTRACT):
@@ -491,7 +663,25 @@ func run() InterpretResult {
 			} else {
 				b := Pop()
 				a := Pop()
-				Push(subtractStrings(a, b)) // Mixed types fallback to string cropping
+				if a.Type == runtime.VAL_OBJ && b.Type == runtime.VAL_NUMBER {
+					switch obj := a.Obj.(type) {
+					case *runtime.ObjDate:
+						days := int(b.Number)
+						newTime := obj.Time.AddDate(0, 0, -days)
+						Push(runtime.ObjVal(runtime.NewDate(newTime.Year(), newTime.Month(), newTime.Day())))
+					case *runtime.ObjTime:
+						seconds := int64(b.Number)
+						newTime := obj.Time.Add(-time.Duration(seconds) * time.Second)
+						Push(runtime.ObjVal(runtime.NewTime(newTime.Hour(), newTime.Minute(), newTime.Second())))
+					case *runtime.ObjDateTime:
+						seconds := int64(b.Number)
+						newTime := obj.Time.Add(-time.Duration(seconds) * time.Second)
+						Push(runtime.ObjVal(runtime.NewDateTime(newTime.Year(), newTime.Month(), newTime.Day(), newTime.Hour(), newTime.Minute(), newTime.Second())))
+					default:
+						Push(subtractStrings(a, b)) // Mixed types fallback to string cropping
+					}
+				}
+
 			}
 
 		case uint8(runtime.OP_MULTIPLY):
