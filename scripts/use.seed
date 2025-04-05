@@ -6,6 +6,18 @@ use "mylib" {
     uint32_t my_c_func_uint(size_t);
 };
 
+// or
+
+/*
+use "libmylib.so" {
+    int32_t my_c_func_int(int32_t);
+    double my_c_func_double(double);
+    void my_c_func_void();
+    bool my_c_func_bool(int32_t);
+    uint32_t my_c_func_uint(size_t);
+};
+*/
+
 
 print my_c_func_int(5);     // Should print 10
 print my_c_func_double(2);  // Should print 6.28
@@ -13,3 +25,5 @@ my_c_func_void();           // Should print "Hello from C!"
 print my_c_func_bool(3);    // Should print true
 print my_c_func_bool(-1);   // Should print false
 print my_c_func_uint(10);   // Should print some uint32_t value
+
+// LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH_TO_LIBRARY_FOLDER bin/goseedvm scripts/use.seed

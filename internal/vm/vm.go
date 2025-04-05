@@ -1,29 +1,51 @@
+//go:build cgo
+// +build cgo
+
 package vm
 
 /*
-#cgo pkg-config: readline
 #cgo LDFLAGS: -ldl
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <dlfcn.h>
+#include <string.h>
 
-// Functions to load libraries and symbols
+// Load a library, automatically adding "lib" prefix and ".so" suffix if needed
 void* load_library(const char* lib_name) {
     void* handle = dlopen(lib_name, RTLD_LAZY);
     if (!handle) {
-        fprintf(stderr, "Cannot load library '%s': %s\n", lib_name, dlerror());
+        // If direct load fails, try with "lib" prefix and ".so" suffix
+        char* prefixed_name = malloc(strlen(lib_name) + 7); // "lib" (3) + ".so" (3) + null terminator (1)
+        if (!prefixed_name) {
+            fprintf(stderr, "Memory allocation failed for library name\n");
+            return NULL;
+        }
+
+        // Check if it already starts with "lib" and ends with ".so"
+        if (strncmp(lib_name, "lib", 3) != 0 && strstr(lib_name, ".so") == NULL) {
+            sprintf(prefixed_name, "lib%s.so", lib_name);
+            handle = dlopen(prefixed_name, RTLD_LAZY);
+        }
+
+        if (!handle) {
+            fprintf(stderr, "Cannot load library '%s' or '%s': %s\n", lib_name, prefixed_name, dlerror());
+        }
+        free(prefixed_name);
     }
     return handle;
 }
 
+// Get a function pointer
 void* get_function(void* handle, const char* func_name) {
     void* func = dlsym(handle, func_name);
     if (!func) {
         fprintf(stderr, "Cannot load function '%s': %s\n", func_name, dlerror());
     }
     return func;
+}
+
+void close_library(void* handle) {
+    dlclose(handle);
 }
 */
 import "C"
@@ -73,6 +95,7 @@ type VM struct {
 	globals      map[*runtime.ObjString]runtime.Value // Global variables table.
 	strings      map[uint32]*runtime.ObjString        // Interned strings table.
 	openUpvalues *runtime.ObjUpvalue                  // Linked list of open upvalues for closures.
+	libHandles   []unsafe.Pointer                     // List of loaded library handles.
 }
 
 var vm VM // Global VM instance.
@@ -92,6 +115,10 @@ func InitVM(args []string) {
 
 // FreeVM frees resources used by the VM.
 func FreeVM() {
+	for _, handle := range vm.libHandles {
+		C.close_library(handle)
+	}
+
 	vm.globals = nil
 	vm.strings = nil
 	vm.objects = nil
@@ -954,11 +981,12 @@ func run() InterpretResult {
 			Push(vm.globals[pathObj]) // Push the closure back
 		case uint8(runtime.OP_USE):
 			libName := readString(frame).Chars
-			fullLibName := "lib" + libName + ".so" // Adjust for platform if needed
-			currentLibHandle = C.load_library(C.CString(fullLibName))
+			// Use the full library name as provided (e.g., "libmylib.so" or "mylib.dll")
+			currentLibHandle = C.load_library(C.CString(libName))
 			if currentLibHandle == nil {
-				return runtimeError("Failed to load library '%s'.", fullLibName)
+				return runtimeError("Failed to load library '%s'.", libName)
 			}
+			vm.libHandles = append(vm.libHandles, currentLibHandle)
 
 		case uint8(runtime.OP_DEFINE_EXTERN):
 			returnTypeConstant := readConstant(frame)
