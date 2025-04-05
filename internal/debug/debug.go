@@ -127,8 +127,6 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return simpleInstruction("OP_MAP", offset)
 	case uint8(runtime.OP_MODULE):
 		return constantInstruction("OP_MODULE", ch, offset)
-	case uint8(runtime.OP_DEFINE_MODULE):
-		return constantInstruction("OP_DEFINE_MODULE", ch, offset)
 	case uint8(runtime.OP_IMPORT):
 		return constantInstruction("OP_IMPORT", ch, offset)
 	case uint8(runtime.OP_USE):

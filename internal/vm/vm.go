@@ -952,10 +952,6 @@ func run() InterpretResult {
 			}
 
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule})
-
-		case uint8(runtime.OP_DEFINE_MODULE):
-			// TODO
-
 		case uint8(runtime.OP_IMPORT):
 			path := readString(frame).Chars
 			pathObj := runtime.NewObjString(path)
