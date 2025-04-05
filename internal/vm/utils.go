@@ -113,3 +113,53 @@ func call(closure *runtime.ObjClosure, argCount int) bool {
 	frame.slots = vm.stackTop - argCount - 1
 	return true
 }
+
+func createInstance(callee runtime.Value, argCount int) bool {
+	if callee.Type == runtime.VAL_OBJ {
+		if structObj, ok := callee.Obj.(*runtime.ObjStruct); ok {
+			// Create new instance with default values
+			instance := runtime.NewInstance(structObj)
+
+			// Pop the force flag
+			forceVal := Pop()
+			if forceVal.Type != runtime.VAL_BOOL {
+				runtimeError("Internal error: Expected boolean force flag for instance creation.")
+				return false
+			}
+			force := forceVal.Bool
+
+			// Base position of the struct on the stack
+			base := vm.stackTop - (argCount * 2) - 1 // 2 slots per pair
+
+			// Assign key-value pairs to fields
+			for i := 0; i < argCount; i++ {
+				value := Pop()  // Pop the value (e.g., 2, then 1)
+				keyVal := Pop() // Pop the key (e.g., "y", then "x")
+				if keyVal.Type != runtime.VAL_OBJ {
+					runtimeError("Field name must be a string in instance initializer.")
+					return false
+				}
+				key, ok := keyVal.Obj.(*runtime.ObjString)
+				if !ok {
+					runtimeError("Field name must be a string in instance initializer.")
+					return false
+				}
+				if !force {
+					// Check if the field exists in the struct
+					if _, exists := structObj.Fields[key]; !exists {
+						runtimeError("Unknown field '%s' in struct '%s'.", key.Chars, structObj.Name.Chars)
+						return false
+					}
+				}
+				instance.Fields[key] = value // Assign value to the specified field
+			}
+
+			// Replace the struct with the new instance
+			vm.stack[base] = runtime.ObjVal(instance)
+			vm.stackTop = base + 1
+			return true
+		}
+	}
+	runtimeError("Cannot instantiate %s with '{}'; only structs can be instantiated this way.", typeName(callee))
+	return false
+}

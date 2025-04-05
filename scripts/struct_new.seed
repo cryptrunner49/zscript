@@ -1,0 +1,25 @@
+enable_trace(); // native method
+enable_debug(); // native method
+
+struct Point {
+    x = 10,
+    y = 22
+}
+
+var p = Point{};  // Creates a Point instance with defaults x=10, y=22
+print p;
+
+var p2 = Point{x = 1, y = 2};  // Creates a Point instance with x=1, y=2
+print p2;
+
+var p3 = Point{};
+print p3;
+
+struct Vec3;
+
+var v1 = Vec3(); // Empty old syntax (old syntax only works for creating empty structs)
+var v2 = Vec3{}; // Empty New syntax
+
+//var v3 = Vec3{x = 1, y = 2, z = 3}; // Error cannot initialized with fields that don't exist in the struct
+var v3 = Vec3!{x = 1, y = 2, z = 3};  // Forces the creation and initialization even if the fields don't exits and creates any missing field
+print v3;

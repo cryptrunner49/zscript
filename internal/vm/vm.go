@@ -770,6 +770,13 @@ func run() InterpretResult {
 			}
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objStruct})
 
+		case uint8(runtime.OP_INSTANCE):
+			argCount := int(readByte(frame)) // Number of key-value pairs
+			// Peek past argCount*2 (pairs) + 1 (force bool) to get the struct
+			if !createInstance(peek(argCount*2+1), argCount) {
+				return INTERPRET_RUNTIME_ERROR
+			}
+
 		case uint8(runtime.OP_GET_VALUE):
 			index := Pop()
 			obj := Pop()

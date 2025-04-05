@@ -129,3 +129,57 @@ func mapLiteral(canAssign bool) {
 	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' after map literal")
 	emitBytes(byte(runtime.OP_MAP), byte(pairs))
 }
+
+// instance emits the OP_INSTANCE opcode with the number of arguments.
+func instance(canAssign bool) {
+	force := false
+	if parser.previous.Type == token.TOKEN_BANG { // '!'' was just consumed
+		force = true
+	}
+
+	// Parse arguments if '{' follows '!'
+	if force && match(token.TOKEN_LEFT_BRACE) {
+		// Continue with argument list
+	} else if !force {
+		// Already consumed '{' above
+	} else {
+		reportError("Expected '{' after '!' in instance initializer (e.g., 'Struct!{x = 1}').")
+		return
+	}
+
+	argCount := instanceArgumentList()
+
+	// Emit the force flag as a constant (true if '!' was used, false otherwise)
+	emitConstant(runtime.Value{Type: runtime.VAL_BOOL, Bool: force})
+	emitBytes(byte(runtime.OP_INSTANCE), argCount)
+}
+
+// instanceArgumentList parses key-value pairs for instance initialization (e.g., {x = 1, y = 2}).
+// Returns the number of key-value pairs (argCount).
+func instanceArgumentList() uint8 {
+	var argCount uint8 = 0
+	if !check(token.TOKEN_RIGHT_BRACE) {
+		for {
+			// Expect an identifier (field name)
+			consume(token.TOKEN_IDENTIFIER, "Expected field name in instance initializer (e.g., 'x = value').")
+			fieldName := parser.previous
+			fieldNameConstant := identifierConstant(fieldName)
+			emitBytes(byte(runtime.OP_CONSTANT), fieldNameConstant) // Emit field name as a string constant
+
+			// Expect '=' followed by the value
+			consume(token.TOKEN_EQUAL, "Expected '=' after field name in instance initializer.")
+			expression() // Emit the value expression
+
+			if argCount == 255 {
+				reportError("Instance creation cannot have more than 255 field initializers.")
+			}
+			argCount++ // Increment for each key-value pair
+
+			if !match(token.TOKEN_COMMA) {
+				break
+			}
+		}
+	}
+	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close instance initializer list (e.g., 'Point{x = 1, y = 2}').")
+	return argCount
+}

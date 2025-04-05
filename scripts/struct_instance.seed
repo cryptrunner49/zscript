@@ -1,0 +1,29 @@
+enable_trace();
+enable_debug();
+
+struct Vec {
+    x = 100;
+    y = 500;
+    name = "default";
+}
+
+var v1 = Vec{};              // Empty, uses defaults
+print("v1: ");
+print(v1.x);                 // 100
+print(v1.y);                 // 500
+print(v1.name);              // "default"
+
+var v2 = Vec{x = 10;};       // Partial initialization
+print("v2: ");
+print(v2.x);                 // 10
+print(v2.y);                 // 500
+print(v2.name);              // "default"
+
+var v3 = Vec{x = 10; y = 5}; // Multiple fields
+print("v3: ");
+print(v3.x);                  // 10
+print(v3.y);                  // 5
+print(v3.name);               // "default"
+
+// Old syntax fails
+//var v4 = Vec();              // Syntax error

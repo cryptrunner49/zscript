@@ -113,6 +113,8 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return jumpInstruction("OP_CONTINUE", 1, ch, offset)
 	case uint8(runtime.OP_STRUCT):
 		return structInstruction(ch, offset)
+	case uint8(runtime.OP_INSTANCE):
+		return byteInstruction("OP_INSTANCE", ch, offset)
 	case uint8(runtime.OP_GET_VALUE):
 		return simpleInstruction("OP_GET_VALUE", offset)
 	case uint8(runtime.OP_SET_VALUE):

@@ -112,7 +112,7 @@ func init() {
 	rules = make([]ParseRule, token.TOKEN_EOF+1)
 	rules[token.TOKEN_LEFT_PAREN] = ParseRule{grouping, call, PREC_CALL}
 	rules[token.TOKEN_RIGHT_PAREN] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_LEFT_BRACE] = ParseRule{mapLiteral, nil, PREC_NONE}
+	rules[token.TOKEN_LEFT_BRACE] = ParseRule{mapLiteral, instance, PREC_CALL}
 	rules[token.TOKEN_RIGHT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_LEFT_BRACKET] = ParseRule{arrayLiteral, subscript, PREC_CALL}
 	rules[token.TOKEN_RIGHT_BRACKET] = ParseRule{nil, nil, PREC_NONE}
@@ -130,7 +130,7 @@ func init() {
 	rules[token.TOKEN_HASH] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_DOLLAR] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_COLON] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_BANG] = ParseRule{unary, nil, PREC_NONE}
+	rules[token.TOKEN_BANG] = ParseRule{unary, instance, PREC_CALL}
 	rules[token.TOKEN_BANG_EQUAL] = ParseRule{nil, binary, PREC_EQUALITY}
 	rules[token.TOKEN_EQUAL] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_EQUAL_EQUAL] = ParseRule{nil, binary, PREC_EQUALITY}
