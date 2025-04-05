@@ -19,7 +19,8 @@ const (
 	OBJ_INSTANCE                      // Instance: an instance of a struct.
 	OBJ_ARRAY                         // Array: a dynamic array.
 	OBJ_ARRAY_ITERATOR                // Array Iterator: iterator for arrays.
-	OBJ_MODULE
+	OBJ_MODULE                        // Module: a module containing functions, variables and other modules.
+	OBJ_MAP                           // Map: a key-value store.
 )
 
 // Obj is the header for all heap-allocated objects.
@@ -186,6 +187,18 @@ func PrintObject(obj interface{}) {
 		fmt.Printf("<array iterator at %d>", o.Index)
 	case *ObjModule:
 		fmt.Printf("<mod %s>", o.Name.Chars)
+	case *ObjMap:
+		fmt.Print("{")
+		first := true
+		for key, value := range o.Entries {
+			if !first {
+				fmt.Print(", ")
+			}
+			fmt.Printf("%s: ", key.Chars)
+			PrintValue(value)
+			first = false
+		}
+		fmt.Print("}")
 	default:
 		fmt.Print("unknown object")
 	}
@@ -271,5 +284,19 @@ func NewModule(name *ObjString) *ObjModule {
 		Obj:    Obj{Type: OBJ_MODULE},
 		Name:   name,
 		Fields: make(map[*ObjString]Value),
+	}
+}
+
+// ObjMap represents a hash map with key-value pairs.
+type ObjMap struct {
+	Obj
+	Entries map[*ObjString]Value // Map of keys (strings) to values.
+}
+
+// NewMap creates a new empty hash map object.
+func NewMap() *ObjMap {
+	return &ObjMap{
+		Obj:     Obj{Type: OBJ_MAP},
+		Entries: make(map[*ObjString]Value),
 	}
 }

@@ -101,3 +101,13 @@ var binIndex1 = array_binary_search(sortedSearchArr, "cherry");
 print "Index of 'cherry' (binary search): " + to_str(binIndex1);
 var binIndex2 = array_binary_search(sortedSearchArr, "fig");
 print "Index of 'fig' (binary search, not found returns -1): " + to_str(binIndex2);
+
+// Array
+var arr = [1, 2, 3, 2];
+index_of(arr, 2);        // Returns 1
+last_index_of(arr, 2);   // Returns 3
+array_contains(arr, 3);  // Returns true
+array_clear(arr);        // Clears array
+array_reverse(arr);      // Reverses array
+array_to_string(arr);    // Returns "[1, 2, 3, 2]"
+array_remove(arr, 2);    // Removes first 2

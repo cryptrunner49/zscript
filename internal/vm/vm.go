@@ -392,120 +392,157 @@ func run() InterpretResult {
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: a.Number < b.Number})
 		case uint8(runtime.OP_ADD):
-			// Addition: support both numeric addition, string concatenation,
-			// and element-wise addition on arrays.
+			// Addition: support numeric addition, string concatenation,
+			// element-wise addition on arrays, and map merging.
 			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
 				// Simple numeric addition.
 				binaryOp(func(a, b float64) float64 { return a + b }, "+")
 			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				// Check if both operands are arrays.
-				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				// Check if both operands are maps
+				map2, ok2 := peek(0).Obj.(*runtime.ObjMap)
+				map1, ok1 := peek(1).Obj.(*runtime.ObjMap)
 				if ok1 && ok2 {
-					len1 := len(arr1.Elements)
-					len2 := len(arr2.Elements)
-					maxLen := len1
-					if len2 > maxLen {
-						maxLen = len2
+					// Create a new map with map1's entries
+					result := runtime.NewMap()
+					for key, value := range map1.Entries {
+						result.Entries[key] = value
 					}
-					result := make([]runtime.Value, maxLen)
-					minLen := len1
-					if len2 < minLen {
-						minLen = len2
+					// Add/overwrite with map2's entries
+					for key, value := range map2.Entries {
+						result.Entries[key] = value
 					}
-					// Element-wise addition for indices present in both arrays.
-					for i := 0; i < minLen; i++ {
-						v1 := arr1.Elements[i]
-						v2 := arr2.Elements[i]
-						if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
-							result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number + v2.Number}
-						} else {
-							s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
-							s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
-							result[i] = runtime.ObjVal(runtime.NewObjString(s1 + s2))
-						}
-					}
-					// Copy the remaining elements from the longer array.
-					if len1 > len2 {
-						for i := minLen; i < len1; i++ {
-							result[i] = arr1.Elements[i]
-						}
-					} else {
-						for i := minLen; i < len2; i++ {
-							result[i] = arr2.Elements[i]
-						}
-					}
-					Pop() // Pop second array.
-					Pop() // Pop first array.
-					Push(runtime.ObjVal(runtime.NewArray(result)))
+					Pop() // Pop second map
+					Pop() // Pop first map
+					Push(runtime.ObjVal(result))
 				} else {
-					// Fallback: if not arrays, attempt string concatenation.
-					concatenate()
+					// Check if both operands are arrays
+					arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+					arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+					if ok1 && ok2 {
+						len1 := len(arr1.Elements)
+						len2 := len(arr2.Elements)
+						maxLen := len1
+						if len2 > maxLen {
+							maxLen = len2
+						}
+						result := make([]runtime.Value, maxLen)
+						minLen := len1
+						if len2 < minLen {
+							minLen = len2
+						}
+						// Element-wise addition for indices present in both arrays
+						for i := 0; i < minLen; i++ {
+							v1 := arr1.Elements[i]
+							v2 := arr2.Elements[i]
+							if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
+								result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number + v2.Number}
+							} else {
+								s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
+								s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
+								result[i] = runtime.ObjVal(runtime.NewObjString(s1 + s2))
+							}
+						}
+						// Copy remaining elements from the longer array
+						if len1 > len2 {
+							for i := minLen; i < len1; i++ {
+								result[i] = arr1.Elements[i]
+							}
+						} else {
+							for i := minLen; i < len2; i++ {
+								result[i] = arr2.Elements[i]
+							}
+						}
+						Pop() // Pop second array
+						Pop() // Pop first array
+						Push(runtime.ObjVal(runtime.NewArray(result)))
+					} else {
+						// Fallback: if not arrays or maps, attempt string concatenation
+						concatenate()
+					}
 				}
 			} else {
-				// Mixed types: convert both to strings and concatenate.
+				// Mixed types: convert both to strings and concatenate
 				s1 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
 				s2 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
 				Push(runtime.ObjVal(runtime.NewObjString(s2 + s1)))
 			}
+
 		case uint8(runtime.OP_SUBTRACT):
 			// Subtraction: supports numeric subtraction, string cropping,
-			// and element-wise subtraction on arrays.
+			// element-wise subtraction on arrays, and map difference.
 			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				// Simple numeric subtraction.
+				// Simple numeric subtraction
 				binaryOp(func(a, b float64) float64 { return a - b }, "-")
 			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				// Check if both operands are arrays.
-				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+				// Check if both operands are maps
+				map2, ok2 := peek(0).Obj.(*runtime.ObjMap)
+				map1, ok1 := peek(1).Obj.(*runtime.ObjMap)
 				if ok1 && ok2 {
-					len1 := len(arr1.Elements)
-					len2 := len(arr2.Elements)
-					maxLen := len1
-					if len2 > maxLen {
-						maxLen = len2
+					// Create a new map with map1's entries
+					result := runtime.NewMap()
+					for key, value := range map1.Entries {
+						result.Entries[key] = value
 					}
-					result := make([]runtime.Value, maxLen)
-					minLen := len1
-					if len2 < minLen {
-						minLen = len2
+					// Remove all keys from map2 that exist in result
+					for key := range map2.Entries {
+						delete(result.Entries, key)
 					}
-					// Element-wise subtraction (or crop) for indices present in both arrays.
-					for i := 0; i < minLen; i++ {
-						v1 := arr1.Elements[i]
-						v2 := arr2.Elements[i]
-						if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
-							result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number - v2.Number}
-						} else {
-							s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
-							s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
-							idx := strings.Index(s1, s2)
-							if idx >= 0 {
-								result[i] = runtime.ObjVal(runtime.NewObjString(s1[:idx] + s1[idx+len(s2):]))
+					Pop() // Pop second map
+					Pop() // Pop first map
+					Push(runtime.ObjVal(result))
+				} else {
+					// Check if both operands are arrays
+					arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
+					arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
+					if ok1 && ok2 {
+						len1 := len(arr1.Elements)
+						len2 := len(arr2.Elements)
+						maxLen := len1
+						if len2 > maxLen {
+							maxLen = len2
+						}
+						result := make([]runtime.Value, maxLen)
+						minLen := len1
+						if len2 < minLen {
+							minLen = len2
+						}
+						// Element-wise subtraction (or crop) for indices present in both arrays
+						for i := 0; i < minLen; i++ {
+							v1 := arr1.Elements[i]
+							v2 := arr2.Elements[i]
+							if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
+								result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number - v2.Number}
 							} else {
-								result[i] = runtime.ObjVal(runtime.NewObjString(s1))
+								s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
+								s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
+								idx := strings.Index(s1, s2)
+								if idx >= 0 {
+									result[i] = runtime.ObjVal(runtime.NewObjString(s1[:idx] + s1[idx+len(s2):]))
+								} else {
+									result[i] = runtime.ObjVal(runtime.NewObjString(s1))
+								}
 							}
 						}
-					}
-					// Copy the remaining elements from the longer array.
-					if len1 > len2 {
-						for i := minLen; i < len1; i++ {
-							result[i] = arr1.Elements[i]
+						// Copy remaining elements from the longer array
+						if len1 > len2 {
+							for i := minLen; i < len1; i++ {
+								result[i] = arr1.Elements[i]
+							}
+						} else {
+							for i := minLen; i < len2; i++ {
+								result[i] = arr2.Elements[i]
+							}
 						}
+						Pop()
+						Pop()
+						Push(runtime.ObjVal(runtime.NewArray(result)))
 					} else {
-						for i := minLen; i < len2; i++ {
-							result[i] = arr2.Elements[i]
-						}
+						// Fallback to string crop
+						crop()
 					}
-					Pop()
-					Pop()
-					Push(runtime.ObjVal(runtime.NewArray(result)))
-				} else {
-					// Fallback to string crop.
-					crop()
 				}
 			} else {
-				// Mixed types: convert both to strings and perform crop.
+				// Mixed types: convert both to strings and perform crop
 				s1 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
 				s2 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
 				idx := strings.Index(s1, s2)
@@ -813,28 +850,87 @@ func run() InterpretResult {
 				objStruct.Fields[fieldName] = defaultValue
 			}
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: objStruct})
-		case uint8(runtime.OP_ARRAY_GET):
-			// Array indexing: retrieve an element from an array.
-			indexVal := Pop()
-			arrayVal := Pop()
 
-			if arrayVal.Type != runtime.VAL_OBJ {
-				return runtimeError("Only arrays can be indexed with [].")
-			}
-			array, ok := arrayVal.Obj.(*runtime.ObjArray)
-			if !ok {
-				return runtimeError("Only arrays can be indexed with [].")
-			}
-			if indexVal.Type != runtime.VAL_NUMBER {
-				return runtimeError("Array index must be a number.")
+		case uint8(runtime.OP_GET_VALUE):
+			index := Pop()
+			obj := Pop()
+
+			if obj.Type != runtime.VAL_OBJ {
+				runtimeError("Cannot index non-object type.")
+				break
 			}
 
-			index := int(indexVal.Number)
-			if index < 0 || index >= len(array.Elements) {
-				return runtimeError("Array index out of bounds.")
+			switch o := obj.Obj.(type) {
+			case *runtime.ObjArray:
+				if index.Type != runtime.VAL_NUMBER {
+					runtimeError("Array index must be a number.")
+					break
+				}
+				idx := int(index.Number)
+				if idx < 0 || idx >= len(o.Elements) {
+					runtimeError("Array index out of bounds.")
+					break
+				}
+				Push(o.Elements[idx])
+			case *runtime.ObjMap:
+				if index.Type != runtime.VAL_OBJ {
+					runtimeError("Map key must be a string.")
+					break
+				}
+				key, ok := index.Obj.(*runtime.ObjString)
+				if !ok {
+					runtimeError("Map key must be a string.")
+					break
+				}
+				val, exists := o.Entries[key]
+				if exists {
+					Push(val)
+				} else {
+					Push(runtime.Value{Type: runtime.VAL_NULL})
+				}
+			default:
+				runtimeError("Object does not support indexing.")
 			}
 
-			Push(array.Elements[index])
+		case uint8(runtime.OP_SET_VALUE):
+			value := Pop()
+			index := Pop()
+			obj := Pop()
+
+			if obj.Type != runtime.VAL_OBJ {
+				runtimeError("Cannot index non-object type.")
+				break
+			}
+
+			switch o := obj.Obj.(type) {
+			case *runtime.ObjArray:
+				if index.Type != runtime.VAL_NUMBER {
+					runtimeError("Array index must be a number.")
+					break
+				}
+				idx := int(index.Number)
+				if idx < 0 || idx >= len(o.Elements) {
+					runtimeError("Array index out of bounds.")
+					break
+				}
+				o.Elements[idx] = value
+				Push(value)
+			case *runtime.ObjMap:
+				if index.Type != runtime.VAL_OBJ {
+					runtimeError("Map key must be a string.")
+					break
+				}
+				key, ok := index.Obj.(*runtime.ObjString)
+				if !ok {
+					runtimeError("Map key must be a string.")
+					break
+				}
+				o.Entries[key] = value
+				Push(value)
+			default:
+				runtimeError("Object does not support indexing.")
+			}
+
 		case uint8(runtime.OP_ARRAY):
 			// Create a new array object from a list of elements.
 			elementCount := int(readByte(frame))
@@ -843,30 +939,7 @@ func run() InterpretResult {
 				elements[i] = Pop()
 			}
 			Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewArray(elements)})
-		case uint8(runtime.OP_ARRAY_SET):
-			// Set an array element at a specified index.
-			value := Pop()
-			indexVal := Pop()
-			arrayVal := Pop()
 
-			if arrayVal.Type != runtime.VAL_OBJ {
-				return runtimeError("Only arrays can be indexed with [].")
-			}
-			array, ok := arrayVal.Obj.(*runtime.ObjArray)
-			if !ok {
-				return runtimeError("Only arrays can be indexed with [].")
-			}
-			if indexVal.Type != runtime.VAL_NUMBER {
-				return runtimeError("Array index must be a number.")
-			}
-
-			index := int(indexVal.Number)
-			if index < 0 || index >= len(array.Elements) {
-				return runtimeError("Array index out of bounds.")
-			}
-
-			array.Elements[index] = value
-			Push(value)
 		case uint8(runtime.OP_ARRAY_LEN):
 			// Get the length of an array.
 			arrayVal := Pop()
@@ -1002,6 +1075,25 @@ func run() InterpretResult {
 			nativeFunc := createNativeFunc(funcName, cFunc, returnType, paramTypes)
 			nameObj := runtime.NewObjString(funcName)
 			vm.globals[nameObj] = runtime.Value{Type: runtime.VAL_OBJ, Obj: nativeFunc}
+
+		case uint8(runtime.OP_MAP):
+			pairCount := int(readByte(frame))
+			mapObj := runtime.NewMap()
+			for i := 0; i < pairCount; i++ {
+				value := Pop()
+				keyVal := Pop()
+				if keyVal.Type != runtime.VAL_OBJ {
+					runtimeError("Map key must be a string")
+					continue
+				}
+				key, ok := keyVal.Obj.(*runtime.ObjString)
+				if !ok {
+					runtimeError("Map key must be a string")
+					continue
+				}
+				mapObj.Entries[key] = value
+			}
+			Push(runtime.ObjVal(mapObj))
 		}
 	}
 }

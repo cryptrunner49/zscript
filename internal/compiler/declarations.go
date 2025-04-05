@@ -9,6 +9,24 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
+// declareVariable handles variable declarations and checks for redeclaration in the same scope.
+func declareVariable() {
+	if current.scopeDepth == 0 {
+		return
+	}
+	name := parser.previous
+	for i := current.localCount - 1; i >= 0; i-- {
+		local := current.locals[i]
+		if local.depth != -1 && local.depth < current.scopeDepth {
+			break
+		}
+		if identifiersEqual(name, local.name) {
+			reportError(fmt.Sprintf("Variable '%s' is already declared in this scope.", name.Start))
+		}
+	}
+	addLocal(name)
+}
+
 func fnDeclaration() {
 	global := parseVariable("Expected a function name after 'fn' (e.g., 'fn myFunc()').")
 	markInitialized()

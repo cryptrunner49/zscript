@@ -1,0 +1,131 @@
+package compiler
+
+import (
+	"github.com/cryptrunner49/goseedvm/internal/runtime"
+	"github.com/cryptrunner49/goseedvm/internal/token"
+)
+
+// function compiles a function declaration, including parameter parsing and function body.
+func function(funcType FunctionType) {
+	var compiler Compiler
+	initCompiler(&compiler, funcType, current.scriptDir) // Regular function: no module context
+	beginScope()
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name to start parameter list.")
+	if !check(token.TOKEN_RIGHT_PAREN) {
+		for {
+			current.function.Arity++
+			if current.function.Arity > 255 {
+				errorAtCurrent("Function cannot have more than 255 parameters.")
+			}
+			paramConstant := parseVariable("Expected a parameter name (e.g., 'x' in 'fn foo(x)').")
+			defineVariable(paramConstant)
+			if !match(token.TOKEN_COMMA) {
+				break
+			}
+		}
+	}
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close parameter list (e.g., 'fn foo()').")
+	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to start function body.")
+	block()
+	function := endCompiler()
+	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function}))
+	for i := 0; i < function.UpvalueCount; i++ {
+		isLocal := compiler.upvalues[i].isLocal
+		index := compiler.upvalues[i].index
+		var byteToEmit byte
+		if isLocal {
+			byteToEmit = 1
+		} else {
+			byteToEmit = 0
+		}
+		emitByte(byteToEmit)
+		emitByte(index)
+	}
+}
+
+// arrayLiteral parses an array literal and emits the corresponding bytecode.
+// It collects the elements, enforces a maximum element count of 255, and then
+// emits an OP_ARRAY opcode with the element count.
+func arrayLiteral(canAssign bool) {
+	elementCount := 0
+	if !check(token.TOKEN_RIGHT_BRACKET) {
+		for {
+			expression()
+			elementCount++
+			if elementCount == 255 {
+				reportError("Array literal cannot have more than 255 elements.")
+			}
+			if !match(token.TOKEN_COMMA) {
+				break
+			}
+		}
+	}
+	consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after array elements.")
+
+	emitBytes(byte(runtime.OP_ARRAY), byte(elementCount))
+}
+
+// subscript parses array subscript expressions, handling both element access and slice syntax.
+// For slices, it expects an optional start expression, a colon, and an optional end expression.
+// It emits either an OP_ARRAY_SLICE or an OP_ARRAY_GET/OP_ARRAY_SET opcode depending on the context.
+// subscript handles array/map access and slices. Key changes:
+// 1. Keep OP_ARRAY_SLICE for slice operations
+// 2. Use generic OP_GET_INDEX/OP_SET_INDEX for element access
+func subscript(canAssign bool) {
+	// Handle slice start (optional)
+	hasStart := !check(token.TOKEN_COLON) && !check(token.TOKEN_RIGHT_BRACKET)
+	if hasStart {
+		expression()
+	} else {
+		emitConstant(runtime.Value{Type: runtime.VAL_NULL}) // Default start
+	}
+
+	if match(token.TOKEN_COLON) {
+		// Handle slice end (optional)
+		hasEnd := !check(token.TOKEN_RIGHT_BRACKET)
+		if hasEnd {
+			expression()
+		} else {
+			emitConstant(runtime.Value{Type: runtime.VAL_NULL}) // Default end
+		}
+		consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after slice")
+		emitByte(byte(runtime.OP_ARRAY_SLICE)) // Array-specific slice
+	} else {
+		// Regular element access - use generic index ops
+		consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after index")
+		if canAssign && match(token.TOKEN_EQUAL) {
+			expression()
+			emitByte(byte(runtime.OP_SET_VALUE)) // Works for arrays AND maps
+		} else {
+			emitByte(byte(runtime.OP_GET_VALUE)) // Works for arrays AND maps
+		}
+	}
+}
+
+func mapLiteral(canAssign bool) {
+	pairs := 0
+	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+		// Parse key
+		if match(token.TOKEN_STRING) {
+			// Key is a string literal
+			key := parser.previous.Start[1 : len(parser.previous.Start)-1]
+			emitConstant(runtime.ObjVal(runtime.NewObjString(key)))
+		} else if match(token.TOKEN_IDENTIFIER) {
+			// Key is an identifier (treated as string)
+			key := parser.previous.Start
+			emitConstant(runtime.ObjVal(runtime.NewObjString(key)))
+		} else {
+			reportError("Map key must be a string or identifier")
+			return
+		}
+		consume(token.TOKEN_COLON, "Expected ':' after map key")
+		// Parse value
+		expression()
+		pairs++
+		if !match(token.TOKEN_COMMA) {
+			break
+		}
+	}
+	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' after map literal")
+	emitBytes(byte(runtime.OP_MAP), byte(pairs))
+}

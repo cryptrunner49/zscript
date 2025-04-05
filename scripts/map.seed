@@ -1,0 +1,25 @@
+var map = { "name": "Alice", "age": 30 };
+print(map["name"]); // 
+print(map["age"]);  // 30
+map["age"] = 31;
+print(map["age"]);  // 31
+
+var m = {"a": 1, "b": 2};
+print(m);
+map_remove(m, "a");          // Removes key "a"
+print(m);
+map_contains_key(m, "b");    // Returns true
+map_contains_value(m, 2);    // Returns true
+map_size(m);                 // Returns number of entries
+map_keys(m);                 // Returns array of keys
+map_values(m);               // Returns array of values
+map_clear(m);                // Clears all entries
+print(m);
+
+var a = {"x": 1, "y": 2};
+var b = {"y": 3, "z": 4};
+print(a+b); // {"y": 3, "x": 1, "z": 4}
+
+var a = {"x": 1, "y": 2, "z": 3};
+var b = {"y": null, "w": null};
+print(a-b); // {"x": 1, "z": 3}

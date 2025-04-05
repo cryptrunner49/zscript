@@ -113,18 +113,20 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return jumpInstruction("OP_CONTINUE", 1, ch, offset)
 	case uint8(runtime.OP_STRUCT):
 		return structInstruction(ch, offset)
+	case uint8(runtime.OP_GET_VALUE):
+		return simpleInstruction("OP_GET_VALUE", offset)
+	case uint8(runtime.OP_SET_VALUE):
+		return simpleInstruction("OP_SET_VALUE", offset)
 	case uint8(runtime.OP_ARRAY):
 		return byteInstruction("OP_ARRAY", ch, offset)
-	case uint8(runtime.OP_ARRAY_GET):
-		return simpleInstruction("OP_ARRAY_GET", offset)
-	case uint8(runtime.OP_ARRAY_SET):
-		return simpleInstruction("OP_ARRAY_SET", offset)
 	case uint8(runtime.OP_ARRAY_LEN):
 		return simpleInstruction("OP_ARRAY_LEN", offset)
 	case uint8(runtime.OP_ARRAY_SLICE):
 		return simpleInstruction("OP_ARRAY_SLICE", offset)
 	case uint8(runtime.OP_MAP):
-		return simpleInstruction("OP_MAP", offset)
+		pairCount := int(ch.Code()[offset+1])
+		fmt.Printf("%-16s %d pairs\n", "OP_MAP", pairCount)
+		return offset + 2
 	case uint8(runtime.OP_MODULE):
 		return constantInstruction("OP_MODULE", ch, offset)
 	case uint8(runtime.OP_IMPORT):

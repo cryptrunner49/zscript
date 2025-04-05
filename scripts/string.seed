@@ -32,6 +32,22 @@ print(✂️);      // Outputs: abde
 // Cropping ASCII
 var text = "Hello, world!";
 var cropped = text - "world";
-var trim = "abcde" - "c";
+var _trim = "abcde" - "c";
 print(cropped); // Outputs: Hello, !
-print(trim);    // Outputs: abde
+print(_trim);    // Outputs: abde
+
+// String
+var str = "Hello World";
+char_at(str, 1);         // Returns "e"
+substring(str, 0, 5);    // Returns "Hello"
+str_index_of(str, "o");  // Returns 4
+str_last_index_of(str, "o"); // Returns 7
+str_contains(str, "World");  // Returns true
+starts_with(str, "He");  // Returns true
+ends_with(str, "ld");    // Returns true
+to_upper(str);           // Returns "HELLO WORLD"
+to_lower(str);           // Returns "hello world"
+trim("  hi  ");          // Returns "hi"
+split(str, " ");         // Returns ["Hello", "World"]
+replace(str, "o", "0");  // Returns "Hell0 W0rld"
+str_length(str);         // Returns 11

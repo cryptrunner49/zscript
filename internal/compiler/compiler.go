@@ -112,7 +112,7 @@ func init() {
 	rules = make([]ParseRule, token.TOKEN_EOF+1)
 	rules[token.TOKEN_LEFT_PAREN] = ParseRule{grouping, call, PREC_CALL}
 	rules[token.TOKEN_RIGHT_PAREN] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_LEFT_BRACE] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_LEFT_BRACE] = ParseRule{mapLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_RIGHT_BRACE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_LEFT_BRACKET] = ParseRule{arrayLiteral, subscript, PREC_CALL}
 	rules[token.TOKEN_RIGHT_BRACKET] = ParseRule{nil, nil, PREC_NONE}
@@ -343,24 +343,6 @@ func addLocal(name token.Token) {
 	current.localCount++
 }
 
-// declareVariable handles variable declarations and checks for redeclaration in the same scope.
-func declareVariable() {
-	if current.scopeDepth == 0 {
-		return
-	}
-	name := parser.previous
-	for i := current.localCount - 1; i >= 0; i-- {
-		local := current.locals[i]
-		if local.depth != -1 && local.depth < current.scopeDepth {
-			break
-		}
-		if identifiersEqual(name, local.name) {
-			reportError(fmt.Sprintf("Variable '%s' is already declared in this scope.", name.Start))
-		}
-	}
-	addLocal(name)
-}
-
 // parseVariable parses an identifier token for variable declarations.
 func parseVariable(errorMessage string) uint8 {
 	consume(token.TOKEN_IDENTIFIER, errorMessage)
@@ -377,44 +359,6 @@ func markInitialized() {
 		return
 	}
 	current.locals[current.localCount-1].depth = current.scopeDepth
-}
-
-// function compiles a function declaration, including parameter parsing and function body.
-func function(funcType FunctionType) {
-	var compiler Compiler
-	initCompiler(&compiler, funcType, current.scriptDir) // Regular function: no module context
-	beginScope()
-	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name to start parameter list.")
-	if !check(token.TOKEN_RIGHT_PAREN) {
-		for {
-			current.function.Arity++
-			if current.function.Arity > 255 {
-				errorAtCurrent("Function cannot have more than 255 parameters.")
-			}
-			paramConstant := parseVariable("Expected a parameter name (e.g., 'x' in 'fn foo(x)').")
-			defineVariable(paramConstant)
-			if !match(token.TOKEN_COMMA) {
-				break
-			}
-		}
-	}
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close parameter list (e.g., 'fn foo()').")
-	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to start function body.")
-	block()
-	function := endCompiler()
-	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function}))
-	for i := 0; i < function.UpvalueCount; i++ {
-		isLocal := compiler.upvalues[i].isLocal
-		index := compiler.upvalues[i].index
-		var byteToEmit byte
-		if isLocal {
-			byteToEmit = 1
-		} else {
-			byteToEmit = 0
-		}
-		emitByte(byteToEmit)
-		emitByte(index)
-	}
 }
 
 func defineVariable(global uint8) {
