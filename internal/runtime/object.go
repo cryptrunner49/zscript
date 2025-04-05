@@ -171,9 +171,21 @@ func PrintObject(obj interface{}) {
 	case *ObjString:
 		fmt.Print(o.Chars)
 	case *ObjStruct:
-		fmt.Print(o.Name.Chars)
+		fmt.Printf("<struct %s>", o.Name.Chars)
 	case *ObjInstance:
-		fmt.Printf("<struct %s>", o.Structure.Name.Chars)
+		// Print instance with all fields in the format <structName.field1=value1, field2=value2>
+		fmt.Print("<")
+		fmt.Printf("(struct %s)", o.Structure.Name.Chars) // Print struct name
+		first := true
+		for fieldName, fieldValue := range o.Fields {
+			if !first {
+				fmt.Print(",")
+			}
+			fmt.Printf(" %s=", fieldName.Chars) // Print field name
+			PrintValue(fieldValue)              // Print field value
+			first = false
+		}
+		fmt.Print(">")
 	case *ObjArray:
 		fmt.Print("[")
 		for i, elem := range o.Elements {

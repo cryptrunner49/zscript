@@ -52,7 +52,6 @@ import "C"
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"strings"
 	"unsafe"
@@ -243,19 +242,6 @@ func run() InterpretResult {
 	readString := func(frame *CallFrame) *runtime.ObjString {
 		return readConstant(frame).Obj.(*runtime.ObjString)
 	}
-	// binaryOp applies a binary arithmetic operation to two number operands.
-	binaryOp := func(op func(a, b float64) float64, opName string) InterpretResult {
-		top := peek(0)
-		next := peek(1)
-		if top.Type != runtime.VAL_NUMBER || next.Type != runtime.VAL_NUMBER {
-			return runtimeError("Both operands for '%s' must be numbers (got %s and %s).", opName, typeName(top), typeName(next))
-		}
-		b := Pop().Number
-		a := Pop().Number
-		result := op(a, b)
-		Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: result})
-		return INTERPRET_OK
-	}
 
 	// Main instruction dispatch loop.
 	for {
@@ -391,349 +377,282 @@ func run() InterpretResult {
 			b := Pop()
 			a := Pop()
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: a.Number < b.Number})
+
 		case uint8(runtime.OP_ADD):
-			// Addition: support numeric addition, string concatenation,
-			// element-wise addition on arrays, and map merging.
 			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				// Simple numeric addition.
-				binaryOp(func(a, b float64) float64 { return a + b }, "+")
+				b := Pop()
+				a := Pop()
+				Push(addNumbers(a, b))
 			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				// Check if both operands are maps
-				map2, ok2 := peek(0).Obj.(*runtime.ObjMap)
-				map1, ok1 := peek(1).Obj.(*runtime.ObjMap)
-				if ok1 && ok2 {
-					// Create a new map with map1's entries
-					result := runtime.NewMap()
-					for key, value := range map1.Entries {
-						result.Entries[key] = value
-					}
-					// Add/overwrite with map2's entries
-					for key, value := range map2.Entries {
-						result.Entries[key] = value
-					}
-					Pop() // Pop second map
-					Pop() // Pop first map
-					Push(runtime.ObjVal(result))
-				} else {
-					// Check if both operands are arrays
-					arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-					arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
-					if ok1 && ok2 {
-						len1 := len(arr1.Elements)
-						len2 := len(arr2.Elements)
-						maxLen := len1
-						if len2 > maxLen {
-							maxLen = len2
+				b := peek(0)
+				a := peek(1)
+				switch obj2 := b.Obj.(type) {
+				case *runtime.ObjInstance:
+					if inst1, ok := a.Obj.(*runtime.ObjInstance); ok {
+						result, err := addInstances(inst1, obj2)
+						if err != INTERPRET_OK {
+							return err
 						}
-						result := make([]runtime.Value, maxLen)
-						minLen := len1
-						if len2 < minLen {
-							minLen = len2
-						}
-						// Element-wise addition for indices present in both arrays
-						for i := 0; i < minLen; i++ {
-							v1 := arr1.Elements[i]
-							v2 := arr2.Elements[i]
-							if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
-								result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number + v2.Number}
-							} else {
-								s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
-								s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
-								result[i] = runtime.ObjVal(runtime.NewObjString(s1 + s2))
-							}
-						}
-						// Copy remaining elements from the longer array
-						if len1 > len2 {
-							for i := minLen; i < len1; i++ {
-								result[i] = arr1.Elements[i]
-							}
-						} else {
-							for i := minLen; i < len2; i++ {
-								result[i] = arr2.Elements[i]
-							}
-						}
-						Pop() // Pop second array
-						Pop() // Pop first array
-						Push(runtime.ObjVal(runtime.NewArray(result)))
+						Pop()
+						Pop()
+						Push(result)
 					} else {
-						// Fallback: if not arrays or maps, attempt string concatenation
-						concatenate()
+						return runtimeError("Operands must be of the same type for '+'. Got %s and %s.", typeName(a), typeName(b))
 					}
+				case *runtime.ObjMap:
+					if map1, ok := a.Obj.(*runtime.ObjMap); ok {
+						result := addMaps(map1, obj2)
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						return runtimeError("Operands must be of the same type for '+'. Got %s and %s.", typeName(a), typeName(b))
+					}
+				case *runtime.ObjArray:
+					if arr1, ok := a.Obj.(*runtime.ObjArray); ok {
+						result := addArrays(arr1, obj2)
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						return runtimeError("Operands must be of the same type for '+'. Got %s and %s.", typeName(a), typeName(b))
+					}
+				case *runtime.ObjString:
+					if _, ok := a.Obj.(*runtime.ObjString); ok {
+						b := Pop()
+						a := Pop()
+						Push(addStrings(a, b))
+					} else {
+						return runtimeError("Operands must be of the same type for '+'. Got %s and %s.", typeName(a), typeName(b))
+					}
+				default:
+					b := Pop()
+					a := Pop()
+					Push(addStrings(a, b)) // Fallback to string concatenation
 				}
 			} else {
-				// Mixed types: convert both to strings and concatenate
-				s1 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
-				s2 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
-				Push(runtime.ObjVal(runtime.NewObjString(s2 + s1)))
+				b := Pop()
+				a := Pop()
+				Push(addStrings(a, b)) // Mixed types fallback to string concatenation
 			}
 
 		case uint8(runtime.OP_SUBTRACT):
-			// Subtraction: supports numeric subtraction, string cropping,
-			// element-wise subtraction on arrays, and map difference.
 			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				// Simple numeric subtraction
-				binaryOp(func(a, b float64) float64 { return a - b }, "-")
+				b := Pop()
+				a := Pop()
+				Push(subtractNumbers(a, b))
 			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				// Check if both operands are maps
-				map2, ok2 := peek(0).Obj.(*runtime.ObjMap)
-				map1, ok1 := peek(1).Obj.(*runtime.ObjMap)
-				if ok1 && ok2 {
-					// Create a new map with map1's entries
-					result := runtime.NewMap()
-					for key, value := range map1.Entries {
-						result.Entries[key] = value
-					}
-					// Remove all keys from map2 that exist in result
-					for key := range map2.Entries {
-						delete(result.Entries, key)
-					}
-					Pop() // Pop second map
-					Pop() // Pop first map
-					Push(runtime.ObjVal(result))
-				} else {
-					// Check if both operands are arrays
-					arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-					arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
-					if ok1 && ok2 {
-						len1 := len(arr1.Elements)
-						len2 := len(arr2.Elements)
-						maxLen := len1
-						if len2 > maxLen {
-							maxLen = len2
-						}
-						result := make([]runtime.Value, maxLen)
-						minLen := len1
-						if len2 < minLen {
-							minLen = len2
-						}
-						// Element-wise subtraction (or crop) for indices present in both arrays
-						for i := 0; i < minLen; i++ {
-							v1 := arr1.Elements[i]
-							v2 := arr2.Elements[i]
-							if v1.Type == runtime.VAL_NUMBER && v2.Type == runtime.VAL_NUMBER {
-								result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: v1.Number - v2.Number}
-							} else {
-								s1 := toStr(1, []runtime.Value{v1}).Obj.(*runtime.ObjString).Chars
-								s2 := toStr(1, []runtime.Value{v2}).Obj.(*runtime.ObjString).Chars
-								idx := strings.Index(s1, s2)
-								if idx >= 0 {
-									result[i] = runtime.ObjVal(runtime.NewObjString(s1[:idx] + s1[idx+len(s2):]))
-								} else {
-									result[i] = runtime.ObjVal(runtime.NewObjString(s1))
-								}
-							}
-						}
-						// Copy remaining elements from the longer array
-						if len1 > len2 {
-							for i := minLen; i < len1; i++ {
-								result[i] = arr1.Elements[i]
-							}
-						} else {
-							for i := minLen; i < len2; i++ {
-								result[i] = arr2.Elements[i]
-							}
+				b := peek(0)
+				a := peek(1)
+				switch obj2 := b.Obj.(type) {
+				case *runtime.ObjInstance:
+					if inst1, ok := a.Obj.(*runtime.ObjInstance); ok {
+						result, err := subtractInstances(inst1, obj2)
+						if err != INTERPRET_OK {
+							return err
 						}
 						Pop()
 						Pop()
-						Push(runtime.ObjVal(runtime.NewArray(result)))
+						Push(result)
 					} else {
-						// Fallback to string crop
-						crop()
+						return runtimeError("Operands must be of the same type for '-'. Got %s and %s.", typeName(a), typeName(b))
 					}
+				case *runtime.ObjMap:
+					if map1, ok := a.Obj.(*runtime.ObjMap); ok {
+						result := subtractMaps(map1, obj2)
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						return runtimeError("Operands must be of the same type for '-'. Got %s and %s.", typeName(a), typeName(b))
+					}
+				case *runtime.ObjArray:
+					if arr1, ok := a.Obj.(*runtime.ObjArray); ok {
+						result := subtractArrays(arr1, obj2)
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						return runtimeError("Operands must be of the same type for '-'. Got %s and %s.", typeName(a), typeName(b))
+					}
+				case *runtime.ObjString:
+					if _, ok := a.Obj.(*runtime.ObjString); ok {
+						b := Pop()
+						a := Pop()
+						Push(subtractStrings(a, b))
+					} else {
+						return runtimeError("Operands must be of the same type for '-'. Got %s and %s.", typeName(a), typeName(b))
+					}
+				default:
+					b := Pop()
+					a := Pop()
+					Push(subtractStrings(a, b)) // Fallback to string cropping
 				}
 			} else {
-				// Mixed types: convert both to strings and perform crop
-				s1 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
-				s2 := toStr(1, []runtime.Value{Pop()}).Obj.(*runtime.ObjString).Chars
-				idx := strings.Index(s1, s2)
-				if idx >= 0 {
-					Push(runtime.ObjVal(runtime.NewObjString(s1[:idx] + s1[idx+len(s2):])))
-				} else {
-					Push(runtime.ObjVal(runtime.NewObjString(s1)))
-				}
+				b := Pop()
+				a := Pop()
+				Push(subtractStrings(a, b)) // Mixed types fallback to string cropping
 			}
+
 		case uint8(runtime.OP_MULTIPLY):
-			// Multiplication: supports both numbers and arrays of numbers.
-			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				binaryOp(func(a, b float64) float64 { return a * b }, "*")
-			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				// Both operands must be arrays.
-				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
-				if !ok1 || !ok2 {
-					return runtimeError("Both operands for '*' must be numbers or arrays of numbers.")
-				}
-				// Verify all elements are numbers.
-				for _, elem := range arr1.Elements {
-					if elem.Type != runtime.VAL_NUMBER {
-						return runtimeError("All elements in the first array must be numbers.")
+			b := peek(0)
+			a := peek(1)
+			switch {
+			case b.Type == runtime.VAL_NUMBER && a.Type == runtime.VAL_NUMBER:
+				bVal := Pop()
+				aVal := Pop()
+				Push(multiplyNumbers(aVal, bVal))
+			case b.Type == runtime.VAL_OBJ && a.Type == runtime.VAL_OBJ:
+				switch obj2 := b.Obj.(type) {
+				case *runtime.ObjInstance:
+					if inst1, ok := a.Obj.(*runtime.ObjInstance); ok {
+						result, err := multiplyInstances(inst1, obj2)
+						if err != INTERPRET_OK {
+							return err
+						}
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						bVal := Pop()
+						aVal := Pop()
+						runtimeError("Operator '*' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+						Push(aVal)
 					}
-				}
-				for _, elem := range arr2.Elements {
-					if elem.Type != runtime.VAL_NUMBER {
-						return runtimeError("All elements in the second array must be numbers.")
+				case *runtime.ObjArray:
+					if arr1, ok := a.Obj.(*runtime.ObjArray); ok {
+						result, err := multiplyArrays(arr1, obj2)
+						if err != INTERPRET_OK {
+							return err
+						}
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						bVal := Pop()
+						aVal := Pop()
+						runtimeError("Operator '*' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+						Push(aVal)
 					}
+				default:
+					bVal := Pop()
+					aVal := Pop()
+					runtimeError("Operator '*' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+					Push(aVal)
 				}
-				len1 := len(arr1.Elements)
-				len2 := len(arr2.Elements)
-				maxLen := len1
-				if len2 > maxLen {
-					maxLen = len2
-				}
-				result := make([]runtime.Value, maxLen)
-				minLen := len1
-				if len2 < minLen {
-					minLen = len2
-				}
-				// Element-wise multiplication up to the shorter array length.
-				for i := 0; i < minLen; i++ {
-					a := arr1.Elements[i].Number
-					b := arr2.Elements[i].Number
-					result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: a * b}
-				}
-				// Copy the remaining elements from the longer array.
-				if len1 > len2 {
-					for i := minLen; i < len1; i++ {
-						result[i] = arr1.Elements[i]
-					}
-				} else {
-					for i := minLen; i < len2; i++ {
-						result[i] = arr2.Elements[i]
-					}
-				}
-				Pop() // Pop the top (second) array.
-				Pop() // Pop the first array.
-				Push(runtime.ObjVal(runtime.NewArray(result)))
-			} else {
-				return runtimeError("Operator '*' requires two numbers or two arrays of numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			default:
+				bVal := Pop()
+				aVal := Pop()
+				runtimeError("Operator '*' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+				Push(aVal)
 			}
+
 		case uint8(runtime.OP_DIVIDE):
-			// Division: supports both numbers and arrays of numbers.
-			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				// Check division by zero.
-				if peek(0).Number == 0 {
-					return runtimeError("Division by zero is not allowed.")
-				}
-				binaryOp(func(a, b float64) float64 { return a / b }, "/")
-			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
-				if !ok1 || !ok2 {
-					return runtimeError("Both operands for '/' must be numbers or arrays of numbers.")
-				}
-				for _, elem := range arr1.Elements {
-					if elem.Type != runtime.VAL_NUMBER {
-						return runtimeError("All elements in the first array must be numbers.")
-					}
-				}
-				for _, elem := range arr2.Elements {
-					if elem.Type != runtime.VAL_NUMBER {
-						return runtimeError("All elements in the second array must be numbers.")
-					}
-				}
-				len1 := len(arr1.Elements)
-				len2 := len(arr2.Elements)
-				maxLen := len1
-				if len2 > maxLen {
-					maxLen = len2
-				}
-				result := make([]runtime.Value, maxLen)
-				minLen := len1
-				if len2 < minLen {
-					minLen = len2
-				}
-				// Perform element-wise division with division-by-zero check.
-				for i := 0; i < minLen; i++ {
-					bVal := arr2.Elements[i].Number
-					if bVal == 0 {
-						return runtimeError("Division by zero is not allowed at index %d.", i)
-					}
-					aVal := arr1.Elements[i].Number
-					result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: aVal / bVal}
-				}
-				// Copy remaining elements from the longer array.
-				if len1 > len2 {
-					for i := minLen; i < len1; i++ {
-						result[i] = arr1.Elements[i]
-					}
-				} else {
-					for i := minLen; i < len2; i++ {
-						bVal := arr2.Elements[i].Number
-						if bVal == 0 {
-							return runtimeError("Division by zero is not allowed at index %d.", i)
+			b := peek(0)
+			a := peek(1)
+			switch {
+			case b.Type == runtime.VAL_NUMBER && a.Type == runtime.VAL_NUMBER:
+				bVal := Pop()
+				aVal := Pop()
+				Push(divideNumbers(aVal, bVal))
+			case b.Type == runtime.VAL_OBJ && a.Type == runtime.VAL_OBJ:
+				switch obj2 := b.Obj.(type) {
+				case *runtime.ObjInstance:
+					if inst1, ok := a.Obj.(*runtime.ObjInstance); ok {
+						result, err := divideInstances(inst1, obj2)
+						if err != INTERPRET_OK {
+							return err
 						}
-						result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: arr2.Elements[i].Number}
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						bVal := Pop()
+						aVal := Pop()
+						runtimeError("Operator '/' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+						Push(aVal)
 					}
+				case *runtime.ObjArray:
+					if arr1, ok := a.Obj.(*runtime.ObjArray); ok {
+						result, err := divideArrays(arr1, obj2)
+						if err != INTERPRET_OK {
+							return err
+						}
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						bVal := Pop()
+						aVal := Pop()
+						runtimeError("Operator '/' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+						Push(aVal)
+					}
+				default:
+					bVal := Pop()
+					aVal := Pop()
+					runtimeError("Operator '/' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+					Push(aVal)
 				}
-				Pop()
-				Pop()
-				Push(runtime.ObjVal(runtime.NewArray(result)))
-			} else {
-				return runtimeError("Operator '/' requires two numbers or two arrays of numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			default:
+				bVal := Pop()
+				aVal := Pop()
+				runtimeError("Operator '/' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+				Push(aVal)
 			}
+
 		case uint8(runtime.OP_MOD):
-			// Modulo: supports both numbers and arrays of numbers.
-			if peek(0).Type == runtime.VAL_NUMBER && peek(1).Type == runtime.VAL_NUMBER {
-				if peek(0).Number == 0 {
-					return runtimeError("Modulo by zero is not allowed.")
-				}
-				binaryOp(func(a, b float64) float64 { return math.Mod(a, b) }, "%")
-			} else if peek(0).Type == runtime.VAL_OBJ && peek(1).Type == runtime.VAL_OBJ {
-				arr2, ok2 := peek(0).Obj.(*runtime.ObjArray)
-				arr1, ok1 := peek(1).Obj.(*runtime.ObjArray)
-				if !ok1 || !ok2 {
-					return runtimeError("Both operands for '%%' must be numbers or arrays of numbers.")
-				}
-				for _, elem := range arr1.Elements {
-					if elem.Type != runtime.VAL_NUMBER {
-						return runtimeError("All elements in the first array must be numbers.")
-					}
-				}
-				for _, elem := range arr2.Elements {
-					if elem.Type != runtime.VAL_NUMBER {
-						return runtimeError("All elements in the second array must be numbers.")
-					}
-				}
-				len1 := len(arr1.Elements)
-				len2 := len(arr2.Elements)
-				maxLen := len1
-				if len2 > maxLen {
-					maxLen = len2
-				}
-				result := make([]runtime.Value, maxLen)
-				minLen := len1
-				if len2 < minLen {
-					minLen = len2
-				}
-				// Perform element-wise modulo with check for division by zero.
-				for i := 0; i < minLen; i++ {
-					bVal := arr2.Elements[i].Number
-					if bVal == 0 {
-						return runtimeError("Modulo by zero is not allowed at index %d.", i)
-					}
-					aVal := arr1.Elements[i].Number
-					result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: math.Mod(aVal, bVal)}
-				}
-				// Copy remaining elements from the longer array.
-				if len1 > len2 {
-					for i := minLen; i < len1; i++ {
-						result[i] = arr1.Elements[i]
-					}
-				} else {
-					for i := minLen; i < len2; i++ {
-						bVal := arr2.Elements[i].Number
-						if bVal == 0 {
-							return runtimeError("Modulo by zero is not allowed at index %d.", i)
+			b := peek(0)
+			a := peek(1)
+			switch {
+			case b.Type == runtime.VAL_NUMBER && a.Type == runtime.VAL_NUMBER:
+				bVal := Pop()
+				aVal := Pop()
+				Push(modNumbers(aVal, bVal))
+			case b.Type == runtime.VAL_OBJ && a.Type == runtime.VAL_OBJ:
+				switch obj2 := b.Obj.(type) {
+				case *runtime.ObjInstance:
+					if inst1, ok := a.Obj.(*runtime.ObjInstance); ok {
+						result, err := modInstances(inst1, obj2)
+						if err != INTERPRET_OK {
+							return err
 						}
-						result[i] = runtime.Value{Type: runtime.VAL_NUMBER, Number: math.Mod(arr2.Elements[i].Number, bVal)}
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						bVal := Pop()
+						aVal := Pop()
+						runtimeError("Operator '%%' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+						Push(aVal)
 					}
+				case *runtime.ObjArray:
+					if arr1, ok := a.Obj.(*runtime.ObjArray); ok {
+						result, err := modArrays(arr1, obj2)
+						if err != INTERPRET_OK {
+							return err
+						}
+						Pop()
+						Pop()
+						Push(result)
+					} else {
+						bVal := Pop()
+						aVal := Pop()
+						runtimeError("Operator '%%' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+						Push(aVal)
+					}
+				default:
+					bVal := Pop()
+					aVal := Pop()
+					runtimeError("Operator '%%' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+					Push(aVal)
 				}
-				Pop()
-				Pop()
-				Push(runtime.ObjVal(runtime.NewArray(result)))
-			} else {
-				return runtimeError("Operator '%%' requires two numbers or two arrays of numbers (got %s and %s).", typeName(peek(1)), typeName(peek(0)))
+			default:
+				bVal := Pop()
+				aVal := Pop()
+				runtimeError("Operator '%%' requires numbers or arrays of numbers (got %s and %s).", typeName(aVal), typeName(bVal))
+				Push(aVal)
 			}
+
 		case uint8(runtime.OP_NOT):
 			// Logical NOT: converts a value to its boolean negation.
 			val := Pop()
