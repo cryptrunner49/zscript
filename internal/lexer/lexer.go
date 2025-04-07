@@ -79,8 +79,14 @@ func ScanToken() token.Token {
 	case '.':
 		return lexer.makeToken(token.TOKEN_DOT)
 	case '-':
+		if lexer.match('-') {
+			return lexer.makeToken(token.TOKEN_MINUS_MINUS)
+		}
 		return lexer.makeToken(token.TOKEN_MINUS)
 	case '+':
+		if lexer.match('+') {
+			return lexer.makeToken(token.TOKEN_PLUS_PLUS)
+		}
 		return lexer.makeToken(token.TOKEN_PLUS)
 	case '/':
 		return lexer.makeToken(token.TOKEN_SLASH)

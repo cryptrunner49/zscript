@@ -1213,6 +1213,10 @@ func run() InterpretResult {
 		case uint8(runtime.OP_MATCH):
 			// TODO
 			fmt.Print("TODO")
+		case uint8(runtime.OP_DUP):
+			// Duplicate the top value on the stack
+			top := peek(0)
+			Push(top)
 		}
 	}
 }

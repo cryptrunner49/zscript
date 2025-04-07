@@ -1,0 +1,17 @@
+//enable_trace(); // native method
+//enable_debug(); // native method
+
+var x = 5;
+print x;        // Prints 5
+print ++x;      // Prints 6, x becomes 6
+print --x;      // Prints 5, x becomes 5
+
+var y = 5;
+print x++;    // Prints 5, x becomes 6
+print ++x;    // Prints 7, x becomes 7
+print x--;    // Prints 7, x becomes 6
+print --x;    // Prints 5, x becomes 5
+
+var z = 5;
+print x++;    // Prints 5, x becomes 6
+print x--;    // Prints 6, x becomes 5

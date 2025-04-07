@@ -139,6 +139,8 @@ func init() {
 	rules[token.TOKEN_GREATER_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_LESS] = ParseRule{nil, binary, PREC_COMPARISON}
 	rules[token.TOKEN_LESS_EQUAL] = ParseRule{nil, binary, PREC_COMPARISON}
+	rules[token.TOKEN_PLUS_PLUS] = ParseRule{unary, nil, PREC_UNARY}
+	rules[token.TOKEN_MINUS_MINUS] = ParseRule{unary, nil, PREC_UNARY}
 	rules[token.TOKEN_IDENTIFIER] = ParseRule{variable, nil, PREC_NONE}
 	rules[token.TOKEN_CHAR] = ParseRule{charLiteral, nil, PREC_NONE}
 	rules[token.TOKEN_STRING] = ParseRule{stringLiteral, nil, PREC_NONE}
@@ -428,15 +430,74 @@ func number(canAssign bool) {
 	emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
 }
 
-// unary compiles a unary operator expression.
+// unary compiles a unary operator expression (handles prefix ++x and --x).
 func unary(canAssign bool) {
 	operatorType := parser.previous.Type
-	parsePrecedence(PREC_UNARY)
+	parsePrecedence(PREC_UNARY) // Parse the operand (e.g., the variable name)
+
 	switch operatorType {
 	case token.TOKEN_MINUS:
 		emitByte(byte(runtime.OP_NEGATE))
 	case token.TOKEN_BANG:
 		emitByte(byte(runtime.OP_NOT))
+	case token.TOKEN_PLUS_PLUS:
+		// Ensure the operand is a variable (identifier)
+		if parser.previous.Type != token.TOKEN_IDENTIFIER {
+			reportError("Increment and decrement operators ('++' and '--') can only be applied to variables.")
+			return
+		}
+
+		name := parser.previous
+		var getOp, setOp uint8
+		var arg int
+		if localArg := resolveLocal(current, name); localArg != -1 {
+			arg = localArg
+			getOp = byte(runtime.OP_GET_LOCAL)
+			setOp = byte(runtime.OP_SET_LOCAL)
+		} else if upvalueArg := resolveUpvalue(current, name); upvalueArg != -1 {
+			arg = upvalueArg
+			getOp = byte(runtime.OP_GET_UPVALUE)
+			setOp = byte(runtime.OP_SET_UPVALUE)
+		} else {
+			arg = int(identifierConstant(name))
+			getOp = byte(runtime.OP_GET_GLOBAL)
+			setOp = byte(runtime.OP_SET_GLOBAL)
+		}
+
+		// Prefix ++x: Load, increment, store, leave new value on stack
+		emitBytes(getOp, uint8(arg))                                     // Load variable value
+		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1
+		emitByte(byte(runtime.OP_ADD))                                   // Increment
+		emitBytes(setOp, uint8(arg))                                     // Store back to variable
+	case token.TOKEN_MINUS_MINUS:
+		// Ensure the operand is a variable (identifier)
+		if parser.previous.Type != token.TOKEN_IDENTIFIER {
+			reportError("Increment and decrement operators ('++' and '--') can only be applied to variables.")
+			return
+		}
+
+		name := parser.previous
+		var getOp, setOp uint8
+		var arg int
+		if localArg := resolveLocal(current, name); localArg != -1 {
+			arg = localArg
+			getOp = byte(runtime.OP_GET_LOCAL)
+			setOp = byte(runtime.OP_SET_LOCAL)
+		} else if upvalueArg := resolveUpvalue(current, name); upvalueArg != -1 {
+			arg = upvalueArg
+			getOp = byte(runtime.OP_GET_UPVALUE)
+			setOp = byte(runtime.OP_SET_UPVALUE)
+		} else {
+			arg = int(identifierConstant(name))
+			getOp = byte(runtime.OP_GET_GLOBAL)
+			setOp = byte(runtime.OP_SET_GLOBAL)
+		}
+
+		// Prefix --x: Load, decrement, store, leave new value on stack
+		emitBytes(getOp, uint8(arg))                                     // Load variable value
+		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1
+		emitByte(byte(runtime.OP_SUBTRACT))                              // Decrement
+		emitBytes(setOp, uint8(arg))                                     // Store back to variable
 	}
 }
 
@@ -537,7 +598,7 @@ func resolveUpvalue(compiler *Compiler, name token.Token) int {
 	return -1
 }
 
-// namedVariable compiles a variable access or assignment, handling locals, upvalues, or globals.
+// namedVariable compiles a variable access or assignment, handling locals, upvalues, globals, or postfix operators (x++ and x--).
 func namedVariable(name token.Token, canAssign bool) {
 	var getOp, setOp uint8
 	var arg int
@@ -554,9 +615,26 @@ func namedVariable(name token.Token, canAssign bool) {
 		getOp = byte(runtime.OP_GET_GLOBAL)
 		setOp = byte(runtime.OP_SET_GLOBAL)
 	}
+
 	if canAssign && match(token.TOKEN_EQUAL) {
 		expression()
 		emitBytes(setOp, uint8(arg))
+	} else if match(token.TOKEN_PLUS_PLUS) {
+		// Postfix x++: Load, duplicate, increment, store, pop new value, leave original on stack
+		emitBytes(getOp, uint8(arg))                                     // Load variable value (e.g., 5)
+		emitByte(byte(runtime.OP_DUP))                                   // Duplicate for return (stack: [5, 5])
+		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1 (stack: [5, 5, 1])
+		emitByte(byte(runtime.OP_ADD))                                   // Increment (stack: [5, 6])
+		emitBytes(setOp, uint8(arg))                                     // Store new value back (stack: [5, 6])
+		emitByte(byte(runtime.OP_POP))                                   // Pop new value (stack: [5])
+	} else if match(token.TOKEN_MINUS_MINUS) {
+		// Postfix x--: Load, duplicate, decrement, store, pop new value, leave original on stack
+		emitBytes(getOp, uint8(arg))                                     // Load variable value (e.g., 6)
+		emitByte(byte(runtime.OP_DUP))                                   // Duplicate for return (stack: [6, 6])
+		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1 (stack: [6, 6, 1])
+		emitByte(byte(runtime.OP_SUBTRACT))                              // Decrement (stack: [6, 5])
+		emitBytes(setOp, uint8(arg))                                     // Store new value back (stack: [6, 5])
+		emitByte(byte(runtime.OP_POP))                                   // Pop new value (stack: [6])
 	} else {
 		emitBytes(getOp, uint8(arg))
 	}

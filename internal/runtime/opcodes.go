@@ -51,4 +51,5 @@ const (
 	OP_USE
 	OP_DEFINE_EXTERN
 	OP_MATCH
+	OP_DUP
 )
