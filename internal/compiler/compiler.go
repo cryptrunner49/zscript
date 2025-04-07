@@ -43,17 +43,18 @@ type Upvalue struct {
 	isLocal bool  // Indicates if the captured variable was a local variable.
 }
 
-// LoopType defines different kinds of loops.
-type LoopType int
+// JumpType defines different kinds of jumps.
+type JumpType int
 
 const (
-	LOOP_WHILE LoopType = iota // While loop.
-	LOOP_FOR                   // For loop.
+	JUMP_WHILE JumpType = iota // While jump.
+	JUMP_FOR                   // For jump.
+	JUMP_MATCH                 // Match jump.
 )
 
 // Loop is used to manage loop state during compilation, including jump patching.
 type Loop struct {
-	loopType        LoopType // Type of loop (while or for).
+	jumpType        JumpType // Type of jump (while, for or match).
 	start           int      // Bytecode index where the loop begins.
 	exitPatches     []int    // List of jump offsets to patch for loop exit.
 	continuePatches []int    // List of jump offsets to patch for continue statements.
@@ -162,7 +163,7 @@ func init() {
 	rules[token.TOKEN_ITER] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_BREAK] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_CONTINUE] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_MATCH] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_MATCH] = ParseRule{Prefix: nil, Infix: nil, Precedence: PREC_NONE}
 	rules[token.TOKEN_WITH] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_THROUGH] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RANDOM] = ParseRule{random, nil, PREC_NONE}
@@ -403,6 +404,11 @@ func makeConstant(val runtime.Value) uint8 {
 	if constant > 255 {
 		reportError("Too many constants in this chunk (max 256). Consider splitting the code.")
 		return 0
+	}
+	if common.DebugPrintCode {
+		fmt.Printf("Added constant %d: ", constant)
+		runtime.PrintValue(val)
+		fmt.Println()
 	}
 	return uint8(constant)
 }

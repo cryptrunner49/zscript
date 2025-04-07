@@ -50,4 +50,5 @@ const (
 	OP_IMPORT
 	OP_USE
 	OP_DEFINE_EXTERN
+	OP_MATCH
 )

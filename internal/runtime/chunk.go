@@ -85,3 +85,11 @@ func growCapacity(capacity int) int {
 	}
 	return capacity * 2
 }
+
+// SetCode replaces the underlying code slice with newCode, updates the count, and resets capacity.
+// To use in the future, for the match statement.
+func (c *Chunk) SetCode(newCode []uint8, newCount int) {
+	c.code = newCode
+	c.count = newCount
+	c.capacity = len(newCode)
+}

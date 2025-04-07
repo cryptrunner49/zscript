@@ -37,6 +37,12 @@ func errorAtCurrent(message string) {
 	errorAt(parser.current, message)
 }
 
+// Helper to report errors at a specific bytecode position
+func reportErrorAtPosition(ip int, message string) {
+	line := currentChunk().Lines()[ip]
+	errorAt(token.Token{Line: line}, message)
+}
+
 // currentChunk retrieves the current chunk of bytecode being compiled.
 func currentChunk() *runtime.Chunk {
 	return &current.function.Chunk
@@ -120,4 +126,50 @@ func identifierConstant(name token.Token) uint8 {
 // identifiersEqual checks if two identifier tokens are equal based on their string content.
 func identifiersEqual(a, b token.Token) bool {
 	return a.Start == b.Start
+}
+
+// truncateCurrentChunk truncates the current chunk's code to the given position.
+func truncateCurrentChunk(pos int) {
+	chunk := currentChunk()
+	// Make a new slice holding only the first pos bytes.
+	newCode := make([]uint8, pos)
+	copy(newCode, chunk.Code()[:pos])
+	// Update the chunk using the new SetCode method.
+	chunk.SetCode(newCode, pos)
+}
+
+// insertBytes inserts buf into the current chunk’s code at position pos,
+// shifting the existing code to the right.
+func InsertBytes(pos int, buf []uint8) {
+	chunk := currentChunk()
+	oldCode := chunk.Code()
+	newCount := chunk.Count() + len(buf)
+	newCode := make([]uint8, newCount)
+	// Copy bytes before pos.
+	copy(newCode, oldCode[:pos])
+	// Insert the new bytes.
+	copy(newCode[pos:], buf)
+	// Copy the remaining bytes after pos.
+	copy(newCode[pos+len(buf):], oldCode[pos:])
+	chunk.SetCode(newCode, newCount)
+}
+
+// compileMatchCaseBody compiles a match case’s body until it reaches a case marker ('|'),
+// the closing '}' of the match block, or EOF.  If a "break" token is encountered, it is
+// consumed (including its trailing semicolon) and compilation stops. No OP_BREAK is emitted.
+func CompileMatchCaseBody() []uint8 {
+	start := currentChunk().Count()
+	for !check(token.TOKEN_PIPE) && !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+		if match(token.TOKEN_BREAK) {
+			consume(token.TOKEN_SEMICOLON, "Expected ';' after 'break'.")
+			break
+		} else {
+			statement()
+		}
+	}
+	end := currentChunk().Count()
+	body := make([]uint8, end-start)
+	copy(body, currentChunk().Code()[start:end])
+	truncateCurrentChunk(start)
+	return body
 }

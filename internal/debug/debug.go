@@ -157,6 +157,8 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		runtime.PrintValue(ch.Constants().Values()[funcNameIdx])
 		fmt.Println("'")
 		return offset + 1
+	case uint8(runtime.OP_MATCH):
+		return matchInstruction(ch, offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1
@@ -214,5 +216,37 @@ func structInstruction(ch *runtime.Chunk, offset int) int {
 		fmt.Println("'")
 		offset++
 	}
+	return offset
+}
+
+// New function to disassemble OP_MATCH
+func matchInstruction(ch *runtime.Chunk, offset int) int {
+	fmt.Printf("%-16s", "OP_MATCH")
+	offset++ // Skip opcode
+	numCases := ch.Code()[offset]
+	fmt.Printf("%d cases, default -> ", numCases)
+	offset++
+	defaultOffset := (int(ch.Code()[offset]) << 8) | int(ch.Code()[offset+1])
+	fmt.Printf("%04d", offset+defaultOffset)
+	offset += 2
+	for i := 0; i < int(numCases); i++ {
+		if offset+2 >= len(ch.Code()) {
+			fmt.Println("\n      | <truncated>")
+			return offset
+		}
+		constant := ch.Code()[offset]
+		fmt.Printf("\n%04d      | case constant %d: '", offset, constant)
+		if constant < uint8(len(ch.Constants().Values())) {
+			runtime.PrintValue(ch.Constants().Values()[constant])
+		} else {
+			fmt.Print("<invalid>")
+		}
+		fmt.Print("'")
+		offset++
+		caseOffset := (int(ch.Code()[offset]) << 8) | int(ch.Code()[offset+1])
+		fmt.Printf(" offset -> %04d", offset+caseOffset-1)
+		offset += 2
+	}
+	fmt.Println()
 	return offset
 }

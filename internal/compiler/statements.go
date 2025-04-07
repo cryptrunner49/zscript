@@ -1,6 +1,9 @@
 package compiler
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
@@ -48,7 +51,7 @@ func whileStatement() {
 
 	// Track loop for continue/break
 	current.loops = append(current.loops, Loop{
-		loopType:        LOOP_WHILE,
+		jumpType:        JUMP_WHILE,
 		start:           loopStart,
 		exitPatches:     make([]int, 0),
 		continuePatches: make([]int, 0),
@@ -111,7 +114,7 @@ func forStatement() {
 	}
 
 	current.loops = append(current.loops, Loop{
-		loopType:        LOOP_FOR,
+		jumpType:        JUMP_FOR,
 		start:           loopStart,
 		exitPatches:     make([]int, 0),
 		continuePatches: make([]int, 0),
@@ -176,9 +179,10 @@ func forStatement() {
 	endScope()
 }
 
+// breakStatement compiles a break statement, jumping to the end of the innermost loop or match.
 func breakStatement() {
 	if len(current.loops) == 0 {
-		reportError("Cannot use 'break' outside of a loop.")
+		reportError("Cannot use 'break' outside of a loop or match statement.")
 		return
 	}
 	currentLoop := &current.loops[len(current.loops)-1]
@@ -190,24 +194,23 @@ func breakStatement() {
 	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'break'.")
 }
 
+// continueStatement compiles a continue statement, applicable only to loops.
 func continueStatement() {
 	if len(current.loops) == 0 {
 		reportError("Cannot use 'continue' outside of a loop.")
 		return
 	}
 	currentLoop := &current.loops[len(current.loops)-1]
-
-	// Emit continue instruction
+	if currentLoop.jumpType == JUMP_MATCH {
+		reportError("Cannot use 'continue' inside a match statement.")
+		return
+	}
+	// Existing continue logic remains unchanged
 	emitByte(byte(runtime.OP_CONTINUE))
-
-	// Calculate jump offset (will be patched later)
 	jumpPos := currentChunk().Count()
-	emitByte(0xFF) // placeholder for jump offset
 	emitByte(0xFF)
-
-	// Record this continue for later patching
+	emitByte(0xFF)
 	currentLoop.continuePatches = append(currentLoop.continuePatches, jumpPos)
-
 	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'continue'.")
 }
 
@@ -339,6 +342,61 @@ func iterStatement() {
 	// VM adds OP_NULL and OP_RETURN to finish execution.
 }
 
-func matchStatement() {
+/*
+func parseConstantValue() runtime.Value {
+	if match(token.TOKEN_NUMBER) {
+		val, err := strconv.ParseFloat(parser.previous.Start, 64)
+		if err != nil {
+			reportError("Invalid number literal.")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
+	} else if match(token.TOKEN_STRING) {
+		str := parser.previous.Start[1 : len(parser.previous.Start)-1]
+		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
+	} else if match(token.TOKEN_TRUE) {
+		return runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
+	} else if match(token.TOKEN_FALSE) {
+		return runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
+	} else if match(token.TOKEN_NULL) {
+		return runtime.Value{Type: runtime.VAL_NULL}
+	} else {
+		reportError("Expected a constant value for case (e.g., number, string, true, false, null).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+*/
 
+func parseConstantValue() runtime.Value {
+	if match(token.TOKEN_NUMBER) {
+		val, err := strconv.ParseFloat(parser.previous.Start, 64)
+		if err != nil {
+			reportError("Invalid number literal.")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
+	} else if match(token.TOKEN_STRING) {
+		text := parser.previous.Start
+		if len(text) < 2 {
+			reportError("Invalid string literal; must be enclosed in quotes.")
+			return runtime.Value{Type: runtime.VAL_NULL}
+		}
+		str := text[1 : len(text)-1]
+		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
+	} else if match(token.TOKEN_TRUE) {
+		return runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
+	} else if match(token.TOKEN_FALSE) {
+		return runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
+	} else if match(token.TOKEN_NULL) {
+		return runtime.Value{Type: runtime.VAL_NULL}
+	} else {
+		// If we see an identifier or any other token, that's an error.
+		reportError("Expected a literal constant for case (number, string, true, false, null). Identifiers are not allowed in match cases.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+}
+
+func matchStatement() {
+	// TODO
+	fmt.Println("###### TODO ######")
 }

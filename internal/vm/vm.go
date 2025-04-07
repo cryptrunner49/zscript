@@ -1210,6 +1210,9 @@ func run() InterpretResult {
 				mapObj.Entries[key] = value
 			}
 			Push(runtime.ObjVal(mapObj))
+		case uint8(runtime.OP_MATCH):
+			// TODO
+			fmt.Print("TODO")
 		}
 	}
 }
