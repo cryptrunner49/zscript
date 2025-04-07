@@ -27,3 +27,6 @@ print(🔢);  // Outputs: 100
 
 var 💬 = "Emoji!";
 print(💬);  // Outputs: Emoji!
+
+var _a = 100;
+print a;

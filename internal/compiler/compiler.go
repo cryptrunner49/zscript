@@ -125,6 +125,9 @@ func init() {
 	rules[token.TOKEN_SLASH] = ParseRule{nil, binary, PREC_FACTOR}
 	rules[token.TOKEN_PERCENT] = ParseRule{nil, binary, PREC_FACTOR}
 	rules[token.TOKEN_STAR] = ParseRule{nil, binary, PREC_FACTOR}
+	rules[token.TOKEN_STAR_STAR] = ParseRule{nil, binary, PREC_FACTOR}
+	rules[token.TOKEN_FLOOR] = ParseRule{nil, binary, PREC_FACTOR}
+	rules[token.TOKEN_PERCENT_PERCENT] = ParseRule{nil, binary, PREC_FACTOR}
 	rules[token.TOKEN_PIPE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_QUESTION] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_AT] = ParseRule{nil, nil, PREC_NONE}
@@ -517,6 +520,12 @@ func binary(canAssign bool) {
 		emitByte(byte(runtime.OP_DIVIDE))
 	case token.TOKEN_PERCENT:
 		emitByte(byte(runtime.OP_MOD))
+	case token.TOKEN_STAR_STAR:
+		emitByte(byte(runtime.OP_EXPONENTIAL))
+	case token.TOKEN_FLOOR:
+		emitByte(byte(runtime.OP_FLOOR))
+	case token.TOKEN_PERCENT_PERCENT:
+		emitByte(byte(runtime.OP_PERCENT))
 	case token.TOKEN_BANG_EQUAL:
 		emitBytes(byte(runtime.OP_EQUAL), byte(runtime.OP_NOT))
 	case token.TOKEN_EQUAL_EQUAL:

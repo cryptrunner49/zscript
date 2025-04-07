@@ -52,6 +52,7 @@ import "C"
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -1217,6 +1218,33 @@ func run() InterpretResult {
 			// Duplicate the top value on the stack
 			top := peek(0)
 			Push(top)
+		case uint8(runtime.OP_EXPONENTIAL):
+			b := Pop()
+			a := Pop()
+			if a.Type != runtime.VAL_NUMBER || b.Type != runtime.VAL_NUMBER {
+				return runtimeError("Operands for '**' must be numbers (got %s and %s).", typeName(a), typeName(b))
+			}
+			result := math.Pow(a.Number, b.Number)
+			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: result})
+		case uint8(runtime.OP_FLOOR):
+			b := Pop()
+			a := Pop()
+			if a.Type != runtime.VAL_NUMBER || b.Type != runtime.VAL_NUMBER {
+				return runtimeError("Operands for '__' must be numbers (got %s and %s).", typeName(a), typeName(b))
+			}
+			if b.Number == 0 {
+				return runtimeError("Division by zero in '__' operator.")
+			}
+			result := math.Floor(a.Number / b.Number)
+			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: result})
+		case uint8(runtime.OP_PERCENT):
+			b := Pop()
+			a := Pop()
+			if a.Type != runtime.VAL_NUMBER || b.Type != runtime.VAL_NUMBER {
+				return runtimeError("Operands for '%%' must be numbers (got %s and %s).", typeName(a), typeName(b))
+			}
+			result := (a.Number / 100.0) * b.Number
+			Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: result})
 		}
 	}
 }

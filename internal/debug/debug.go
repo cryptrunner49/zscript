@@ -161,6 +161,12 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return matchInstruction(ch, offset)
 	case uint8(runtime.OP_DUP):
 		return simpleInstruction("OP_DUP", offset)
+	case uint8(runtime.OP_EXPONENTIAL):
+		return simpleInstruction("OP_EXPONENTIAL", offset)
+	case uint8(runtime.OP_FLOOR):
+		return simpleInstruction("OP_FLOOR", offset)
+	case uint8(runtime.OP_PERCENT):
+		return simpleInstruction("OP_PERCENT", offset)
 	default:
 		fmt.Printf("Unknown opcode %d\n", instruction)
 		return offset + 1

@@ -88,12 +88,21 @@ func ScanToken() token.Token {
 			return lexer.makeToken(token.TOKEN_PLUS_PLUS)
 		}
 		return lexer.makeToken(token.TOKEN_PLUS)
+	case '*':
+		if lexer.match('*') {
+			return lexer.makeToken(token.TOKEN_STAR_STAR)
+		}
+		return lexer.makeToken(token.TOKEN_STAR)
 	case '/':
+		if lexer.match('_') {
+			return lexer.makeToken(token.TOKEN_FLOOR)
+		}
 		return lexer.makeToken(token.TOKEN_SLASH)
 	case '%':
+		if lexer.match('%') {
+			return lexer.makeToken(token.TOKEN_PERCENT_PERCENT)
+		}
 		return lexer.makeToken(token.TOKEN_PERCENT)
-	case '*':
-		return lexer.makeToken(token.TOKEN_STAR)
 	case '!':
 		if lexer.match('=') {
 			return lexer.makeToken(token.TOKEN_BANG_EQUAL)
