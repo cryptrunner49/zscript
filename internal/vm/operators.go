@@ -7,22 +7,6 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
 )
 
-// binaryOp applies a binary arithmetic operation to two number operands.
-/*
-binaryOp := func(op func(a, b float64) float64, opName string) InterpretResult {
-	top := peek(0)
-	next := peek(1)
-	if top.Type != runtime.VAL_NUMBER || next.Type != runtime.VAL_NUMBER {
-		return runtimeError("Both operands for '%s' must be numbers (got %s and %s).", opName, typeName(top), typeName(next))
-	}
-	b := Pop().Number
-	a := Pop().Number
-	result := op(a, b)
-	Push(runtime.Value{Type: runtime.VAL_NUMBER, Number: result})
-	return INTERPRET_OK
-}
-*/
-
 // Helper function for numeric addition
 func addNumbers(a, b runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: a.Number + b.Number}
