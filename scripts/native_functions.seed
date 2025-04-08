@@ -109,5 +109,14 @@ for (var i = 0; i < count; i = i + 1) {
 println("Generated " + to_str(count) + " random numbers:");
 println(array_to_string(results));
 
+println("Parse int: ");
+var a = 55;
+var b = a + parse_int("50");
+println(b);
+
+println("Clock: ");
+println(clock());
+
 // End of script
 println("--- Script Complete ---");
+

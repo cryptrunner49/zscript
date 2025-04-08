@@ -230,6 +230,18 @@ func toStr(argCount int, args []runtime.Value) runtime.Value {
 		switch obj := value.Obj.(type) {
 		case *runtime.ObjString:
 			str = obj.Chars
+		case *runtime.ObjArray:
+			str = arrayToString(obj)
+		case *runtime.ObjMap:
+			str = mapToString(obj)
+		case *runtime.ObjInstance:
+			str = instanceToString(obj)
+		case *runtime.ObjDate:
+			str = dateToString(obj)
+		case *runtime.ObjTime:
+			str = timeToString(obj)
+		case *runtime.ObjDateTime:
+			str = dateTimeToString(obj)
 		case *runtime.ObjFunction:
 			if obj.Name != nil {
 				str = "<fn " + obj.Name.Chars + ">"
@@ -246,8 +258,6 @@ func toStr(argCount int, args []runtime.Value) runtime.Value {
 			str = "<native fn>"
 		case *runtime.ObjStruct:
 			str = "<struct " + obj.Name.Chars + ">"
-		case *runtime.ObjInstance:
-			str = "<instance>"
 		case *runtime.ObjUpvalue:
 			str = "<upvalue>"
 		default:
@@ -260,6 +270,88 @@ func toStr(argCount int, args []runtime.Value) runtime.Value {
 		Type: runtime.VAL_OBJ,
 		Obj:  runtime.NewObjString(str),
 	}
+}
+
+// arrayToString converts an array to a string like "[1, 2, 3]".
+func arrayToString(array *runtime.ObjArray) string {
+	var sb strings.Builder
+	sb.WriteString("[")
+	for i, elem := range array.Elements {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		strVal := toStr(1, []runtime.Value{elem})
+		if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+			sb.WriteString(strObj.Chars)
+		} else {
+			sb.WriteString("error")
+		}
+	}
+	sb.WriteString("]")
+	return sb.String()
+}
+
+// mapToString converts a map to a string like "{key1: value1, key2: value2}".
+func mapToString(mapObj *runtime.ObjMap) string {
+	var sb strings.Builder
+	sb.WriteString("{")
+	first := true
+	for key, value := range mapObj.Entries {
+		if !first {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(key.Chars)
+		sb.WriteString(": ")
+		strVal := toStr(1, []runtime.Value{value})
+		if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+			sb.WriteString(strObj.Chars)
+		} else {
+			sb.WriteString("error")
+		}
+		first = false
+	}
+	sb.WriteString("}")
+	return sb.String()
+}
+
+// instanceToString converts a struct instance to a string like "<StructName{field1=value1, field2=value2}>".
+func instanceToString(instance *runtime.ObjInstance) string {
+	var sb strings.Builder
+	sb.WriteString("<")
+	sb.WriteString(instance.Structure.Name.Chars)
+	sb.WriteString("{")
+	first := true
+	for fieldName, fieldValue := range instance.Fields {
+		if !first {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fieldName.Chars)
+		sb.WriteString("=")
+		strVal := toStr(1, []runtime.Value{fieldValue})
+		if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+			sb.WriteString(strObj.Chars)
+		} else {
+			sb.WriteString("error")
+		}
+		first = false
+	}
+	sb.WriteString("}>")
+	return sb.String()
+}
+
+// dateToString converts a Date object to a string like "2023-10-15".
+func dateToString(date *runtime.ObjDate) string {
+	return date.Time.Format("2006-01-02")
+}
+
+// timeToString converts a Time object to a string like "14:30:00".
+func timeToString(timeObj *runtime.ObjTime) string {
+	return timeObj.Time.Format("15:04:05")
+}
+
+// dateTimeToString converts a DateTime object to a string like "2023-10-15 14:30:00".
+func dateTimeToString(dateTime *runtime.ObjDateTime) string {
+	return dateTime.Time.Format("2006-01-02 15:04:05")
 }
 
 // toCharsNative converts a string into an array of single-character strings.

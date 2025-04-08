@@ -1,2 +1,0 @@
-use "libmath.so";
-print add(2, 3); // 5

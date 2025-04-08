@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
 	"github.com/cryptrunner49/goseedvm/internal/token"
@@ -242,6 +241,7 @@ func iterVarDeclaration() {
 // iterStatement compiles the `iter (var item in iterable) { body }` syntax into bytecode.
 // It creates a loop that iterates over an iterable (e.g., an array), assigning each value
 // to the variable `item` and executing the body for each iteration.
+/*
 func iterStatement() {
 	// Start a new scope for the iterator variables to ensure proper cleanup.
 	beginScope()
@@ -256,7 +256,7 @@ func iterStatement() {
 
 	// Declare the iterator variable (e.g., 'item') and get its slot in the local scope.
 	iterVarDeclaration()
-	iterVarSlot := uint8(current.localCount - 1) // Slot for 'item' (typically slot 1).
+	//iterVarSlot := uint8(current.localCount - 1) // Slot for 'item' (typically slot 1).
 
 	// Expect 'in' to separate the variable from the iterable expression.
 	consume(token.TOKEN_IN, "Expected 'in' after iterator variable.")
@@ -301,17 +301,11 @@ func iterStatement() {
 	emitByte(byte(runtime.OP_POP))                        // Pop false result.
 	// Stack: [ <script> ]
 
-	// Get the current value from the iterator using iter_value(it).
-	constantIndex = identifierConstant(token.Token{Start: "iter_value", Length: len("iter_value"), Line: parser.previous.Line})
-	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex) // Push iter_value function.
-	emitBytes(byte(runtime.OP_GET_LOCAL), iteratorSlot)   // Push iterator.
-	emitBytes(byte(runtime.OP_CALL), 1)                   // Call iter_value, returns value.
-	emitBytes(byte(runtime.OP_SET_LOCAL), iterVarSlot)    // Assign value to 'item'.
-	emitByte(byte(runtime.OP_POP))                        // Pop call result.
-	// Stack: [ <script> ]
-
 	// Compile the loop body (e.g., { print item; }).
 	statement()
+
+	emitByte(byte(runtime.OP_POP))
+	emitBytes(byte(runtime.OP_GET_LOCAL), iteratorSlot) // Push iterator.
 
 	// Advance the iterator to the next element using iter_next(it).
 	constantIndex = identifierConstant(token.Token{Start: "iter_next", Length: len("iter_next"), Line: parser.previous.Line})
@@ -335,32 +329,91 @@ func iterStatement() {
 	endScope() // Close scope; no additional pops needed.
 	// VM adds OP_NULL and OP_RETURN to finish execution.
 }
-
-/*
-func parseConstantValue() runtime.Value {
-	if match(token.TOKEN_NUMBER) {
-		val, err := strconv.ParseFloat(parser.previous.Start, 64)
-		if err != nil {
-			reportError("Invalid number literal.")
-			return runtime.Value{Type: runtime.VAL_NULL}
-		}
-		return runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
-	} else if match(token.TOKEN_STRING) {
-		str := parser.previous.Start[1 : len(parser.previous.Start)-1]
-		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
-	} else if match(token.TOKEN_TRUE) {
-		return runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
-	} else if match(token.TOKEN_FALSE) {
-		return runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
-	} else if match(token.TOKEN_NULL) {
-		return runtime.Value{Type: runtime.VAL_NULL}
-	} else {
-		reportError("Expected a constant value for case (e.g., number, string, true, false, null).")
-		return runtime.Value{Type: runtime.VAL_NULL}
-	}
-}
 */
 
+func iterStatement() {
+	// Start a new scope for the iterator variables to ensure proper cleanup.
+	beginScope()
+
+	// Parse the iterator syntax: expect '(' after 'iter'.
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'iter'.")
+
+	// Ensure 'var' keyword follows '(' to declare the iterator variable.
+	if !match(token.TOKEN_VAR) {
+		reportError("Expected 'var' after '(' in iter statement.")
+	}
+
+	// Declare the iterator variable (e.g., 'item') and get its slot in the local scope.
+	iterVarDeclaration()
+	iterVarSlot := uint8(current.localCount - 1) // Slot for 'item' (typically slot 1).
+
+	// Expect 'in' to separate the variable from the iterable expression.
+	consume(token.TOKEN_IN, "Expected 'in' after iterator variable.")
+
+	// Compile the iterable expression (e.g., [1, 2, 3]), leaving it on the stack.
+	expression()
+
+	// Expect ')' to close the iterator declaration.
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after iterable expression.")
+
+	// Store the iterable in a temporary local variable to persist across iterations.
+	arraySlot := declareTemporary()                  // Slot for the array (typically slot 2).
+	emitBytes(byte(runtime.OP_SET_LOCAL), arraySlot) // Assign iterable to local slot.
+	emitByte(byte(runtime.OP_POP))                   // Remove iterable from stack.
+
+	// Generate a unique global name for the iterator 'it' (e.g., "__iter_5").
+	uniqueIteratorName := fmt.Sprintf("__iter_%d", parser.previous.Line)
+	iteratorNameToken := token.Token{Start: uniqueIteratorName, Length: len(uniqueIteratorName), Line: parser.previous.Line}
+	iteratorConstant := identifierConstant(iteratorNameToken)
+
+	// Initialize the iterator by calling array_iter(iterable) and store in global 'it'.
+	constantIndex := identifierConstant(token.Token{Start: "array_iter", Length: len("array_iter"), Line: parser.previous.Line})
+	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex)       // Push array_iter function.
+	emitBytes(byte(runtime.OP_GET_LOCAL), arraySlot)            // Push the iterable.
+	emitBytes(byte(runtime.OP_CALL), 1)                         // Call array_iter, returns iterator.
+	emitBytes(byte(runtime.OP_DEFINE_GLOBAL), iteratorConstant) // Define global 'it'.
+
+	// Mark the start of the iteration loop.
+	loopStart := currentChunk().Count()
+
+	// Condition: Check if the iterator is done using iter_done(it).
+	constantIndex = identifierConstant(token.Token{Start: "iter_done", Length: len("iter_done"), Line: parser.previous.Line})
+	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex)    // Push iter_done function.
+	emitBytes(byte(runtime.OP_GET_GLOBAL), iteratorConstant) // Push global 'it'.
+	emitBytes(byte(runtime.OP_CALL), 1)                      // Call iter_done, returns bool.
+	exitJump := emitJump(byte(runtime.OP_JUMP_IF_TRUE))      // Jump to end if true (done).
+	emitByte(byte(runtime.OP_POP))                           // Pop false result.
+
+	// Get the current value from the iterator using iter_value(it).
+	constantIndex = identifierConstant(token.Token{Start: "iter_value", Length: len("iter_value"), Line: parser.previous.Line})
+	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex)    // Push iter_value function.
+	emitBytes(byte(runtime.OP_GET_GLOBAL), iteratorConstant) // Push global 'it'.
+	emitBytes(byte(runtime.OP_CALL), 1)                      // Call iter_value, returns value.
+	emitBytes(byte(runtime.OP_SET_LOCAL), iterVarSlot)       // Assign value to 'item'.
+	// Removed emitByte(byte(runtime.OP_POP)) here to keep the value on the stack.
+
+	// Compile the loop body (e.g., { print item; }).
+	statement()
+
+	// Advance the iterator to the next element using iter_next(it).
+	constantIndex = identifierConstant(token.Token{Start: "iter_next", Length: len("iter_next"), Line: parser.previous.Line})
+	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex)    // Push iter_next function.
+	emitBytes(byte(runtime.OP_GET_GLOBAL), iteratorConstant) // Push global 'it'.
+	emitBytes(byte(runtime.OP_CALL), 1)                      // Call iter_next, returns null.
+	emitByte(byte(runtime.OP_POP))                           // Pop null result.
+
+	// Loop back to the condition check.
+	emitLoop(loopStart)
+
+	// Patch the exit jump to point here when iter_done returns true.
+	patchJump(exitJump)
+
+	// Cleanup: Adjust locals for scope exit.
+	current.localCount -= 2 // Account for 'item' and 'array'.
+	endScope()              // Close scope; no additional pops needed.
+}
+
+/*
 func parseConstantValue() runtime.Value {
 	if match(token.TOKEN_NUMBER) {
 		val, err := strconv.ParseFloat(parser.previous.Start, 64)
@@ -389,6 +442,7 @@ func parseConstantValue() runtime.Value {
 		return runtime.Value{Type: runtime.VAL_NULL}
 	}
 }
+*/
 
 func matchStatement() {
 	// TODO

@@ -3,36 +3,36 @@
 //enable_debug();
 //enable_trace();
 
-print("---START---");
+println("---START---");
 
 import "math.seed";
-print "----------";
-print "math.seed:";
-print "";
-print add(2, 3);  // Outputs: 5
-print PI;         // Outputs: 3.14159
-print "----------";
+println("----------");
+println("math.seed:");
+println("");
+println(add(2, 3));  // Outputs: 5
+println(PI);         // Outputs: 3.14159
+println("----------");
 
 import "geometry.seed";
-print "----------";
-print "geometry.seed:";
-print "";
-print Geometry.PI;             // 3.14
-print Geometry.Shapes.area(2); // 12.56
-print "----------";
+println("----------");
+println("geometry.seed:");
+println("");
+println(Geometry.PI);             // 3.14
+println(Geometry.Shapes.area(2)); // 12.56
+println("----------");
 
-print "----------";
-print "mod as:";
-print "";
+println("----------");
+println("mod as:");
+println("");
 mod Geometry.Shapes as Shapes;
-print Shapes.area(2); // 12.56
-print "----------";
+println(Shapes.area(2)); // 12.56
+println("----------");
 
-print "----------";
-print "def as:";
-print "";
+println("----------");
+println("def as:");
+println("");
 def Geometry.Shapes as shapes;
-print shapes.area(2); // 12.56
-print "----------";
+println(shapes.area(2)); // 12.56
+println("----------");
 
-print("---END---");
+println("---END---");

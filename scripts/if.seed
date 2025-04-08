@@ -7,9 +7,11 @@ if (色 == "赤") {
 }
 
 // ASCII
-var color = "red";
+var color = "blue";
 if (color == "red") {
-    print("This is red!"); // Outputs: This is red!
+    print("This is red!");
+} else if (color == "blue") {
+    print("This is blue!");  // Outputs: This is blue!
 } else {
     print("Not red.");
 }

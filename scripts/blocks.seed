@@ -2,14 +2,14 @@
 var 変数 = 10;
 {
     var 変数 = 20;
-    print(to_str(変数) + "📦"); // Outputs: 20📦
+    println(to_str(変数) + "📦"); // Outputs: 20📦
 }
-print(変数); // Outputs: 10
+println(変数); // Outputs: 10
 
 // ASCII
 var x = 10;
 {
     var x = 20;
-    print(x); // Outputs: 20
+    println(x); // Outputs: 20
 }
-print(x); // Outputs: 10
+println(x); // Outputs: 10

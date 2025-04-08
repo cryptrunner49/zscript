@@ -7,20 +7,20 @@ for (var i = 0; i < args.length; i = i + 1) {
 }
 
 if (verbose) {
-    print "Running in verbose mode!";
+    println("Running in verbose mode!");
 } else {
-    print "Running in normal mode.";
+    println("Running in normal mode.");
 }
 
 
-print "---------------";
-// Print the number of arguments.
-print "array size: " + args.length;
-print "array length: " + len(args);
+println("---------------");
+// print the number of arguments.
+println("array size: " + args.length);
+println("array length: " + len(args));
 
-// Print the program name and subsequent arguments using array indexing.
-print "---------------";
-print args[0];       
-print args[1];       
-print args[2];
-print "---------------";
+// print the program name and subsequent arguments using array indexing.
+println("---------------");
+println(args[0]);       
+println(args[1]);       
+println(args[2]);
+println("---------------");

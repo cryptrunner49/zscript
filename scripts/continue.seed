@@ -1,26 +1,26 @@
-enable_debug();
-enable_trace();
+//enable_debug();
+//enable_trace();
 
 // Example with while and continue
 var x = 0;
-print "While loop with continue:";
+println("While loop with continue:");
 while (x < 6) {
     x = x + 1;
     if (x == 3) {
-        print "Skipping x = 3";
+        println("Skipping x = 3");
         continue;
     }
-    print x;
+    println(x);
 }
-print "Exited while loop";
+println("Exited while loop");
 
 // Example with for and continue
-print "For loop with continue:";
+println("For loop with continue:");
 for (var y = 0; y < 6; y = y + 1) {
     if (y == 2) {
-        print "Skipping y = 2";
+        println("Skipping y = 2");
         continue;
     }
-    print y;
+    println(y);
 }
-print "Exited for loop";
+println("Exited for loop");

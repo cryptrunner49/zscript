@@ -42,8 +42,8 @@ var str = "hello world";
 var chars = to_chars(str);  // Assume this converts to array of characters
 var hello = chars[:5];      // ["h", "e", "l", "l", "o"]
 var world = chars[6:];      // ["w", "o", "r", "l", "d"]
-print hello;
-print world;
+println(hello);
+println(world);
 
 // 3. Getting first/last elements
 var first = data[:1][0];  // 10 (first element)

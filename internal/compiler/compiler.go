@@ -465,6 +465,7 @@ func unary(canAssign bool) {
 		}
 
 		// Prefix ++x: Load, increment, store, leave new value on stack
+		emitByte(byte(runtime.OP_POP))                                   // Remove old value from stack
 		emitBytes(getOp, uint8(arg))                                     // Load variable value
 		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1
 		emitByte(byte(runtime.OP_ADD))                                   // Increment
@@ -494,6 +495,7 @@ func unary(canAssign bool) {
 		}
 
 		// Prefix --x: Load, decrement, store, leave new value on stack
+		emitByte(byte(runtime.OP_POP))                                   // Remove old value from stack
 		emitBytes(getOp, uint8(arg))                                     // Load variable value
 		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1
 		emitByte(byte(runtime.OP_SUBTRACT))                              // Decrement

@@ -1,7 +1,7 @@
-print(2 ** 2);
-print(7 /_ 3);
-print(50 %% 1000);
+println(2 ** 2);
+println(7 /_ 3);
+println(50 %% 1000);
 
-print(6 ** 2);
-print(18 /_ 3);
-print(25 %% 1000);
+println(6 ** 2);
+println(18 /_ 3);
+println(25 %% 1000);

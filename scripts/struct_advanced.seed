@@ -53,13 +53,13 @@ v2.info.count = 5;
 
 // Test addition
 var sum = v1 + v2;
-print("v1 + v2 = ");
-print(sum);
+println("v1 + v2 = ");
+println(sum);
 
 // Test subtraction
 var diff = v1 - v2;
-print("v1 - v2 = ");
-print(diff);
+println("v1 - v2 = ");
+println(diff);
 
 // Test with a partially initialized instance
 var v3 = Vec();
@@ -71,5 +71,5 @@ v3.info.id = 3;
 v3.info.tag = "mid";
 
 var sum2 = v1 + v3;
-print("v1 + v3 (with partial nesting) = ");
-print(sum2);
+println("v1 + v3 (with partial nesting) = ");
+println(sum2);

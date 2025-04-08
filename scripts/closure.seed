@@ -8,8 +8,8 @@ fn 计数器を作る() {
     return 増やす;
 }
 var 计数器 = 计数器を作る();
-print(计数器()); // Outputs: 1
-print(计数器()); // Outputs: 2
+println(计数器()); // Outputs: 1
+println(计数器()); // Outputs: 2
 
 // ASCII
 fn makeCounter() {
@@ -21,5 +21,5 @@ fn makeCounter() {
     return increment;
 }
 var counter = makeCounter();
-print(counter()); // Outputs: 1
-print(counter()); // Outputs: 2
+println(counter()); // Outputs: 1
+println(counter()); // Outputs: 2

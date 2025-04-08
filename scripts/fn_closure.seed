@@ -5,7 +5,7 @@ fn outer() {
         var c = 3;
         var d = 4;
         fn inner() {
-            print a + c + b + d;  // Accesses variables from outer scopes
+            println(a + c + b + d);  // Accesses variables from outer scopes
         }
         inner();
     }

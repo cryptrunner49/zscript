@@ -1,0 +1,11 @@
+fn fileDemo() {
+    // Write to a file
+    write_file("test.txt", "Hello, Seed!\nThis is a test file.");
+    
+    // Read from a file
+    var content = read_file("test.txt");
+    println("File contents:", content);
+}
+
+println("=== File Demo ===");
+fileDemo();

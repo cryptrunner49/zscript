@@ -1,7 +1,7 @@
 // Unicode with Emoji
 var 🔢 = 42;
-print(🔢);  // Outputs: 42
+println(🔢);  // Outputs: 42
 
 // ASCII
 var num = 42;
-print(num); // Outputs: 42
+println(num); // Outputs: 42
