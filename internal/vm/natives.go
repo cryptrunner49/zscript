@@ -121,7 +121,6 @@ func defineAllNatives() {
 	defineNative("datetime_add_days", dateTimeAddDays)
 	defineNative("datetime_subtract_days", dateTimeSubtractDays)
 
-	// New native functions...
 	// Random Functions
 	defineNative("shuffle", shuffleNative)
 	defineNative("random_between", randomBetweenNative)
@@ -1922,34 +1921,6 @@ func dateTimeSubtractDays(argCount int, args []runtime.Value) runtime.Value {
 }
 
 // ============================================================================
-// Native Functions: Output Operations
-// ============================================================================
-
-// ============================================================================
-// Native Functions: Input Operations
-// ============================================================================
-
-// ============================================================================
-// Native Functions: Format Operations
-// ============================================================================
-
-// ============================================================================
-// Native Functions: File Operations
-// ============================================================================
-
-// ============================================================================
-// Native Functions: Others Operations
-// ============================================================================
-
-// clockNative returns the current time in seconds as a number.
-func clockNative(argCount int, args []runtime.Value) runtime.Value {
-	return runtime.Value{
-		Type:   runtime.VAL_NUMBER,
-		Number: float64(time.Now().UnixNano()) / 1e9,
-	}
-}
-
-// ============================================================================
 // Native Functions: Random Operations
 // ============================================================================
 
@@ -2401,4 +2372,16 @@ func parseIntNative(argCount int, args []runtime.Value) runtime.Value {
 		return runtime.Value{Type: runtime.VAL_NULL}
 	}
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(num)}
+}
+
+// ============================================================================
+// Native Functions: Others Operations
+// ============================================================================
+
+// clockNative returns the current time in seconds as a number.
+func clockNative(argCount int, args []runtime.Value) runtime.Value {
+	return runtime.Value{
+		Type:   runtime.VAL_NUMBER,
+		Number: float64(time.Now().UnixNano()) / 1e9,
+	}
 }
