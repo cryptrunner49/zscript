@@ -359,8 +359,6 @@ func (l *Lexer) identifierType() token.TokenType {
 		return token.TOKEN_NULL
 	case "or":
 		return token.TOKEN_OR
-	case "print":
-		return token.TOKEN_PRINT
 	case "return":
 		return token.TOKEN_RETURN
 	case "struct":

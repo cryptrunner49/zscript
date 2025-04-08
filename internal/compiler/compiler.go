@@ -157,7 +157,6 @@ func init() {
 	rules[token.TOKEN_IF] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_NULL] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_OR] = ParseRule{nil, or, PREC_OR}
-	rules[token.TOKEN_PRINT] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_RETURN] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_SUPER] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_STRUCT] = ParseRule{nil, nil, PREC_NONE}
@@ -259,9 +258,7 @@ func expression() {
 
 // statement compiles a statement, dispatching to the appropriate function based on the token.
 func statement() {
-	if match(token.TOKEN_PRINT) {
-		printStatement()
-	} else if match(token.TOKEN_IF) {
+	if match(token.TOKEN_IF) {
 		ifStatement()
 	} else if match(token.TOKEN_WHILE) {
 		whileStatement()

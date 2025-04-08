@@ -111,7 +111,7 @@ func synchronize() {
 		}
 		switch parser.current.Type {
 		case token.TOKEN_CLASS, token.TOKEN_FN, token.TOKEN_VAR, token.TOKEN_FOR,
-			token.TOKEN_IF, token.TOKEN_WHILE, token.TOKEN_PRINT, token.TOKEN_RETURN:
+			token.TOKEN_IF, token.TOKEN_WHILE, token.TOKEN_RETURN:
 			return
 		}
 		advance()

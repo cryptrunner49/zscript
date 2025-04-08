@@ -1,14 +1,33 @@
 package vm
 
 import (
+	"bufio"
 	"fmt"
+	"math"
+	"math/rand"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cryptrunner49/goseedvm/internal/common"
 	"github.com/cryptrunner49/goseedvm/internal/runtime"
 )
+
+// Seed the random number generator once during initialization
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+// unescapeString replaces common escape sequences like \n with their actual characters.
+func unescapeString(s string) string {
+	s = strings.ReplaceAll(s, `\n`, "\n")
+	s = strings.ReplaceAll(s, `\t`, "\t")
+	s = strings.ReplaceAll(s, `\\`, "\\")
+	// Add more escape sequences as needed
+	return s
+}
 
 // defineAllNatives registers all native functions (built-in functions) to the VM.
 func defineAllNatives() {
@@ -101,6 +120,33 @@ func defineAllNatives() {
 	defineNative("datetime_set_component", dateTimeSetDateTimeComponent)
 	defineNative("datetime_add_days", dateTimeAddDays)
 	defineNative("datetime_subtract_days", dateTimeSubtractDays)
+
+	// New native functions...
+	// Random Functions
+	defineNative("shuffle", shuffleNative)
+	defineNative("random_between", randomBetweenNative)
+	defineNative("random_string", randomStringNative)
+
+	// Output Functions
+	defineNative("print", printNative)
+	defineNative("println", printlnNative)
+	defineNative("printf", printfNative)
+
+	// Input Functions
+	defineNative("scan", scanNative)
+	defineNative("scanln", scanlnNative)
+	defineNative("scanf", scanfNative)
+
+	// Formatting Functions
+	defineNative("sprintf", sprintfNative)
+	defineNative("errorf", errorfNative)
+
+	// File Operations
+	defineNative("read_file", readFileNative)
+	defineNative("write_file", writeFileNative)
+
+	// Utility Functions
+	defineNative("parse_int", parseIntNative)
 
 	// Others
 	defineNative("clock", clockNative)
@@ -1876,6 +1922,22 @@ func dateTimeSubtractDays(argCount int, args []runtime.Value) runtime.Value {
 }
 
 // ============================================================================
+// Native Functions: Output Operations
+// ============================================================================
+
+// ============================================================================
+// Native Functions: Input Operations
+// ============================================================================
+
+// ============================================================================
+// Native Functions: Format Operations
+// ============================================================================
+
+// ============================================================================
+// Native Functions: File Operations
+// ============================================================================
+
+// ============================================================================
 // Native Functions: Others Operations
 // ============================================================================
 
@@ -1885,4 +1947,458 @@ func clockNative(argCount int, args []runtime.Value) runtime.Value {
 		Type:   runtime.VAL_NUMBER,
 		Number: float64(time.Now().UnixNano()) / 1e9,
 	}
+}
+
+// ============================================================================
+// Native Functions: Random Operations
+// ============================================================================
+
+func shuffleNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("'shuffle' expects 1 argument (the array).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_OBJ {
+		runtimeError("'shuffle' can only be used on arrays.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	array, ok := args[0].Obj.(*runtime.ObjArray)
+	if !ok {
+		runtimeError("'shuffle' can only be used on arrays.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	rand.Shuffle(len(array.Elements), func(i, j int) {
+		array.Elements[i], array.Elements[j] = array.Elements[j], array.Elements[i]
+	})
+	return args[0]
+}
+
+func randomBetweenNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("'random_between' expects 2 arguments (min, max).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_NUMBER || args[1].Type != runtime.VAL_NUMBER {
+		runtimeError("'random_between' expects two numbers.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	min := args[0].Number
+	max := args[1].Number
+	if min > max {
+		runtimeError("min must be less than or equal to max.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if math.Floor(min) == min && math.Floor(max) == max {
+		minInt := int(min)
+		maxInt := int(max)
+		randomInt := rand.Intn(maxInt-minInt+1) + minInt
+		return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(randomInt)}
+	}
+	randomFloat := min + rand.Float64()*(max-min)
+	return runtime.Value{Type: runtime.VAL_NUMBER, Number: randomFloat}
+}
+
+func randomStringNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("'random_string' expects 1 argument (size).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_NUMBER {
+		runtimeError("'random_string' expects a number (size).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	size := int(args[0].Number)
+	if size < 0 {
+		runtimeError("Size must be non-negative.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?"
+	var sb strings.Builder
+	for i := 0; i < size; i++ {
+		index := rand.Intn(len(charset))
+		sb.WriteByte(charset[index])
+	}
+	return runtime.ObjVal(runtime.NewObjString(sb.String()))
+}
+
+// ============================================================================
+// Native Functions: Output Operations
+// ============================================================================
+
+func printNative(argCount int, args []runtime.Value) runtime.Value {
+	for i := 0; i < argCount; i++ {
+		strVal := toStr(1, args[i:i+1])
+		if strVal.Type == runtime.VAL_OBJ {
+			if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+				fmt.Print(unescapeString(strObj.Chars))
+			} else {
+				fmt.Print("error")
+			}
+		} else {
+			fmt.Print("error")
+		}
+		if i < argCount-1 {
+			fmt.Print(" ")
+		}
+	}
+	return runtime.Value{Type: runtime.VAL_NULL}
+}
+
+func printlnNative(argCount int, args []runtime.Value) runtime.Value {
+	for i := 0; i < argCount; i++ {
+		strVal := toStr(1, args[i:i+1])
+		if strVal.Type == runtime.VAL_OBJ {
+			if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+				fmt.Print(unescapeString(strObj.Chars))
+			} else {
+				fmt.Print("error")
+			}
+		} else {
+			fmt.Print("error")
+		}
+		if i < argCount-1 {
+			fmt.Print(" ")
+		}
+	}
+	fmt.Println()
+	return runtime.Value{Type: runtime.VAL_NULL}
+}
+
+func printfNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount < 1 {
+		runtimeError("'printf' expects at least 1 argument (format string).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatVal := args[0]
+	if formatVal.Type != runtime.VAL_OBJ {
+		runtimeError("'printf' first argument must be a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatObj, ok := formatVal.Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'printf' first argument must be a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	format := unescapeString(formatObj.Chars) // Unescape the format string
+	var printArgs []interface{}
+	for _, arg := range args[1:] {
+		switch arg.Type {
+		case runtime.VAL_BOOL:
+			printArgs = append(printArgs, arg.Bool)
+		case runtime.VAL_NUMBER:
+			if math.Mod(arg.Number, 1) == 0 {
+				printArgs = append(printArgs, int(arg.Number))
+			} else {
+				printArgs = append(printArgs, arg.Number)
+			}
+		case runtime.VAL_OBJ:
+			switch obj := arg.Obj.(type) {
+			case *runtime.ObjString:
+				printArgs = append(printArgs, unescapeString(obj.Chars)) // Unescape string arguments
+			case *runtime.ObjArray:
+				strVal := arrayToStringNative(1, []runtime.Value{arg})
+				if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+					printArgs = append(printArgs, unescapeString(strObj.Chars))
+				} else {
+					printArgs = append(printArgs, "unknown array")
+				}
+			default:
+				strVal := toStr(1, []runtime.Value{arg})
+				if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+					printArgs = append(printArgs, unescapeString(strObj.Chars))
+				} else {
+					printArgs = append(printArgs, "unknown")
+				}
+			}
+		case runtime.VAL_NULL:
+			printArgs = append(printArgs, "null")
+		default:
+			printArgs = append(printArgs, "unknown")
+		}
+	}
+	// Replace all format specifiers with %v
+	adjustedFormat := strings.ReplaceAll(format, "%s", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%d", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%f", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%g", "%v")
+	fmt.Printf(adjustedFormat, printArgs...)
+	return runtime.Value{Type: runtime.VAL_NULL}
+}
+
+// ============================================================================
+// Native Functions: Input Operations
+// ============================================================================
+
+func scanNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		runtimeError("'scan' expects 0 arguments.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		runtimeError("Error reading input: %v", err)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	line = strings.TrimSuffix(line, "\n")
+	parts := strings.Fields(line)
+	values := make([]runtime.Value, len(parts))
+	for i, part := range parts {
+		values[i] = runtime.ObjVal(runtime.NewObjString(part))
+	}
+	return runtime.ObjVal(runtime.NewArray(values))
+}
+
+func scanlnNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		runtimeError("'scanln' expects 0 arguments.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		runtimeError("Error reading input: %v", err)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	line = strings.TrimSuffix(line, "\n")
+	return runtime.ObjVal(runtime.NewObjString(line))
+}
+
+func scanfNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("'scanf' expects 1 argument (format string).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatVal := args[0]
+	if formatVal.Type != runtime.VAL_OBJ {
+		runtimeError("'scanf' expects a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if _, ok := formatVal.Obj.(*runtime.ObjString); !ok {
+		runtimeError("'scanf' expects a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		runtimeError("Error reading input: %v", err)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	line = strings.TrimSuffix(line, "\n")
+	return runtime.ObjVal(runtime.NewObjString(line))
+}
+
+// ============================================================================
+// Native Functions: Format Operations
+// ============================================================================
+
+func sprintfNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount < 1 {
+		runtimeError("'sprintf' expects at least 1 argument (format string).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatVal := args[0]
+	if formatVal.Type != runtime.VAL_OBJ {
+		runtimeError("'sprintf' first argument must be a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatObj, ok := formatVal.Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'sprintf' first argument must be a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	format := unescapeString(formatObj.Chars) // Unescape the format string
+	var printArgs []interface{}
+	for _, arg := range args[1:] {
+		switch arg.Type {
+		case runtime.VAL_BOOL:
+			printArgs = append(printArgs, arg.Bool)
+		case runtime.VAL_NUMBER:
+			if math.Mod(arg.Number, 1) == 0 {
+				printArgs = append(printArgs, int(arg.Number))
+			} else {
+				printArgs = append(printArgs, arg.Number)
+			}
+		case runtime.VAL_OBJ:
+			switch obj := arg.Obj.(type) {
+			case *runtime.ObjString:
+				printArgs = append(printArgs, unescapeString(obj.Chars)) // Unescape string arguments
+			case *runtime.ObjArray:
+				strVal := arrayToStringNative(1, []runtime.Value{arg})
+				if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+					printArgs = append(printArgs, unescapeString(strObj.Chars))
+				} else {
+					printArgs = append(printArgs, "unknown array")
+				}
+			default:
+				strVal := toStr(1, []runtime.Value{arg})
+				if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+					printArgs = append(printArgs, unescapeString(strObj.Chars))
+				} else {
+					printArgs = append(printArgs, "unknown")
+				}
+			}
+		case runtime.VAL_NULL:
+			printArgs = append(printArgs, "null")
+		default:
+			printArgs = append(printArgs, "unknown")
+		}
+	}
+	// Replace all format specifiers with %v
+	adjustedFormat := strings.ReplaceAll(format, "%s", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%d", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%f", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%g", "%v")
+	formatted := fmt.Sprintf(adjustedFormat, printArgs...)
+	return runtime.ObjVal(runtime.NewObjString(formatted))
+}
+
+func errorfNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount < 1 {
+		runtimeError("'errorf' expects at least 1 argument (format string).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatVal := args[0]
+	if formatVal.Type != runtime.VAL_OBJ {
+		runtimeError("'errorf' first argument must be a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	formatObj, ok := formatVal.Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'errorf' first argument must be a string (format).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	format := unescapeString(formatObj.Chars) // Unescape the format string
+	var printArgs []interface{}
+	for _, arg := range args[1:] {
+		switch arg.Type {
+		case runtime.VAL_BOOL:
+			printArgs = append(printArgs, arg.Bool)
+		case runtime.VAL_NUMBER:
+			if math.Mod(arg.Number, 1) == 0 {
+				printArgs = append(printArgs, int(arg.Number))
+			} else {
+				printArgs = append(printArgs, arg.Number)
+			}
+		case runtime.VAL_OBJ:
+			switch obj := arg.Obj.(type) {
+			case *runtime.ObjString:
+				printArgs = append(printArgs, unescapeString(obj.Chars)) // Unescape string arguments
+			case *runtime.ObjArray:
+				strVal := arrayToStringNative(1, []runtime.Value{arg})
+				if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+					printArgs = append(printArgs, unescapeString(strObj.Chars))
+				} else {
+					printArgs = append(printArgs, "unknown array")
+				}
+			default:
+				strVal := toStr(1, []runtime.Value{arg})
+				if strObj, ok := strVal.Obj.(*runtime.ObjString); ok {
+					printArgs = append(printArgs, unescapeString(strObj.Chars))
+				} else {
+					printArgs = append(printArgs, "unknown")
+				}
+			}
+		case runtime.VAL_NULL:
+			printArgs = append(printArgs, "null")
+		default:
+			printArgs = append(printArgs, "unknown")
+		}
+	}
+	// Replace all format specifiers with %v
+	adjustedFormat := strings.ReplaceAll(format, "%s", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%d", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%f", "%v")
+	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%g", "%v")
+	errMsg := fmt.Sprintf(adjustedFormat, printArgs...)
+	return runtime.ObjVal(runtime.NewObjString(errMsg))
+}
+
+// ============================================================================
+// Native Functions: File Operations
+// ============================================================================
+
+func readFileNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("'read_file' expects 1 argument (file path).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	pathVal := args[0]
+	if pathVal.Type != runtime.VAL_OBJ {
+		runtimeError("'read_file' expects a string (file path).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	pathObj, ok := pathVal.Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'read_file' expects a string (file path).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	path := pathObj.Chars
+	content, err := os.ReadFile(path)
+	if err != nil {
+		runtimeError("Error reading file: %v", err)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.ObjVal(runtime.NewObjString(string(content)))
+}
+
+func writeFileNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 2 {
+		runtimeError("'write_file' expects 2 arguments (file path, content).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	pathVal := args[0]
+	contentVal := args[1]
+	if pathVal.Type != runtime.VAL_OBJ {
+		runtimeError("'write_file' first argument must be a string (file path).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	pathObj, ok := pathVal.Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'write_file' first argument must be a string (file path).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if contentVal.Type != runtime.VAL_OBJ {
+		runtimeError("'write_file' second argument must be a string (content).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	contentObj, ok := contentVal.Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'write_file' second argument must be a string (content).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	path := pathObj.Chars
+	content := contentObj.Chars
+	err := os.WriteFile(path, []byte(content), 0644)
+	if err != nil {
+		runtimeError("Error writing file: %v", err)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.Value{Type: runtime.VAL_NULL}
+}
+
+// ============================================================================
+// Native Functions: Utility Operations
+// ============================================================================
+
+func parseIntNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("'parse_int' expects 1 argument (string).")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	if args[0].Type != runtime.VAL_OBJ {
+		runtimeError("'parse_int' expects a string.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	strObj, ok := args[0].Obj.(*runtime.ObjString)
+	if !ok {
+		runtimeError("'parse_int' expects a string.")
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	num, err := strconv.Atoi(strObj.Chars)
+	if err != nil {
+		runtimeError("Failed to parse '%s' as an integer: %v", strObj.Chars, err)
+		return runtime.Value{Type: runtime.VAL_NULL}
+	}
+	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(num)}
 }

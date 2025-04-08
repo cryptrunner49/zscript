@@ -1,0 +1,113 @@
+// Sample Script Demonstrating New Native Functions
+
+// --- Random Functions ---
+println("--- Random Functions ---");
+
+var numbers = [1, 2, 3, 4, 5];
+println("Original array:");
+println(array_to_string(numbers));
+shuffle(numbers);
+println("Shuffled array:");
+println(array_to_string(numbers));
+
+var min = 5;
+var max = 10;
+var randNum = random_between(min, max);
+println("Random number between " + to_str(min) + " and " + to_str(max) + ":");
+println(randNum);
+
+var size = 8;
+var randStr = random_string(size);
+println("Random string of size " + to_str(size) + ":");
+println(randStr);
+
+// --- Output Functions ---
+println("--- Output Functions ---");
+
+print("Hello", 42, true);
+println();
+
+println("This is a single line with number:", 100);
+
+var name = "Alice";
+var age = 25;
+printf("Name: %v, Age: %v\n", name, age);
+
+// --- Input Functions ---
+println("--- Input Functions ---");
+
+println("Enter some words (space-separated), then press Enter:");
+var words = scan();
+println("You entered these words:");
+println(array_to_string(words));
+
+println("Enter a sentence, then press Enter:");
+var sentence = scanln();
+println("You entered this sentence:");
+println(sentence);
+
+println("Enter something formatted (e.g., a number or text), then press Enter:");
+var formattedInput = scanf("%v");
+println("You entered (scanf):");
+println(formattedInput);
+
+// --- Formatting Functions ---
+println("--- Formatting Functions ---");
+
+var x = 10;
+var y = 20.5; // Changed to float to demonstrate flexibility
+var formatted = sprintf("Coordinates: (%v, %v)", x, y);
+println("Formatted string with sprintf:");
+println(formatted);
+
+var errorCode = 404;
+var errorMsg = errorf("Error %v: Resource not found", errorCode);
+println("Error message with errorf:");
+println(errorMsg);
+
+// --- File Operations ---
+println("--- File Operations ---");
+
+var filename = "test.txt";
+var content = "Hello from Seed VM!\nWritten on April 07, 2025.";
+write_file(filename, content);
+println("Wrote content to " + filename);
+
+var fileContent = read_file(filename);
+println("Read content from " + filename + ":");
+println(fileContent);
+
+// --- Combined Example ---
+println("--- Combined Example ---");
+
+var data = [10, 20, 30, 40, 50];
+println("Original data array:");
+println(array_to_string(data));
+shuffle(data);
+println("Shuffled data array:");
+println(array_to_string(data));
+
+var dataStr = sprintf("Shuffled data: %v", array_to_string(data));
+var dataFile = "shuffled_data.txt";
+write_file(dataFile, dataStr);
+println("Wrote shuffled data to " + dataFile);
+
+var readData = read_file(dataFile);
+println("Read from " + dataFile + ":");
+println(readData);
+
+println("Enter how many random numbers to generate (integer):");
+var countInput = scanln();
+var count = parse_int(countInput);
+if (count < 0) {
+    count = 0; // Ensure non-negative
+}
+var results = [];
+for (var i = 0; i < count; i = i + 1) {
+    push(results, random_between(1, 100));
+}
+println("Generated " + to_str(count) + " random numbers:");
+println(array_to_string(results));
+
+// End of script
+println("--- Script Complete ---");

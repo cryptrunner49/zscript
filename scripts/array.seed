@@ -1,106 +1,106 @@
 // Basic Basic Operations
-print "--- Basic Basic Operations ---";
+print("--- Basic Basic Operations ---");
 var arr = [1, 2, 3];
-print arr[0];       // Prints 1
+print(arr[0]);       // Prints 1
 arr[1] = 42;        // Assigns a new value at index 1
-print len(arr);     // Prints 3 (the number of elements)
+print(len(arr));     // Prints 3 (the number of elements)
 push(arr, 4);       // Adds element 4 to the end of the array
-print pop(arr);     // Prints and removes the last element (4)
+print(pop(arr));     // Prints and removes the last element (4)
 
-print "--- For Loop ---";
+print("--- For Loop ---");
 // Traditional for loop with index
 var arr = [10, 20, 30, 40];
 for (var i = 0; i < len(arr); i = i + 1) {
-    print arr[i];
+    print(arr[i]);
 }
 
-print "--- While Loop ---";
+print("--- While Loop ---");
 var index = 0;
 while (index < len(arr)) {
-    print arr[index];
+    print(arr[index]);
     index = index + 1;
 }
 
-print "--- While Loop Iterator ---";
+print("--- While Loop Iterator ---");
 // Using the iterator pattern
 var arr = [10, 20, 30, 40];
 var it = array_iter(arr);
 while (!iter_done(it)) {
     var value = iter_value(it);
-    print value;
+    print(value);
     iter_next(it);
 }
 
-print "--- Iterator Loop ---";
+print("--- Iterator Loop ---");
 iter (var item in [10, 20, 30, 40]) { 
-    print item; 
+    print(item);
 }
 
-print "--- Other Array Operations ---";
+print("--- Other Array Operations ---");
 // Example for array_sort: sorts an array in lexicographical order.
 // Note: all elements are compared by their string representations.
 var unsorted = [5, 3, 8, 1, 42, 10];
-print "";
-print "Unsorted array:";
-print unsorted;
+print("");
+print("Unsorted array:");
+print(unsorted);
 var sorted = array_sort(unsorted);
-print "Sorted array:";
-print sorted;
+print("Sorted array:");
+print(sorted);
 
 // Example for array_split: splits an array into subarrays at each occurrence of a separator.
 // In this example, the separator is the string "sep".
 var toSplit = [1, 2, "sep", 3, 4, "sep", 5, 6];
-print "";
-print "Original array for splitting:";
-print toSplit;
+print("");
+print("Original array for splitting:");
+print(toSplit);
 var splitResult = array_split(toSplit, "sep");
-print "Result of array_split (each subarray):";
-print splitResult;
+print("Result of array_split (each subarray):");
+print(splitResult);
 
 // Example for array_join: joins two or more arrays into one.
 var a1 = [1, 2];
 var a2 = [3, 4];
 var a3 = [5, 6];
-print "";
-print "Arrays to be joined:";
-print a1;
-print a2;
-print a3;
+print("");
+print("Arrays to be joined:");
+print(a1);
+print(a2);
+print(a3);
 var joined = array_join(a1, a2, a3);
-print "Result of array_join (joined array):";
-print joined;
+print("Result of array_join (joined array):");
+print(joined);
 
 // Example for array_sorted_push: inserts a new element into a sorted array and keeps it sorted.
 // Here we start with an already sorted array and push a new value.
 var sortedArray = ["apple", "banana", "mango", "orange"];
-print "";
-print "Original sorted array (lexicographical order):";
-print sortedArray;
+print("");
+print("Original sorted array (lexicographical order):");
+print(sortedArray);
 array_sorted_push(sortedArray, "blueberry");
-print "Sorted array after array_sorted_push:";
-print sortedArray;
+print("Sorted array after array_sorted_push:");
+print(sortedArray);
 
-print "";
-print "--- array_linear_search Example ---";
+print("");
+print("--- array_linear_search Example ---");
 // Example for array_linear_search: searches for an element linearly.
 var searchArr = ["cat", "dog", "bird", "dog"];
-print "Array for linear search:";
-print searchArr;
+print("Array for linear search:");
+print(searchArr);
 var indexFound = array_linear_search(searchArr, "dog");
-print "First index of 'dog' (linear search): " + to_str(indexFound);
+print("First index of 'dog' (linear search): " + to_str(indexFound));
 var indexFound2 = array_linear_search(searchArr, "tiger");
-print "Index of 'tiger' (linear search, not found returns -1): " + to_str(indexFound2);
+print("Index of 'tiger' (linear search, not found returns -1): " + to_str(indexFound2));
 
-print "";
-print "--- array_binary_search Example ---";
+print("");
+print("--- array_binary_search Example ---");
 // Example for array_binary_search: binary search on a sorted array.
 var sortedSearchArr = ["apple", "banana", "cherry", "date"];
-print "Sorted array for binary search:";
-print sortedSearchArr;
+print("Sorted array for binary search:");
+print(sortedSearchArr);
 var binIndex1 = array_binary_search(sortedSearchArr, "cherry");
-print "Index of 'cherry' (binary search): " + to_str(binIndex1);
+print("Index of 'cherry' (binary search): " + to_str(binIndex1));
 var binIndex2 = array_binary_search(sortedSearchArr, "fig");
-print "Index of 'fig' (binary search, not found returns -1): " + to_str(binIndex2);
+print("Index of 'fig' (binary search, not found returns -1): " + to_str(binIndex2));
 
 // Array
 var arr = [1, 2, 3, 2];

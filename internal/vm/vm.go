@@ -876,10 +876,6 @@ func run() InterpretResult {
 			} else {
 				return runtimeError("Unary '-' requires a number (got %s).", typeName(peek(0)))
 			}
-		case uint8(runtime.OP_PRINT):
-			// Print the top value on the stack.
-			runtime.PrintValue(Pop())
-			fmt.Println()
 		case uint8(runtime.OP_JUMP):
 			// Unconditional jump: move the instruction pointer by a given offset.
 			offset := int(readShort(frame))

@@ -8,12 +8,6 @@ import (
 	"github.com/cryptrunner49/goseedvm/internal/token"
 )
 
-func printStatement() {
-	expression()
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after value in print statement (e.g., 'print x;').")
-	emitByte(byte(runtime.OP_PRINT))
-}
-
 func expressionStatement() {
 	expression()
 	consume(token.TOKEN_SEMICOLON, "Expected ';' after expression (e.g., 'x + 1;').")

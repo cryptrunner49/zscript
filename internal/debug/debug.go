@@ -69,8 +69,6 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		return simpleInstruction("OP_NOT", offset)
 	case uint8(runtime.OP_NEGATE):
 		return simpleInstruction("OP_NEGATE", offset)
-	case uint8(runtime.OP_PRINT):
-		return simpleInstruction("OP_PRINT", offset)
 	case uint8(runtime.OP_CALL):
 		return byteInstruction("OP_CALL", ch, offset)
 	case uint8(runtime.OP_CLOSURE):
