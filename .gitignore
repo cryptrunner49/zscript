@@ -27,3 +27,5 @@ go.work.sum
 bin/
 tmp/
 libs/
+shuffled_data.txt
+test.txt

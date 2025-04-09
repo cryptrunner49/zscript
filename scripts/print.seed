@@ -10,7 +10,7 @@ fn printDemo() {
     // printf with format specifiers
     var num = 42;
     var floatNum = 3.14159;
-    printf("Number: %d, Float: %f\n", num, floatNum);
+    printf("Number: %v, Float: %v\n", num, floatNum);
 }
 
 println("\n=== Print Demo ===");

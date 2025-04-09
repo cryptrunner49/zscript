@@ -1,11 +1,4 @@
-// Unicode
-var 無 = null;
-var 🚫 = null;
-println(無);  // Outputs: null
-println(🚫);  // Outputs: null
-
-// ASCII
 var nothing = null;
 var none = null;
-println(nothing); // Outputs: null
-println(none);    // Outputs: null
+println("Nothing:", nothing);  // Outputs: null
+println("None:", none);        // Outputs: null

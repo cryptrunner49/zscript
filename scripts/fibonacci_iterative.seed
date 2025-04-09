@@ -1,3 +1,5 @@
+// Iterative Fibonacci Function
+println("--- Iterative Fibonacci ---");
 fn fib(n) {
     if (n < 2) return n;
     var a = 0;
@@ -10,6 +12,7 @@ fn fib(n) {
     return b;
 }
 
+// Performance Test
 var start = clock();
-println(fib(16));  // Outputs: 987
-println(clock() - start);  // Outputs: time taken (faster than recursion)
+println("Fibonacci(16):", fib(16));         // Outputs: 987
+printf("Time taken: %v\n", clock() - start);

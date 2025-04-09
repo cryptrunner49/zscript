@@ -1,109 +1,63 @@
-// Equality Unicode
-var 等しい = 5 == 5;
-var π = 3.14;
-var 🟰 = π == 3.14;
-println(等しい); // Outputs: true
-println(🟰);    // Outputs: true
-
-// Equality ASCII
+// Equality
+println("--- Equality Demo ---");
 var equal = 5 == 5;
 var pi = 3.14;
 var eq = pi == 3.14;
-println(equal); // Outputs: true
-println(eq);    // Outputs: true
+println("5 == 5:", equal);  // Outputs: true
+println("pi == 3.14:", eq); // Outputs: true
 
-// Inequality Unicode
-var 異なる = 5 != 3;
-var 🚫🟰 = π != 3;
-println(異なる); // Outputs: true
-println(🚫🟰);  // Outputs: true
-
-// Inequality ASCII
+// Inequality
+println("--- Inequality Demo ---");
 var notEqual = 5 != 3;
 var neq = pi != 3;
-println(notEqual); // Outputs: true
-println(neq);      // Outputs: true
+println("5 != 3:", notEqual);  // Outputs: true
+println("pi != 3:", neq);      // Outputs: true
 
-// Less Than Unicode
-var 小さい = 3 < 5;
-var 📏 = π < 4;
-println(小さい); // Outputs: true
-println(📏);   // Outputs: true
-
-// Less Than ASCII
+// Less Than
+println("--- Less Than Demo ---");
 var less = 3 < 5;
 var lt = pi < 4;
-println(less); // Outputs: true
-println(lt);   // Outputs: true
+println("3 < 5:", less);  // Outputs: true
+println("pi < 4:", lt);   // Outputs: true
 
-// Less Than or Equal Unicode
-var 小さいか等しい = 5 <= 5;
-var 📏🟰 = π <= 3.14;
-println(小さいか等しい); // Outputs: true
-println(📏🟰);         // Outputs: true
-
-// Less Than or Equal ASCII
+// Less Than or Equal
+println("--- Less Than or Equal Demo ---");
 var lessOrEqual = 5 <= 5;
 var lte = pi <= 3.14;
-println(lessOrEqual); // Outputs: true
-println(lte);         // Outputs: true
+println("5 <= 5:", lessOrEqual);  // Outputs: true
+println("pi <= 3.14:", lte);      // Outputs: true
 
-// Greater Than Unicode
-var 大きい = 7 > 2;
-var 📐 = 4 > π;
-println(大きい); // Outputs: true
-println(📐);   // Outputs: true
-
-// Greater Than ASCII
+// Greater Than
+println("--- Greater Than Demo ---");
 var greater = 7 > 2;
 var gt = 4 > pi;
-println(greater); // Outputs: true
-println(gt);      // Outputs: true
+println("7 > 2:", greater);  // Outputs: true
+println("4 > pi:", gt);      // Outputs: true
 
-// Greater Than or Equal Unicode
-var 大きいか等しい = 7 >= 7;
-var 📐🟰 = π >= 3.14;
-println(大きいか等しい); // Outputs: true
-println(📐🟰);         // Outputs: true
-
-// Greater Than or Equal ASCII
+// Greater Than or Equal
+println("--- Greater Than or Equal Demo ---");
 var greaterOrEqual = 7 >= 7;
 var gte = pi >= 3.14;
-println(greaterOrEqual); // Outputs: true
-println(gte);            // Outputs: true
+println("7 >= 7:", greaterOrEqual);  // Outputs: true
+println("pi >= 3.14:", gte);         // Outputs: true
 
-// Logical NOT Unicode
-var 非 = !true;
-var 🚫✅ = !false;
-println(非);    // Outputs: false
-println(🚫✅);  // Outputs: true
-
-// Logical NOT ASCII
+// Logical NOT
+println("--- Logical NOT Demo ---");
 var not = !true;
 var notOk = !false;
-println(not);   // Outputs: false
-println(notOk); // Outputs: true
+println("!true:", not);     // Outputs: false
+println("!false:", notOk);  // Outputs: true
 
-// Logical AND Unicode
-var かつ = true and false;
-var ✅✖️ = true and true;
-println(かつ);  // Outputs: false
-println(✅✖️); // Outputs: true
-
-// Logical AND ASCII
+// Logical AND
+println("--- Logical AND Demo ---");
 var _and = true and false;
 var both = true and true;
-println(_and);  // Outputs: false
-println(both); // Outputs: true
+println("true and false:", _and);  // Outputs: false
+println("true and true:", both);   // Outputs: true
 
-// Logical OR Unicode
-var または = false or true;
-var ✅➕ = false or false;
-println(または); // Outputs: true
-println(✅➕);  // Outputs: false
-
-// Logical OR ASCII
+// Logical OR
+println("--- Logical OR Demo ---");
 var _or = false or true;
 var either = false or false;
-println(_or);     // Outputs: true
-println(either); // Outputs: false
+println("false or true:", _or);     // Outputs: true
+println("false or false:", either); // Outputs: false

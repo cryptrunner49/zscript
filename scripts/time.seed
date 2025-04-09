@@ -1,4 +1,4 @@
-// time.seed - Demonstrates Time native functions
+// Time functions
 
 var t = Time(14, 30, 45);  // Create a Time object for 14:30:45 (2:30:45 PM)
 

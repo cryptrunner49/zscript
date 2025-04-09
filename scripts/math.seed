@@ -1,55 +1,31 @@
-// π
-var π = 3.14;
+// Constants
+println("--- Math Demo ---");
 var pi = 3.14;
 
-// Addition Unicode
-var 和 = 5 + 3;
-var ➕ = π + 2;
-println(和); // Outputs: 8
-println(➕); // Outputs: 5.14
-
-// Addition ASCII
+// Addition
 var sum = 5 + 3;
 var add = pi + 2;
-println(sum); // Outputs: 8
-println(add); // Outputs: 5.14
+println("5 + 3:", sum);    // Outputs: 8
+println("pi + 2:", add);   // Outputs: 5.14
 
-// Subtraction Unicode
-var 差 = 10 - 4;
-var ➖ = 7 - π;
-println(差); // Outputs: 6
-println(➖); // Outputs: 3.86
-
-// Subtraction ASCII
+// Subtraction
 var diff = 10 - 4;
 var sub = 7 - pi;
-println(diff); // Outputs: 6
-println(sub);  // Outputs: 3.86
+println("10 - 4:", diff);  // Outputs: 6
+println("7 - pi:", sub);   // Outputs: 3.86
 
-// Multiplication Unicode
-var 積 = 6 * 7;
-var ✖️ = π * 2;
-println(積);  // Outputs: 42
-println(✖️);  // Outputs: 6.28
-
-// Multiplication ASCII
+// Multiplication
 var prod = 6 * 7;
 var mult = pi * 2;
-println(prod); // Outputs: 42
-println(mult); // Outputs: 6.28
+println("6 * 7:", prod);   // Outputs: 42
+println("pi * 2:", mult);  // Outputs: 6.28
 
-// Division Unicode
-var 商 = 15 / 3;
-var ➗ = 10 / π;
-println(商); // Outputs: 5
-println(➗); // Outputs: 3.183
-
-// Division ASCII
+// Division
 var quot = 15 / 3;
 var div = 10 / pi;
-println(quot); // Outputs: 5
-println(div);  // Outputs: 3.183
+println("15 / 3:", quot);  // Outputs: 5
+println("10 / pi:", div);  // Outputs: 3.183
 
-// Module
+// Modulo
 var result = 10 % 2;
-println(result);
+println("10 % 2:", result);  // Outputs: 0

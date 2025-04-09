@@ -1,6 +1,3 @@
-//enable_trace(); // native method
-//enable_debug(); // native method
-
 struct Point {
     x = 10,
     y = 22

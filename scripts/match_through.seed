@@ -1,9 +1,6 @@
 // TODO
 // Switch case (fall through)
 
-enable_trace(); // native method
-enable_debug(); // native method
-
 var value = 8;
 match value through {
     | 1: print("1° - Value is 1"); break;

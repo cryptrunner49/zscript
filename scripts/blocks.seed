@@ -1,15 +1,8 @@
-// Unicode
-var 変数 = 10;
-{
-    var 変数 = 20;
-    println(to_str(変数) + "📦"); // Outputs: 20📦
-}
-println(変数); // Outputs: 10
-
-// ASCII
+// Section: Block Scope Demonstration
+println("--- Block Scope ---");
 var x = 10;
 {
-    var x = 20;
-    println(x); // Outputs: 20
+    var x = 20;       // Shadows the outer x
+    println("Inner scope x:", x);  // Outputs: 20
 }
-println(x); // Outputs: 10
+println("Outer scope x:", x);      // Outputs: 10

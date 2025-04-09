@@ -1,8 +1,11 @@
+// Recursive Fibonacci Function
+println("--- Recursive Fibonacci ---");
 fn fib(n) {
     if (n < 2) return n;
     return fib(n - 2) + fib(n - 1);
 }
 
+// Performance Test
 var start = clock();
-println(fib(16));  // Outputs: 987
-println(clock() - start);  // Outputs: time taken
+println("Fibonacci(16):", fib(16));         // Outputs: 987
+printf("Time taken: %v\n", clock() - start);

@@ -1,7 +1,2 @@
-// Unicode
-var ❎ = -10;
-println(❎);  // Outputs: -10
-
-// ASCII
 var negative = -10;
-println(negative); // Outputs: -10
+println("Negative value:", negative);  // Outputs: -10

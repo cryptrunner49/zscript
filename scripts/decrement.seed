@@ -1,8 +1,3 @@
-//enable_trace(); // native method
-//enable_debug(); // native method
-
 var x = 5;
-println(x++);    // Prints 5, x becomes 6
-println(++x);    // Prints 7, x becomes 7
-println(x--);    // Prints 7, x becomes 6
-println(--x);    // Prints 5, x becomes 5
+println("Post-decrement x--:", x--);    // Prints 5, x becomes 4
+println("Pre-decrement --x:", --x);    // Prints 3, x becomes 3

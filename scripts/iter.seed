@@ -1,31 +1,30 @@
-//enable_trace(); // native method
-//enable_debug(); // native method
-
+// For Loop Iteration
 println("--- For Loop ---");
-// Traditional for loop with index
 var arr = [10, 20, 30];
 for (var i = 0; i < len(arr); i = i + 1) {
-    println(arr[i]);
+    println("Element at index", i, ":", arr[i]);
 }
 
+// While Loop Iteration
 println("--- While Loop ---");
 var index = 0;
 while (index < len(arr)) {
-    println(arr[index]);
+    println("Element at index", index, ":", arr[index]);
     index = index + 1;
 }
 
-println("--- While Loop Iterator (Manual) ---");
-// Using the iterator pattern
+// Manual Iterator with While
+println("--- Manual Iterator ---");
 var arr = [10, 20, 30];
 var it = array_iter(arr);
 while (!iter_done(it)) {
     var value = iter_value(it);
-    println(value);
+    println("Iterator value:", value);
     iter_next(it);
 }
 
+// Iterator Loop
 println("--- Iterator Loop ---");
-iter (var item in [10, 20, 30]) { 
-    println(item);
+iter (var item in [10, 20, 30]) {
+    println("Item:", item);
 }

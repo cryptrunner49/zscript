@@ -1,25 +1,13 @@
-// Unicode
-fn 计数器を作る() {
-    var 数値 = 0;
-    fn 増やす() {
-        数値 = 数値 + 1;
-        return 数値;
-    }
-    return 増やす;
-}
-var 计数器 = 计数器を作る();
-println(计数器()); // Outputs: 1
-println(计数器()); // Outputs: 2
-
-// ASCII
+// Section: Closure Demonstration
+println("--- Closure Demo ---");
 fn makeCounter() {
     var value = 0;
     fn increment() {
-        value = value + 1;
+        value = value + 1;  // Modifies outer scope variable
         return value;
     }
     return increment;
 }
 var counter = makeCounter();
-println(counter()); // Outputs: 1
-println(counter()); // Outputs: 2
+println("First call:", counter());  // Outputs: 1
+println("Second call:", counter()); // Outputs: 2

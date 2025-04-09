@@ -14,19 +14,5 @@ println(isTrue);  // Outputs: true
 var nothing = null;
 println(nothing);  // Outputs: null
 
-// Unicode variable names
-var π = 3.14;
-println(π);  // Outputs: 3.14
-
-var 挨拶 = "こんにちは";
-println(挨拶);  // Outputs: こんにちは
-
-// Emoji variable names
-var 🔢 = 100;
-println(🔢);  // Outputs: 100
-
-var 💬 = "Emoji!";
-println(💬);  // Outputs: Emoji!
-
-var _a = 100;
-println(_a);
+var _number = 100;
+println(_number);

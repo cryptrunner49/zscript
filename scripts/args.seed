@@ -1,4 +1,5 @@
-// args.seed - Example of using the command-line arguments array.
+// Section: Command-line Arguments Processing
+// Initializes verbose flag and processes command-line arguments
 var verbose = false;
 for (var i = 0; i < args.length; i = i + 1) {
     if (args[i] == "--verbose") {
@@ -6,21 +7,28 @@ for (var i = 0; i < args.length; i = i + 1) {
     }
 }
 
+// Determine and print the running mode based on verbose flag
 if (verbose) {
+    println("--- Mode ---");
     println("Running in verbose mode!");
 } else {
+    println("--- Mode ---");
     println("Running in normal mode.");
 }
 
+// Section: Argument Array Information
+// Prints information about the arguments array
+println("--- Argument Details ---");
+println("Array size:", args.length);   // Number of arguments
+println("Array length:", len(args));   // Alternative length method
 
-println("---------------");
-// print the number of arguments.
-println("array size: " + args.length);
-println("array length: " + len(args));
-
-// print the program name and subsequent arguments using array indexing.
-println("---------------");
-println(args[0]);       
-println(args[1]);       
-println(args[2]);
-println("---------------");
+// Section: Printing Specific Arguments
+// Displays the first three arguments (if available)
+println("--- Arguments ---");
+if (args.length > 2) {
+    println("Program name:", args[0]);      // The program name
+    println("First argument:", args[1]);  // First argument
+    println("Second argument:", args[2]); // Second argument
+} else {
+    println("Not enough arguments");
+}

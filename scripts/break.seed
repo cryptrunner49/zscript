@@ -1,11 +1,8 @@
-//enable_debug();
-//enable_trace();
-
-// Example with while and break
+// Section: While Loop with Break
+println("--- While Loop with Break ---");
 var i = 0;
-println("While loop with break:");
 while (i < 10) {
-    println(i);
+    println("i:", i);
     i = i + 1;
     if (i == 4) {
         println("Breaking at i = 4");
@@ -14,10 +11,10 @@ while (i < 10) {
 }
 println("Exited while loop");
 
-// Example with for and break
-println("For loop with break:");
+// Section: For Loop with Break
+println("--- For Loop with Break ---");
 for (var i = 0; i < 10; i = i + 1) {
-    println(i);
+    println("i:", i);
     if (i == 6) {
         println("Breaking at i = 6");
         break;

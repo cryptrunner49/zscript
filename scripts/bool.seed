@@ -1,11 +1,6 @@
-// Unicode
-var 真 = true;
-var ✅ = false;
-println(真); // Outputs: true
-println(✅); // Outputs: false
-
-// ASCII
+// Section: Boolean Variables
+println("--- Boolean Demo ---");
 var truth = true;
 var ok = false;
-println(truth); // Outputs: true
-println(ok);    // Outputs: false
+println("Truth value:", truth);  // Outputs: true
+println("Ok value:", ok);        // Outputs: false

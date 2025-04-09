@@ -1,4 +1,4 @@
-// datetime.seed - Demonstrates DateTime native functions
+// DateTime native functions
 
 var dt = DateTime(2023, 10, 15, 14, 30, 45);  // Create a DateTime for Oct 15, 2023, 14:30:45
 

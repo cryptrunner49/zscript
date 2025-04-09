@@ -1,5 +1,5 @@
 # Variables
-BINARY_NAME = goseedvm
+BINARY_NAME = seed
 BIN_DIR = bin
 SRC_DIR = cmd
 PACKAGE = ./...

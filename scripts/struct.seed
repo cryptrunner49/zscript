@@ -14,22 +14,6 @@ var thumper = 🐰();
 thumper.favoriteFood = "Carrots";
 println(thumper.favoriteFood);  // Outputs: Carrots
 
-// Unicode Examples
-struct 猫 {}
-var 子猫 = 猫();
-子猫.名前 = "たまちゃん";
-子猫.年 = 2;
-println(子猫.名前);  // Outputs: たまちゃん
-
-struct 犬 { 種類 = "ラブラドール"; 年 = 3; }
-var 犬子 = 犬();
-println(犬子.種類);  // Outputs: ラブラドール
-
-struct 兎;
-var 兎子 = 兎();
-兎子.好物 = "人参";
-println(兎子.好物);  // Outputs: 人参
-
 // ASCII Examples
 struct Cat {}
 var kitten = Cat();

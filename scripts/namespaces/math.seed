@@ -1,5 +1,9 @@
+// Section: Function Definitions
+// Defines utility mathematical functions
 fn add(a, b) {
+    // Adds two numbers and returns the result
     return a + b;
 }
 
+// Section: Constants
 var PI = 3.14159;

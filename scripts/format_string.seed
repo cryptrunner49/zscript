@@ -10,5 +10,5 @@ fn formatDemo() {
     println("Error message:", errorMsg);
 }
 
-println("\n=== Format String Demo ===");
+println("\n=== Format String ===");
 formatDemo();
