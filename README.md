@@ -1,6 +1,6 @@
-# Seed Language
+# 🕵️‍♂️ SPYScript - Slim PY Script
 
-Seed is a lightweight, expressive scripting language designed for simplicity and flexibility. With support for Unicode and emoji identifiers, native functions, and modern programming constructs, Seed is perfect for quick scripts, educational purposes, or experimenting with creative coding. Whether you're shuffling arrays, writing to files, or defining structs with cat emojis (🐱), Seed makes programming fun and accessible.
+SPYScript is a lightweight, expressive scripting language designed for simplicity and flexibility. With support for Unicode and emoji identifiers, native functions, and modern programming constructs, SPYScript is perfect for quick scripts, educational purposes, or experimenting with creative coding. Whether you're shuffling arrays, writing to files, or defining structs with cat emojis (🐱), SPYScript makes programming fun and accessible.
 
 ---
 
@@ -13,7 +13,7 @@ Seed is a lightweight, expressive scripting language designed for simplicity and
 - **File I/O**: Read and write files with `read_file()` and `write_file()`.
 - **Cross-Platform**: Runs on any system with the required dependencies.
 
-Explore more in the [Seed Usage Guide](SEED_USAGE.md)!
+Explore more in the [SPYScript Usage Guide](SPYSCRIPT_USAGE.MD)!
 
 ---
 
@@ -21,7 +21,7 @@ Explore more in the [Seed Usage Guide](SEED_USAGE.md)!
 
 ### Requirements
 
-To build and run the Seed VM, you’ll need:
+To build and run the SPYScript VM, you’ll need:
 
 ```text
 - Go (golang)
@@ -31,20 +31,20 @@ To build and run the Seed VM, you’ll need:
 - pkg-config
 ```
 
-### Install on Ubuntu
+#### Install Requirements on Ubuntu
 
 ```bash
 sudo apt update
 sudo apt install golang libffi-dev libreadline-dev gcc pkg-config
 ```
 
-### Install on macOS
+#### Install Requirements on macOS
 
 ```bash
 brew install go libffi readline pkg-config
 ```
 
-### Building Seed
+### Building SPYScript VM
 
 1. Clone the repository:
 
@@ -62,7 +62,7 @@ brew install go libffi readline pkg-config
 3. Run a script:
 
    ```bash
-   ./bin/seed scripts/rpg.seed
+   ./bin/seed scripts/rpg.spy
    ```
 
 ---
@@ -72,21 +72,21 @@ brew install go libffi readline pkg-config
 Try this simple example:
 
 ```seed
-var 挨拶 = "Hello, Seed!";
-println(挨拶);  // Outputs: Hello, Seed!
+var 挨拶 = "Hello, SPYScript!";
+println(挨拶);  // Outputs: Hello, SPYScript!
 
 for (var i = 0; i < 3; i = i + 1) {
     println("Count:", i);  // Outputs: Count: 0, Count: 1, Count: 2
 }
 ```
 
-For detailed examples of variables, structs, loops, and more, check out the [Seed Usage Guide](SEED_USAGE.md).
+For detailed examples of variables, structs, loops, and more, check out the [SPYScript Usage Guide](SPYSCRIPT_USAGE.MD).
 
 ---
 
 ## Roadmap
 
-Here’s what’s planned for Seed’s future:
+Here’s what’s planned for SPYScript’s future:
 
 - [ ] **Pattern Matching**: Add expressive pattern matching for conditionals.
 - [ ] **Switch Case**: Implement a `switch` statement for multi-branch logic.
@@ -95,16 +95,16 @@ Here’s what’s planned for Seed’s future:
 - [ ] **Error Handling**: Add try-catch or similar mechanisms.
 - [ ] **Standard Library**: Expand with more utility functions.
 
-See the [Issues](https://github.com/cryptrunner49/goseedvm/issues) tab for progress and to suggest features!
+See the [Issues](https://github.com/cryptrunner49/spy/issues) tab for progress and to suggest features!
 
 ---
 
 ## Contributing
 
-We’d love your help to make Seed better! Whether it’s adding examples, fixing bugs, or suggesting features, your contributions are welcome. Read our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+We’d love your help to make SPYScript better! Whether it’s adding examples, fixing bugs, or suggesting features, your contributions are welcome. Read our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
 
 ---
 
 ## License
 
-Seed is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
+SPYScript is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
