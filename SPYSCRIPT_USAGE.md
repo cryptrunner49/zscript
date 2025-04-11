@@ -86,7 +86,7 @@ fn fib(n) {
     if (n < 2) return n;
     var a = 0;
     var b = 1;
-    for (var i = 2; i <= n; i = i + 1) {
+    for (var i = 2; i <= n; i++) {
         var temp = a + b;
         a = b;
         b = temp;
@@ -141,7 +141,7 @@ push(arr, 6);
 println("After push(6):", array_to_string(arr));
 println("Popped:", pop(arr));
 
-for (var i = 0; i < len(arr); i = i + 1) {
+for (var i = 0; i < len(arr); i++) {
     println("Element", i, ":", arr[i]);
 }
 ```
@@ -243,7 +243,7 @@ if (x > 0) {
     println("Zero");
 }
 
-for (var i = 0; i < 3; i = i + 1) {
+for (var i = 0; i < 3; i++) {
     if (i == 1) continue;
     println("i:", i);
 }

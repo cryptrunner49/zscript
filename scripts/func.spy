@@ -1,12 +1,12 @@
 func greet(name) {
-    return "Hello, " + name + "!";
+    return "Hello, " + name + "!"
 }
-var msg = greet("Seed");
-println("Greeting:", msg);  // Outputs: Hello, Seed!
+var msg = greet("World")
+println("Greeting:", msg)  // Outputs: Hello, World!
 
 // Section: Addition Function
 func add(a, b) {
-    return a + b;
+    return a + b
 }
-var total = add(5, 3);
-println("Sum:", total);  // Outputs: 8
+var total = add(5, 3)
+println("Sum:", total)  // Outputs: 8

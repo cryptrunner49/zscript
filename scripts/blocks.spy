@@ -1,8 +1,0 @@
-// Section: Block Scope Demonstration
-println("--- Block Scope ---");
-var x = 10;
-{
-    var x = 20;       // Shadows the outer x
-    println("Inner scope x:", x);  // Outputs: 20
-}
-println("Outer scope x:", x);      // Outputs: 10
