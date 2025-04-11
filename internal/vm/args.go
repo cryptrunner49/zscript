@@ -1,7 +1,7 @@
 package vm
 
 import (
-	"github.com/cryptrunner49/goseedvm/internal/runtime"
+	"github.com/cryptrunner49/spy/internal/runtime"
 )
 
 // defineArgs creates a global variable "args" as an array of strings.

@@ -3,7 +3,7 @@ package debug
 import (
 	"fmt"
 
-	"github.com/cryptrunner49/goseedvm/internal/runtime"
+	"github.com/cryptrunner49/spy/internal/runtime"
 )
 
 func Disassemble(ch *runtime.Chunk, name string) {

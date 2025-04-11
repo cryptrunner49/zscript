@@ -1,110 +1,130 @@
 # 🕵️‍♂️ SPYScript - Slim PY Script
 
-SPYScript is a lightweight, expressive scripting language designed for simplicity and flexibility. With support for Unicode and emoji identifiers, native functions, and modern programming constructs, SPYScript is perfect for quick scripts, educational purposes, or experimenting with creative coding. Whether you're shuffling arrays, writing to files, or defining structs with cat emojis (🐱), SPYScript makes programming fun and accessible.
+**SPYScript** is a lightweight.
 
 ---
 
-## Features
+## 👩‍💻 Hello World
 
-- **Unicode & Emoji Support**: Use `π`, `挨拶`, or `🔢` as variable names.
-- **Simple Syntax**: Easy-to-learn constructs like `var`, `fn`, `if`, and `for`.
-- **Native Functions**: Built-ins like `clock()`, `shuffle()`, and `random_between()`.
-- **Structs & Closures**: Define custom types and leverage functional programming.
-- **File I/O**: Read and write files with `read_file()` and `write_file()`.
-- **Cross-Platform**: Runs on any system with the required dependencies.
+```spy
+var hello = "Hello, World!";
+println(hello);  // Outputs: Hello, World!
+```
 
-Explore more in the [SPYScript Usage Guide](SPYSCRIPT_USAGE.MD)!
+📖 Explore variables, structs, loops, and more in the [SPYScript Usage Guide](SPYSCRIPT_USAGE.md).
 
 ---
 
-## Installation
+## ✨ Features
 
-### Requirements
+- **🌍 Unicode & Emoji Identifiers** — Use `π` or even `🐱` as variable names.
+- **🧠 Simple Syntax** — Easy-to-learn keywords like `var`, `fn`, `if`, and `for`.
+- **⚙️ Native Functions** — Built-ins such as `clock()`, `shuffle()`, and `random_between()`.
+- **🧱 Structs & Closures** — Create custom types and use powerful functional constructs.
+- **📁 File I/O** — Read and write files with `read_file()` and `write_file()`.
+- **🖥 Cross-Platform** — Works on any system with the required dependencies.
 
-To build and run the SPYScript VM, you’ll need:
+📚 Dive deeper in the [SPYScript Usage Guide →](SPYSCRIPT_USAGE.md)
 
-```text
-- Go (golang)
-- libffi
-- readline
-- gcc
-- pkg-config
-```
+---
 
-#### Install Requirements on Ubuntu
+## 📦 Installation
+
+### ✅ Requirements
+
+- Linux (Debian, Ubuntu, Fedora, Arch, etc.) or macOS
+- [Go (Golang)](https://golang.org)
+- Dependencies: `gcc`, `pkg-config`, `make`, `libffi`, `readline`
+
+### 🧰 System Setup
+
+#### Option 1: Install via Script
+
+**System-wide installation (requires `sudo`)**:
 
 ```bash
-sudo apt update
-sudo apt install golang libffi-dev libreadline-dev gcc pkg-config
+curl -sL https://github.com/cryptrunner49/spy/raw/refs/heads/main/install.sh | bash -s -- install --system
 ```
 
-#### Install Requirements on macOS
+**User-only installation (`$HOME/.local/bin`)**:
 
 ```bash
-brew install go libffi readline pkg-config
+curl -sL https://github.com/cryptrunner49/spy/raw/refs/heads/main/install.sh | bash -s -- install --user
 ```
 
-### Building SPYScript VM
+#### Option 2: Manual Download
+
+```bash
+curl -LO https://github.com/cryptrunner49/spy/releases/latest/download/spyvm
+chmod +x spyvm
+```
+
+---
+
+### 🛠 Build From Source
 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/cryptrunner49/goseedvm.git
-   cd goseedvm
+   git clone https://github.com/cryptrunner49/spy.git
+   cd spy
    ```
 
 2. Build the interpreter:
 
    ```bash
-   make build
+   make
    ```
 
 3. Run a script:
 
    ```bash
-   ./bin/seed scripts/rpg.spy
+   ./bin/spyvm sample/rpg.spy
    ```
 
 ---
 
-## Usage
+## 🧪 Platform-Specific Setup
 
-Try this simple example:
+### Ubuntu/Debian
 
-```seed
-var 挨拶 = "Hello, SPYScript!";
-println(挨拶);  // Outputs: Hello, SPYScript!
-
-for (var i = 0; i < 3; i = i + 1) {
-    println("Count:", i);  // Outputs: Count: 0, Count: 1, Count: 2
-}
+```bash
+sudo apt update
+sudo apt install gcc pkg-config make golang libffi-dev libreadline-dev
 ```
 
-For detailed examples of variables, structs, loops, and more, check out the [SPYScript Usage Guide](SPYSCRIPT_USAGE.MD).
+### macOS
+
+```bash
+brew install go pkg-config gcc make libffi readline
+```
 
 ---
 
-## Roadmap
+## 🗺 Roadmap
 
-Here’s what’s planned for SPYScript’s future:
+Coming soon to SPYScript:
 
-- [ ] **Pattern Matching**: Add expressive pattern matching for conditionals.
-- [ ] **Switch Case**: Implement a `switch` statement for multi-branch logic.
-- [ ] **Elif**: Extend `if` with `elif` for cleaner conditional chains.
-- [ ] **Enums**: Introduce enumerated types for structured data.
-- [ ] **Error Handling**: Add try-catch or similar mechanisms.
-- [ ] **Standard Library**: Expand with more utility functions.
+- [ ] **Pattern Matching** — More expressive conditionals.
+- [ ] **Switch Statement** — Cleaner multi-branch logic.
+- [ ] **Elif Support** — Less nesting, more clarity.
+- [ ] **Enums** — Organize data like a pro.
+- [ ] **Error Handling** — Try-catch or similar constructs.
+- [ ] **Standard Library** — More built-in power.
 
-See the [Issues](https://github.com/cryptrunner49/spy/issues) tab for progress and to suggest features!
-
----
-
-## Contributing
-
-We’d love your help to make SPYScript better! Whether it’s adding examples, fixing bugs, or suggesting features, your contributions are welcome. Read our [Contributing Guide](CONTRIBUTING.md) for details on how to get started.
+🎯 Track progress or suggest features via [Issues →](https://github.com/cryptrunner49/spy/issues)
 
 ---
 
-## License
+## 🤝 Contributing
 
-SPYScript is licensed under the MIT License. See the [LICENSE](LICENSE) file for full details.
+We’d love your help! Whether it's fixing bugs, improving docs, or proposing features—your contributions matter.
+
+📘 See the [Contributing Guide →](CONTRIBUTING.md) to get started.
+
+---
+
+## 📄 License
+
+SPYScript is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
+See the [LICENSE](LICENSE) file for full details.

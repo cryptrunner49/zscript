@@ -1,5 +1,5 @@
 # Variables
-BINARY_NAME = seed
+BINARY_NAME = spyvm
 BIN_DIR = bin
 SRC_DIR = cmd
 PACKAGE = ./...
@@ -19,8 +19,8 @@ build-main:
 .PHONY: build-benchmark
 build-benchmark:
 	@mkdir -p $(BIN_DIR)
-	@go build -o $(BIN_DIR)/benchmark_goseedvm benchmark/benchmark.go
-	@echo "✅ Benchmark build complete! Binary located at $(BIN_DIR)/benchmark_goseedvm"
+	@go build -o $(BIN_DIR)/benchmark_spyvm benchmark/benchmark.go
+	@echo "✅ Benchmark build complete! Binary located at $(BIN_DIR)/benchmark_spyvm"
 
 # Build both binaries
 .PHONY: build
@@ -37,8 +37,8 @@ run: build-main
 # Run the benchmark executable from the bin directory
 .PHONY: run-benchmark
 run-benchmark: build-benchmark
-	@echo "🚀 Running benchmark_goseedvm..."
-	@$(BIN_DIR)/benchmark_goseedvm
+	@echo "🚀 Running benchmark_spyvm..."
+	@$(BIN_DIR)/benchmark_spyvm
 	@echo "🏁 Execution finished!"
 
 # Test all packages
@@ -76,7 +76,7 @@ help:
 	@echo "  make             - Build both main and benchmark binaries (default)"
 	@echo "  make build       - Build both main and benchmark binaries"
 	@echo "  make build-main  - Build the main binary into $(BIN_DIR)/$(BINARY_NAME)"
-	@echo "  make build-benchmark - Build the benchmark binary into $(BIN_DIR)/benchmark_goseedvm"
+	@echo "  make build-benchmark - Build the benchmark binary into $(BIN_DIR)/benchmark_spyvm"
 	@echo "  make run         - Build and run the main executable 🚀"
 	@echo "  make run-benchmark - Build and run the benchmark executable 🚀"
 	@echo "  make test        - Run all tests 🧪"

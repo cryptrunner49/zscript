@@ -4,7 +4,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/cryptrunner49/goseedvm/internal/token"
+	"github.com/cryptrunner49/spy/internal/token"
 )
 
 type Lexer struct {

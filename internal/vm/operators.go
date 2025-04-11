@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/cryptrunner49/goseedvm/internal/runtime"
+	"github.com/cryptrunner49/spy/internal/runtime"
 )
 
 // Helper function for numeric addition

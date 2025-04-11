@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cryptrunner49/goseedvm/internal/common"
-	"github.com/cryptrunner49/goseedvm/internal/runtime"
+	"github.com/cryptrunner49/spy/internal/common"
+	"github.com/cryptrunner49/spy/internal/runtime"
 )
 
 // Seed the random number generator once during initialization

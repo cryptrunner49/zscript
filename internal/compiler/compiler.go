@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/cryptrunner49/goseedvm/internal/common"
-	"github.com/cryptrunner49/goseedvm/internal/debug"
-	"github.com/cryptrunner49/goseedvm/internal/lexer"
-	"github.com/cryptrunner49/goseedvm/internal/runtime"
-	"github.com/cryptrunner49/goseedvm/internal/token"
+	"github.com/cryptrunner49/spy/internal/common"
+	"github.com/cryptrunner49/spy/internal/debug"
+	"github.com/cryptrunner49/spy/internal/lexer"
+	"github.com/cryptrunner49/spy/internal/runtime"
+	"github.com/cryptrunner49/spy/internal/token"
 )
 
 var compiledFiles = make(map[string]*runtime.ObjFunction)
