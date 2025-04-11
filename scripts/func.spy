@@ -4,9 +4,9 @@ func greet(name) {
 var msg = greet("World")
 println("Greeting:", msg)  // Outputs: Hello, World!
 
-// Section: Addition Function
 func add(a, b) {
-    return a + b
+    sum = a + b
+    return sum
 }
 var total = add(5, 3)
 println("Sum:", total)  // Outputs: 8

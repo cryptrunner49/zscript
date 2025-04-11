@@ -289,9 +289,6 @@ func run() InterpretResult {
 			Pop()
 		case uint8(runtime.OP_SET_GLOBAL):
 			name := readString(frame)
-			if _, exists := vm.globals[name]; !exists {
-				return runtimeError("Cannot assign to undefined global variable '%s'.", name.Chars)
-			}
 			vm.globals[name] = peek(0)
 		case uint8(runtime.OP_GET_GLOBAL):
 			name := readString(frame)

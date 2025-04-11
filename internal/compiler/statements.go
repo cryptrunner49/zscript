@@ -34,13 +34,13 @@ func whileStatement() {
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'while'.")
 
 	// Set loopStart before the condition
-	loopStart := currentChunk().Count() // Will be 0017
+	loopStart := currentChunk().Count()
 
-	expression() // Emits condition (0017–0021)
+	expression() // Emits condition
 	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
 
-	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE)) // 0022
-	emitByte(byte(runtime.OP_POP))                       // 0025
+	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+	emitByte(byte(runtime.OP_POP))
 
 	// Track loop for continue/break
 	current.loops = append(current.loops, Loop{
@@ -51,10 +51,9 @@ func whileStatement() {
 	})
 	currentLoop := &current.loops[len(current.loops)-1]
 
-	statement() // Body (0026–0056)
+	statement() // Body
 
-	// Jump back to condition
-	emitLoop(loopStart) // Jumps to 0017
+	emitLoop(loopStart)
 
 	// Patch continue jumps to loopStart
 	for _, operandPos := range currentLoop.continuePatches {
