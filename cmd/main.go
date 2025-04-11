@@ -11,13 +11,11 @@ package main
 #include <readline/history.h>
 
 // Helper wrapper that inserts a literal tab character.
-// Using rl_tab_insert as an alternative.
 static int self_insert_wrapper(int count, int key) {
     return rl_tab_insert(count, key);
 }
 
 // Bind the tab key to self_insert_wrapper.
-// This function performs the binding completely in C so that pointer issues are avoided.
 static void bind_tab_key() {
     rl_bind_key('\t', self_insert_wrapper);
 }
@@ -36,29 +34,30 @@ import (
 
 // showUsage prints detailed help and usage instructions.
 func showUsage() {
-	usage := `goseedvm - A Seed Virtual Machine Interpreter
+	usage := `spyvm - A SPYScript Virtual Machine Interpreter
 
-Usage: goseedvm [options] [script]
+Usage: spyvm [options] [script]
 
 Options:
   -h, --help       Display this help message and exit
   -v, --version    Show version information and exit
 
 Modes:
-  - If no script is provided, goseedvm starts an interactive REPL (Read-Eval-Print Loop)
+  - If no script is provided, spyvm starts an interactive REPL (Read-Eval-Print Loop)
     where you can type commands and execute them immediately.
-  - If a script file is provided, goseedvm executes the script and exits.
+  - If a script file is provided, spyvm executes the script and exits.
 
 REPL Usage:
-  - Type Seed VM commands at the ">>> " prompt
-  - For multi-line constructs (like if-statements or loops), continue typing on the 
-    next line — you'll see the "... " prompt until all opening braces '{' are matched
-  - Use arrow keys to navigate command history
-  - Press Ctrl+D or Ctrl+C to exit
+  - Type SPYScript commands at the ">>> " prompt.
+  - To enter a multi-line block (e.g. for control structures), end the first line with ':'
+    then continue typing the block on subsequent lines.
+  - Terminate the block by entering an empty line (i.e. double Enter).
+  - Use arrow keys to navigate command history.
+  - Press Ctrl+D or Ctrl+C to exit.
 
 Script Execution:
-  - Provide a path to a Seed VM script file to execute it
-  - Example: goseedvm myscript.seed
+  - Provide a path to a SPYScript script file to execute it.
+  - Example: spyvm myscript.spy
 
 Exit Codes:
   0   Successful execution
@@ -71,7 +70,7 @@ Exit Codes:
 
 // showVersion prints version information.
 func showVersion() {
-	fmt.Printf("goseedvm version %s\n", common.Version)
+	fmt.Printf("spyvm version %s\n", common.Version)
 }
 
 func main() {
@@ -96,34 +95,21 @@ func main() {
 
 	// Determine mode: REPL or script execution
 	if len(os.Args) == 1 {
-		fmt.Println("goseedvm REPL - Seed Virtual Machine (type Ctrl+D to exit)")
+		fmt.Println("spyvm REPL - SPYScript Virtual Machine (type Ctrl+D to exit)")
 		repl()
 	} else {
 		runFile(os.Args[1])
 	}
 }
 
-// countBlocks counts the net number of open blocks (unmatched '{' minus '}')
-func countBlocks(input string) int {
-	count := 0
-	for _, char := range input {
-		if char == '{' {
-			count++
-		} else if char == '}' {
-			count--
-		}
-	}
-	return count
-}
-
 func repl() {
-	var buffer strings.Builder // Accumulate multi-line input
-	blockDepth := 0            // Track open blocks
+	var blockLines []string // Accumulate multi-line input (block)
+	inBlock := false        // Flag indicating if we're in a block
 
 	for {
 		// Use ">>> " when not in a block, otherwise the simple "... " prompt
 		prompt := ">>> "
-		if blockDepth > 0 {
+		if inBlock {
 			prompt = "... "
 		}
 		cPrompt := C.CString(prompt)
@@ -135,34 +121,19 @@ func repl() {
 			break
 		}
 
-		input := strings.TrimSpace(C.GoString(line))
+		input := strings.TrimRight(C.GoString(line), "\n")
 		C.free(unsafe.Pointer(line))
+		trimmed := strings.TrimSpace(input)
 
-		if len(input) == 0 && blockDepth == 0 {
-			continue // Skip empty lines unless in a block
-		}
-
-		// Add input to the buffer with a newline when necessary.
-		if buffer.Len() > 0 {
-			buffer.WriteString("\n")
-		}
-		buffer.WriteString(input)
-
-		// Update block depth based on the input.
-		blockDepth += countBlocks(input)
-
-		if blockDepth < 0 {
-			fmt.Fprintf(os.Stderr, "REPL error: Unmatched closing brace '}'\n")
-			buffer.Reset()
-			blockDepth = 0
+		// In normal (non-block) mode, ignore empty lines.
+		if !inBlock && trimmed == "" {
 			continue
 		}
 
-		// Once all blocks are closed, interpret the accumulated input.
-		if blockDepth == 0 {
-			source := buffer.String()
-
-			// Add input to history only when the block is complete.
+		// If we are in a block and get an empty line, that signals the end of the block.
+		if inBlock && trimmed == "" {
+			source := strings.Join(blockLines, "\n")
+			// Add the complete block to history.
 			historyEntry := C.CString(source)
 			C.add_history(historyEntry)
 			C.free(unsafe.Pointer(historyEntry))
@@ -170,7 +141,7 @@ func repl() {
 			result := vm.Interpret(source, "<repl>")
 			switch result {
 			case vm.INTERPRET_OK:
-				// Successful execution, no output needed.
+				// Execution successful; no further output required.
 			case vm.INTERPRET_COMPILE_ERROR:
 				fmt.Fprintf(os.Stderr, "Compilation error in REPL\n")
 			case vm.INTERPRET_RUNTIME_ERROR:
@@ -178,9 +149,41 @@ func repl() {
 			default:
 				fmt.Fprintf(os.Stderr, "Unknown error in REPL: %v\n", result)
 			}
+			// Reset block state.
+			blockLines = []string{}
+			inBlock = false
+			continue
+		}
 
-			// Reset the buffer after interpreting.
-			buffer.Reset()
+		// If not in a block and the input line ends with a colon, start a new block.
+		if !inBlock && strings.HasSuffix(trimmed, ":") {
+			inBlock = true
+			blockLines = append(blockLines, input)
+			continue
+		}
+
+		// If already in a block, accumulate the line.
+		if inBlock {
+			blockLines = append(blockLines, input)
+			continue
+		}
+
+		// Otherwise, it's a single-line command.
+		// Add the line to history.
+		historyEntry := C.CString(trimmed)
+		C.add_history(historyEntry)
+		C.free(unsafe.Pointer(historyEntry))
+
+		result := vm.Interpret(trimmed, "<repl>")
+		switch result {
+		case vm.INTERPRET_OK:
+			// Execution successful.
+		case vm.INTERPRET_COMPILE_ERROR:
+			fmt.Fprintf(os.Stderr, "Compilation error in REPL\n")
+		case vm.INTERPRET_RUNTIME_ERROR:
+			fmt.Fprintf(os.Stderr, "Runtime error in REPL\n")
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown error in REPL: %v\n", result)
 		}
 	}
 }
