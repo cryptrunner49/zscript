@@ -9,7 +9,7 @@ import (
 
 func expressionStatement() {
 	expression()
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after expression (e.g., 'x + 1;').")
+	consumeOptionalSemicolon()
 	emitByte(byte(runtime.OP_POP))
 }
 
@@ -101,7 +101,7 @@ func forStatement() {
 
 	if !match(token.TOKEN_SEMICOLON) {
 		expression()
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after loop condition.")
+		consumeOptionalSemicolon()
 		exitJump = emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 		emitByte(byte(runtime.OP_POP)) // Pop condition result
 	}
@@ -184,7 +184,7 @@ func breakStatement() {
 	emitByte(0xFF)
 	emitByte(0xFF)
 	currentLoop.exitPatches = append(currentLoop.exitPatches, operandPos)
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'break'.")
+	consumeOptionalSemicolon()
 }
 
 // continueStatement compiles a continue statement, applicable only to loops.
@@ -204,7 +204,7 @@ func continueStatement() {
 	emitByte(0xFF)
 	emitByte(0xFF)
 	currentLoop.continuePatches = append(currentLoop.continuePatches, jumpPos)
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'continue'.")
+	consumeOptionalSemicolon()
 }
 
 func returnStatement() {
@@ -215,7 +215,7 @@ func returnStatement() {
 		emitReturn()
 	} else {
 		expression()
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after return value (e.g., 'return 42;').")
+		consumeOptionalSemicolon()
 		emitByte(byte(runtime.OP_RETURN))
 	}
 }

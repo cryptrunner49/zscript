@@ -41,7 +41,7 @@ func varDeclaration() {
 	} else {
 		emitByte(byte(runtime.OP_NULL))
 	}
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration (e.g., 'var x = 5;').")
+	consumeOptionalSemicolon()
 	defineVariable(global)
 }
 
@@ -87,7 +87,7 @@ func structDeclaration() {
 				fieldCount++
 
 				if !match(token.TOKEN_COMMA) && !check(token.TOKEN_RIGHT_BRACE) {
-					consume(token.TOKEN_SEMICOLON, "Expected ',' between fields or '}' to end struct.")
+					consumeOptionalSemicolon()
 				}
 			}
 		}
@@ -102,7 +102,7 @@ func structDeclaration() {
 			emitByte(defaultConst)
 		}
 	} else {
-		consume(token.TOKEN_SEMICOLON, "Expected '{' to define fields or ';' for an empty struct.")
+		consumeOptionalSemicolon()
 		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
 		emitByte(0)
 	}
@@ -193,7 +193,7 @@ func modDeclarationField() (*runtime.ObjString, runtime.Value) {
 			} else {
 				defVal = runtime.Value{Type: runtime.VAL_NULL}
 			}
-			consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration in nested module.")
+			consumeOptionalSemicolon()
 			nestedFieldNames = append(nestedFieldNames, fName)
 			nestedFieldDefaults = append(nestedFieldDefaults, defVal)
 		} else if match(token.TOKEN_FUNC) {
@@ -259,8 +259,8 @@ func defDeclaration() {
 	// Define the alias in the current scope.
 	defineVariable(aliasConstant)
 
-	// Require semicolon to terminate the declaration.
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'def' alias declaration (e.g., 'def position.x as pos;').")
+	// Optional semicolon to terminate the declaration.
+	consumeOptionalSemicolon()
 }
 
 func modDeclaration() {
@@ -286,7 +286,7 @@ func modDeclaration() {
 
 		// Define the alias in the current scope.
 		defineVariable(aliasConstant)
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after module alias declaration.")
+		consumeOptionalSemicolon()
 		return
 	}
 
@@ -331,7 +331,7 @@ func modDeclaration() {
 			} else {
 				defVal = runtime.Value{Type: runtime.VAL_NULL}
 			}
-			consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration in module.")
+			consumeOptionalSemicolon()
 			fieldNames = append(fieldNames, fName)
 			fieldDefaults = append(fieldDefaults, defVal)
 		} else if match(token.TOKEN_FUNC) {
@@ -378,7 +378,7 @@ func importDeclaration() {
 		}
 		pathConstant := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(absPath)})
 		emitBytes(byte(runtime.OP_IMPORT), pathConstant)
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after import statement.")
+		consumeOptionalSemicolon()
 	} else {
 		var path []string
 		consume(token.TOKEN_IDENTIFIER, "Expected identifier after 'import'.")
@@ -395,7 +395,7 @@ func importDeclaration() {
 			emitBytes(byte(runtime.OP_GET_PROPERTY), identifierConstant(token.Token{Start: part}))
 		}
 		defineVariable(aliasConstant)
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after import alias.")
+		consumeOptionalSemicolon()
 	}
 }
 
@@ -446,13 +446,13 @@ func useDeclaration() {
 		}
 		emitByte(funcNameConstant)
 
-		// Expect semicolon after each function declaration
-		consume(token.TOKEN_SEMICOLON, "Expected ';' after function declaration.")
+		// Optional semicolon after each function declaration
+		consumeOptionalSemicolon()
 	}
 
 	// Parse closing brace: }
 	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' after function declarations.")
 
-	// Expect semicolon after use statement
-	consume(token.TOKEN_SEMICOLON, "Expected ';' after 'use' statement.")
+	// Optional semicolon after use statement
+	consumeOptionalSemicolon()
 }
