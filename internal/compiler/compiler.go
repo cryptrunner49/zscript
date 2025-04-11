@@ -153,7 +153,7 @@ func init() {
 	rules[token.TOKEN_ELSE] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_FALSE] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_FOR] = ParseRule{nil, nil, PREC_NONE}
-	rules[token.TOKEN_FN] = ParseRule{nil, nil, PREC_NONE}
+	rules[token.TOKEN_FUNC] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_IF] = ParseRule{nil, nil, PREC_NONE}
 	rules[token.TOKEN_NULL] = ParseRule{literal, nil, PREC_NONE}
 	rules[token.TOKEN_OR] = ParseRule{nil, or, PREC_OR}
@@ -287,7 +287,7 @@ func statement() {
 func declaration() {
 	if match(token.TOKEN_STRUCT) {
 		structDeclaration()
-	} else if match(token.TOKEN_FN) {
+	} else if match(token.TOKEN_FUNC) {
 		fnDeclaration()
 	} else if match(token.TOKEN_VAR) {
 		varDeclaration()

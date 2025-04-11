@@ -196,7 +196,7 @@ func modDeclarationField() (*runtime.ObjString, runtime.Value) {
 			consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration in nested module.")
 			nestedFieldNames = append(nestedFieldNames, fName)
 			nestedFieldDefaults = append(nestedFieldDefaults, defVal)
-		} else if match(token.TOKEN_FN) {
+		} else if match(token.TOKEN_FUNC) {
 			consume(token.TOKEN_IDENTIFIER, "Expected function name in nested module.")
 			fName := runtime.NewObjString(parser.previous.Start)
 			markInitialized()
@@ -334,7 +334,7 @@ func modDeclaration() {
 			consume(token.TOKEN_SEMICOLON, "Expected ';' after variable declaration in module.")
 			fieldNames = append(fieldNames, fName)
 			fieldDefaults = append(fieldDefaults, defVal)
-		} else if match(token.TOKEN_FN) {
+		} else if match(token.TOKEN_FUNC) {
 			consume(token.TOKEN_IDENTIFIER, "Expected function name in module declaration.")
 			fName := runtime.NewObjString(parser.previous.Start)
 			markInitialized()
