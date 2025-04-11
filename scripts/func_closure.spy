@@ -1,11 +1,11 @@
 // Nested Functions and Closures
-fn outer() {
+func outer() {
     var a = 1;
     var b = 2;
-    fn middle() {
+    func middle() {
         var c = 3;
         var d = 4;
-        fn inner() {
+        func inner() {
             println("Sum:", a + c + b + d);  // Outputs: 10
         }
         inner();

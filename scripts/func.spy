@@ -1,11 +1,11 @@
-fn greet(name) {
+func greet(name) {
     return "Hello, " + name + "!";
 }
 var msg = greet("Seed");
 println("Greeting:", msg);  // Outputs: Hello, Seed!
 
 // Section: Addition Function
-fn add(a, b) {
+func add(a, b) {
     return a + b;
 }
 var total = add(5, 3);
