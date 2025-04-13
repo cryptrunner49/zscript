@@ -33,8 +33,10 @@ func unescapeString(s string) string {
 func defineAllNatives() {
 	// Debug
 	defineNative("enable_debug", enableDebugPrint)
+	defineNative("enable_debug_indent", enableDebugIndent)
 	defineNative("enable_trace", enableTraceExecution)
 	defineNative("disable_debug", disableDebugPrint)
+	defineNative("disable_debug_indent", disableDebugIndent)
 	defineNative("disable_trace", disableTraceExecution)
 
 	// String
@@ -177,6 +179,15 @@ func enableDebugPrint(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{}
 }
 
+// enableDebugIndent turns on debug indentation.
+func enableDebugIndent(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString("Error: to_str expects 1 argument")}
+	}
+	common.DebugIndent = true
+	return runtime.Value{}
+}
+
 // enableTraceExecution turns on instruction-level execution tracing.
 func enableTraceExecution(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 0 {
@@ -192,6 +203,15 @@ func disableDebugPrint(argCount int, args []runtime.Value) runtime.Value {
 		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString("Error: to_str expects 1 argument")}
 	}
 	common.DebugPrintCode = false
+	return runtime.Value{}
+}
+
+// disableDebugIndent turns off debug indentation.
+func disableDebugIndent(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 0 {
+		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString("Error: to_str expects 1 argument")}
+	}
+	common.DebugIndent = false
 	return runtime.Value{}
 }
 

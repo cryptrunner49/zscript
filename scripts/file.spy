@@ -1,10 +1,9 @@
 // File Operations Function
-fn fileDemo() {
+func fileDemo():
     // Write to a file
-    write_file("test.txt", "Hello, Seed!\nThis is a test file.");
+    write_file("test.txt", "Hello, Seed!\nThis is a test file.")
     // Read from the file
-    var content = read_file("test.txt");
-    println("File contents:", content);
-}
+    var content = read_file("test.txt")
+    println("File contents:", content)
 
-fileDemo();
+fileDemo()

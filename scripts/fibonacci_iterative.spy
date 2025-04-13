@@ -1,18 +1,17 @@
 // Iterative Fibonacci Function
-println("--- Iterative Fibonacci ---");
-fn fib(n) {
-    if (n < 2) return n;
-    var a = 0;
-    var b = 1;
-    for (var i = 2; i <= n; i = i + 1) {
-        var temp = a + b;
-        a = b;
-        b = temp;
-    }
-    return b;
-}
+println("--- Iterative Fibonacci ---")
+func fib(n):
+    if (n < 2):
+        return n
+    var a = 0
+    var b = 1
+    for (var i = 2 i <= n i++):
+        var temp = a + b
+        a = b
+        b = temp
+    return b
 
 // Performance Test
-var start = clock();
-println("Fibonacci(16):", fib(16));         // Outputs: 987
-printf("Time taken: %v\n", clock() - start);
+var start = clock()
+println("Fibonacci(16):", fib(16))         // Outputs: 987
+printf("Time taken: %v\n", clock() - start)

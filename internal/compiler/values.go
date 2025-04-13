@@ -24,8 +24,8 @@ func function(funcType FunctionType) {
 			}
 		}
 	}
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close parameter list (e.g., 'fn foo()').")
-	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to start function body.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after parameters.")
+	consume(token.TOKEN_COLON, "Expected ':' after function parameters.")
 	block()
 	function := endCompiler()
 	emitBytes(byte(runtime.OP_CLOSURE), makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: function}))

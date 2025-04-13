@@ -47,6 +47,11 @@ const (
 	TOKEN_STRING
 	TOKEN_NUMBER
 
+	// Indentation
+	TOKEN_INDENT
+	TOKEN_DEDENT
+	TOKEN_PASS
+
 	// Keywords
 	TOKEN_AND
 	TOKEN_STRUCT

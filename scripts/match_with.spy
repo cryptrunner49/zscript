@@ -1,66 +1,66 @@
 // TODO
 // Pattern matching
 
-var value = 8;
+var value = 8
 match value with {
-    | 1: print("1° - Value is 1");
-    | 2: print("1° - Value is 2");
-    | 3: print("1° - Value is 3");
-    | 4: print("1° - Value is 4");
-    | 5: print("1° - Value is 5");
-    | 6: print("1° - Value is 6");
-    | 7: print("1° - Value is 7");
-    | 8: print("1° - Value is 8");
-    | 9: print("1° - Value is 9");
+    | 1: print("1° - Value is 1")
+    | 2: print("1° - Value is 2")
+    | 3: print("1° - Value is 3")
+    | 4: print("1° - Value is 4")
+    | 5: print("1° - Value is 5")
+    | 6: print("1° - Value is 6")
+    | 7: print("1° - Value is 7")
+    | 8: print("1° - Value is 8")
+    | 9: print("1° - Value is 9")
 }
 
-value = 6;
+value = 6
 match value through {
-    | 1: print("2° - Value is 1");
-    | 2: print("2° - Value is 2");
-    | 3: print("2° - Value is 3");
-    | 4: print("2° - Value is 4");
-    | 5: print("2° - Value is 5");
-    | 6: print("2° - Value is 6");
-    | 7: print("2° - Value is 7");
+    | 1: print("2° - Value is 1")
+    | 2: print("2° - Value is 2")
+    | 3: print("2° - Value is 3")
+    | 4: print("2° - Value is 4")
+    | 5: print("2° - Value is 5")
+    | 6: print("2° - Value is 6")
+    | 7: print("2° - Value is 7")
 }
 
 match value through {
-    | 1: print("3° - Value is 1");
-    | 2: print("3° - Value is 2");
-    | 3: print("3° - Value is 3");
-    | 4: print("3° - Value is 4");
-    | 5: print("3° - Value is 5");
-    | 6: print("3° - Value is 6");
-}
-
-
-value = 2;
-match value through {
-    | 1: print("4° - Value is 1");
-    | 2: print("4° - Value is 2");
-    | 3: print("4° - Value is 3");
+    | 1: print("3° - Value is 1")
+    | 2: print("3° - Value is 2")
+    | 3: print("3° - Value is 3")
+    | 4: print("3° - Value is 4")
+    | 5: print("3° - Value is 5")
+    | 6: print("3° - Value is 6")
 }
 
 
-value = 3;
+value = 2
 match value through {
-    | 1: print("5° - Value is 1");
-    | 2: print("5° - Value is 2");
-    | 3: print("5° - Value is 3");
+    | 1: print("4° - Value is 1")
+    | 2: print("4° - Value is 2")
+    | 3: print("4° - Value is 3")
 }
 
 
-value = 4;
+value = 3
 match value through {
-    | 1: print("6° - Value is 1");
-    | 2: print("6° - Value is 2");
-    | 3: print("6° - Value is 3");
+    | 1: print("5° - Value is 1")
+    | 2: print("5° - Value is 2")
+    | 3: print("5° - Value is 3")
 }
 
-value = 1;
+
+value = 4
 match value through {
-    | 1: print("fall - Value is 1");
-    | 2: print("break - Value is 2");
-    | 3: print("Value is 3");
+    | 1: print("6° - Value is 1")
+    | 2: print("6° - Value is 2")
+    | 3: print("6° - Value is 3")
+}
+
+value = 1
+match value through {
+    | 1: print("fall - Value is 1")
+    | 2: print("break - Value is 2")
+    | 3: print("Value is 3")
 }

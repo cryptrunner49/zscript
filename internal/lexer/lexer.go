@@ -1,27 +1,35 @@
 package lexer
 
 import (
+	"fmt"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/cryptrunner49/spy/internal/common"
 	"github.com/cryptrunner49/spy/internal/token"
 )
 
 type Lexer struct {
-	source  string
-	start   int
-	current int
-	line    int
+	source         string
+	start          int
+	current        int
+	line           int
+	indents        []int // Stack of indentation levels
+	pendingIndents int
+	pendingDedents int
+	atLineStart    bool
 }
 
 var lexer Lexer
 
 func InitLexer(source string) {
 	lexer = Lexer{
-		source:  source,
-		start:   0,
-		current: 0,
-		line:    1,
+		source:      source,
+		start:       0,
+		current:     0,
+		line:        1,
+		indents:     []int{0},
+		atLineStart: true,
 	}
 
 	// Skip shebang line if present
@@ -44,8 +52,22 @@ func InitLexer(source string) {
 func ScanToken() token.Token {
 	lexer.skipWhitespace()
 
+	if lexer.pendingDedents > 0 {
+		lexer.pendingDedents--
+		return lexer.makeToken(token.TOKEN_DEDENT)
+	}
+	if lexer.pendingIndents > 0 {
+		lexer.pendingIndents--
+		return lexer.makeToken(token.TOKEN_INDENT)
+	}
+
 	lexer.start = lexer.current
 	if lexer.isAtEnd() {
+		if len(lexer.indents) > 1 {
+			lexer.pendingDedents = len(lexer.indents) - 1
+			lexer.indents = lexer.indents[:1]
+			return lexer.makeToken(token.TOKEN_DEDENT)
+		}
 		return lexer.makeToken(token.TOKEN_EOF)
 	}
 
@@ -53,8 +75,6 @@ func ScanToken() token.Token {
 	if unicode.IsDigit(r) {
 		return lexer.number()
 	}
-
-	// Start an identifier if the rune is not an operator or whitespace
 	if !isOperatorRune(r) && !unicode.IsSpace(r) {
 		return lexer.identifier()
 	}
@@ -211,16 +231,16 @@ func (l *Lexer) skipWhitespace() {
 	for {
 		r := l.peek()
 		if r == 0 {
-			return
+			break
 		}
-		if unicode.IsSpace(r) {
-			if r == '\n' {
-				l.line++
-			}
+		if r == '\n' {
+			l.line++
 			l.advance()
-			continue
-		}
-		if r == '/' {
+			l.processIndentation() // Process indentation for the next line immediately
+		} else if unicode.IsSpace(r) {
+			l.advance()
+		} else if r == '/' {
+			// Handle comments
 			if l.peekNext() == '/' {
 				for l.peek() != '\n' && !l.isAtEnd() {
 					l.advance()
@@ -239,10 +259,10 @@ func (l *Lexer) skipWhitespace() {
 					}
 				}
 			} else {
-				return
+				break
 			}
 		} else {
-			return
+			break
 		}
 	}
 }
@@ -397,7 +417,82 @@ func (l *Lexer) identifierType() token.TokenType {
 		return token.TOKEN_MOD
 	case "as":
 		return token.TOKEN_AS
+	case "pass":
+		return token.TOKEN_PASS
+	case "enable_debug_indent":
+		common.DebugIndent = true
+		return token.TOKEN_IDENTIFIER
+	case "disable_debug_indent":
+		common.DebugIndent = false
+		return token.TOKEN_IDENTIFIER
 	default:
 		return token.TOKEN_IDENTIFIER
 	}
+}
+
+func (l *Lexer) processIndentation() {
+	// Save the position after the newline
+	startOfLine := l.current
+
+	// Count leading whitespace
+	indentLevel := 0
+	for {
+		r := l.peek()
+		if r == ' ' {
+			indentLevel++
+			l.advance()
+		} else if r == '\t' {
+			indentLevel += 4 // Tabs count as 4 spaces
+			l.advance()
+		} else {
+			break
+		}
+	}
+
+	if common.DebugIndent {
+		fmt.Printf("[Line %d]: Indent level = %d\n", l.line, indentLevel)
+	}
+
+	// Check if the line is blank or a comment
+	isBlank := true
+	for {
+		r := l.peek()
+		if r == '\n' || r == 0 {
+			break
+		}
+		if !unicode.IsSpace(r) {
+			if r == '/' && l.peekNext() == '/' {
+				// Comment line
+				for l.peek() != '\n' && !l.isAtEnd() {
+					l.advance()
+				}
+			} else {
+				isBlank = false
+			}
+			break
+		}
+		l.advance()
+	}
+
+	if isBlank {
+		// Blank line: reset position and skip indentation adjustment
+		l.current = startOfLine
+		return
+	}
+
+	// Adjust indentation levels for non-blank lines
+	currentLevel := l.indents[len(l.indents)-1]
+	if indentLevel > currentLevel {
+		l.indents = append(l.indents, indentLevel)
+		l.pendingIndents++
+	} else if indentLevel < currentLevel {
+		for len(l.indents) > 1 && l.indents[len(l.indents)-1] > indentLevel {
+			l.indents = l.indents[:len(l.indents)-1]
+			l.pendingDedents++
+		}
+		if l.indents[len(l.indents)-1] != indentLevel {
+			l.errorToken("Indentation mismatch")
+		}
+	}
+	// l.current is already at the first non-space character after indentation
 }

@@ -1,26 +1,25 @@
-struct Vec {
-    x = 100;
-    y = 500;
-    name = "default";
-}
+struct Vec:
+    x = 100
+    y = 500
+    name = "default"
 
-var v1 = Vec{};              // Empty, uses defaults
-println("v1: ");
-println(v1.x);                 // 100
-println(v1.y);                 // 500
-println(v1.name);              // "default"
+var v1 = Vec{}              // Empty, uses defaults
+println("v1: ")
+println(v1.x)                 // 100
+println(v1.y)                 // 500
+println(v1.name)              // "default"
 
-var v2 = Vec{x = 10};       // Partial initialization
-println("v2: ");
-println(v2.x);                 // 10
-println(v2.y);                 // 500
-println(v2.name);              // "default"
+var v2 = Vec{x = 10}       // Partial initialization
+println("v2: ")
+println(v2.x)                 // 10
+println(v2.y)                 // 500
+println(v2.name)              // "default"
 
-var v3 = Vec{x = 10, y = 5}; // Multiple fields
-println("v3: ");
-println(v3.x);                  // 10
-println(v3.y);                  // 5
-println(v3.name);               // "default"
+var v3 = Vec{x = 10, y = 5} // Multiple fields
+println("v3: ")
+println(v3.x)                  // 10
+println(v3.y)                  // 5
+println(v3.name)               // "default"
 
 // Old syntax
-var v4 = Vec();
+var v4 = Vec()

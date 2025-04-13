@@ -195,7 +195,9 @@ func runFile(path string) {
 		os.Exit(74)
 	}
 
-	result := vm.Interpret(string(source), path)
+	// Normalize source and append 'pass;' to ensure a stack value
+	sourceStr := strings.TrimRight(string(source), "\n") + "\npass;\n"
+	result := vm.Interpret(sourceStr, path)
 	switch result {
 	case vm.INTERPRET_OK:
 		// Successful execution, exit silently.

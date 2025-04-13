@@ -1,107 +1,103 @@
 // Section: Basic Array Operations
-println("--- Basic Array Operations ---");
-var arr = [1, 2, 3];
-println("First element:", arr[0]);      // Prints 1
-arr[1] = 42;                            // Assigns 42 to index 1
-println("Array length:", len(arr));     // Prints 3
-push(arr, 4);                           // Adds 4 to the end
-println("Popped element:", pop(arr));   // Prints 4 and removes it
+println("--- Basic Array Operations ---")
+var arr = [1, 2, 3]
+println("First element:", arr[0])      // Prints 1
+arr[1] = 42                            // Assigns 42 to index 1
+println("Array length:", len(arr))     // Prints 3
+push(arr, 4)                           // Adds 4 to the end
+println("Popped element:", pop(arr))   // Prints 4 and removes it
 
 // Section: For Loop with Arrays
-println("--- For Loop ---");
-var arr = [10, 20, 30, 40];
-for (var i = 0; i < len(arr); i = i + 1) {
-    println("Element at index", i, ":", arr[i]);  // Prints each element
-}
+println("--- For Loop ---")
+var arr = [10, 20, 30, 40]
+for (var i = 0; i < len(arr); i++):
+    println("Element at index", i, ":", arr[i])  // Prints each element
 
 // Section: While Loop with Arrays
-println("--- While Loop ---");
-var index = 0;
-while (index < len(arr)) {
-    println("Element at index", index, ":", arr[index]);  // Prints each element
-    index = index + 1;
-}
+println("--- While Loop ---")
+var index = 0
+while (index < len(arr)):
+    println("Element at index", index, ":", arr[index])  // Prints each element
+    index = index + 1
 
 // Section: Manual Iterator with While Loop
-println("--- Manual Iterator with While ---");
-var arr = [10, 20, 30, 40];
-var it = array_iter(arr);
-while (!iter_done(it)) {
-    var value = iter_value(it);
-    println("Iterator value:", value);  // Prints each element
-    iter_next(it);
-}
+println("--- Manual Iterator with While ---")
+var arr = [10, 20, 30, 40]
+var it = array_iter(arr)
+while (!iter_done(it)):
+    var value = iter_value(it)
+    println("Iterator value:", value)  // Prints each element
+    iter_next(it)
 
 // Section: Iterator Loop
-println("--- Iterator Loop ---");
-iter (var item in [10, 20, 30, 40]) {
-    println("Item:", item);  // Prints each element
-}
+println("--- Iterator Loop ---")
+iter (var item in [10, 20, 30, 40]):
+    println("Item:", item)  // Prints each element
 
 // Section: Advanced Array Operations
-println("--- Advanced Array Operations ---");
+println("--- Advanced Array Operations ---")
 
 // Sorting an array lexicographically
-var unsorted = [5, 3, 8, 1, 42, 10];
-println("Unsorted array:", unsorted);
-var sorted = array_sort(unsorted);
-println("Sorted array:", sorted);
+var unsorted = [5, 3, 8, 1, 42, 10]
+println("Unsorted array:", unsorted)
+var sorted = array_sort(unsorted)
+println("Sorted array:", sorted)
 
 // Splitting an array at separator "sep"
-var toSplit = [1, 2, "sep", 3, 4, "sep", 5, 6];
-println("Original array for splitting:", toSplit);
-var splitResult = array_split(toSplit, "sep");
-println("Split result:", splitResult);
+var toSplit = [1, 2, "sep", 3, 4, "sep", 5, 6]
+println("Original array for splitting:", toSplit)
+var splitResult = array_split(toSplit, "sep")
+println("Split result:", splitResult)
 
 // Joining multiple arrays
-var a1 = [1, 2];
-var a2 = [3, 4];
-var a3 = [5, 6];
-println("");
-println("Arrays to be joined:");
-println(a1);
-println(a2);
-println(a3);
-var joined = array_join(a1, a2, a3);
-println("Result of array_join (joined array):");
-println(joined);
+var a1 = [1, 2]
+var a2 = [3, 4]
+var a3 = [5, 6]
+println("")
+println("Arrays to be joined:")
+println(a1)
+println(a2)
+println(a3)
+var joined = array_join(a1, a2, a3)
+println("Result of array_join (joined array):")
+println(joined)
 
 // Inserting into a sorted array
-var sortedArray = ["apple", "banana", "mango", "orange"];
-println("");
-println("Original sorted array (lexicographical order):");
-println(sortedArray);
-array_sorted_push(sortedArray, "blueberry");
-println("Sorted array after array_sorted_push:");
-println(sortedArray);
+var sortedArray = ["apple", "banana", "mango", "orange"]
+println("")
+println("Original sorted array (lexicographical order):")
+println(sortedArray)
+array_sorted_push(sortedArray, "blueberry")
+println("Sorted array after array_sorted_push:")
+println(sortedArray)
 
 // Section: Array Search Operations
-println("");
-println("--- array_linear_search Example ---");
-var searchArr = ["cat", "dog", "bird", "dog"];
-println("Array for linear search:");
-println(searchArr);
-var indexFound = array_linear_search(searchArr, "dog");
-println("First index of 'dog' (linear search): " + to_str(indexFound));
-var indexFound2 = array_linear_search(searchArr, "tiger");
-println("Index of 'tiger' (not found returns -1): " + to_str(indexFound2));
+println("")
+println("--- array_linear_search Example ---")
+var searchArr = ["cat", "dog", "bird", "dog"]
+println("Array for linear search:")
+println(searchArr)
+var indexFound = array_linear_search(searchArr, "dog")
+println("First index of 'dog' (linear search): " + to_str(indexFound))
+var indexFound2 = array_linear_search(searchArr, "tiger")
+println("Index of 'tiger' (not found returns -1): " + to_str(indexFound2))
 
-println("");
-println("--- array_binary_search Example ---");
-var sortedSearchArr = ["apple", "banana", "cherry", "date"];
-println("Sorted array for binary search:");
-println(sortedSearchArr);
-var binIndex1 = array_binary_search(sortedSearchArr, "cherry");
-println("Index of 'cherry' (binary search): " + to_str(binIndex1));
-var binIndex2 = array_binary_search(sortedSearchArr, "fig");
-println("Index of 'fig' (not found returns -1): " + to_str(binIndex2));
+println("")
+println("--- array_binary_search Example ---")
+var sortedSearchArr = ["apple", "banana", "cherry", "date"]
+println("Sorted array for binary search:")
+println(sortedSearchArr)
+var binIndex1 = array_binary_search(sortedSearchArr, "cherry")
+println("Index of 'cherry' (binary search): " + to_str(binIndex1))
+var binIndex2 = array_binary_search(sortedSearchArr, "fig")
+println("Index of 'fig' (not found returns -1): " + to_str(binIndex2))
 
 // Section: Additional Array Functions
-var arr = [1, 2, 3, 2];
-index_of(arr, 2);         // Returns 1
-last_index_of(arr, 2);    // Returns 3
-array_contains(arr, 3);   // Returns true
-array_clear(arr);         // Clears array
-array_reverse(arr);       // Reverses array
-array_to_string(arr);     // Returns "[1, 2, 3, 2]"
-array_remove(arr, 2);     // Removes first 2
+var arr = [1, 2, 3, 2]
+index_of(arr, 2)         // Returns 1
+last_index_of(arr, 2)    // Returns 3
+array_contains(arr, 3)   // Returns true
+array_clear(arr)         // Clears array
+array_reverse(arr)       // Reverses array
+array_to_string(arr)     // Returns "[1, 2, 3, 2]"
+array_remove(arr, 2)     // Removes first 2

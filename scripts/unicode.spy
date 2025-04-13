@@ -1,103 +1,103 @@
 // --- Animal Struct and Function ---
-println("--- Animal Struct and Function ---");
-struct 動物 {
-    種類 = "不明";
-    長さ = 50;  // Average cat length in cm
-    高さ = 25;  // Average cat height in cm
-}
-fn 動物を説明する(アニマル) {
-    return アニマル.種類 + ": " + to_str(アニマル.長さ) + "x" + to_str(アニマル.高さ) + " cm";
-}
-var お気に入り = 動物();
-お気に入り.種類 = "ネコ";
-if (お気に入り.長さ <= 50) {
-    println("動物が平均または短い。🐾🐱");
-} else {
-    println("動物が平均より長い。🐾");
-}
-println("Animal description:", 動物を説明する(お気に入り));  // Outputs: ネコ: 50x25 cm
+println("--- Animal Struct and Function ---")
+struct 動物:
+    種類 = "不明"
+    長さ = 50  // Average cat length in cm
+    高さ = 25  // Average cat height in cm
+
+func 動物を説明する(アニマル):
+    return アニマル.種類 + ": " + to_str(アニマル.長さ) + "x" + to_str(アニマル.高さ) + " cm"
+
+var お気に入り = 動物()
+お気に入り.種類 = "ネコ"
+if (お気に入り.長さ <= 50):
+    println("動物が平均または短い。🐾🐱")
+else:
+    println("動物が平均より長い。🐾")
+
+println("Animal description:", 動物を説明する(お気に入り))  // Outputs: ネコ: 50x25 cm
 
 // --- Loops with Unicode ---
-println("--- Loops with Unicode ---");
-var 回数 = 0;
-while (回数 < 2) {
-    println("にゃん #", to_str(回数), "🐾");  // Outputs: にゃん #0🐾, にゃん #1🐾
-    回数 = 回数 + 1;
-}
-var 计数 = 0;
-while (计数 < 3) {
-    println("Count:", to_str(计数), "🔄");  // Outputs: Count: 0🔄, Count: 1🔄, Count: 2🔄
-    计数 = 计数 + 1;
-}
-for (var 回 = 0; 回 < 3; 回 = 回 + 1) {
-    println("Loop count:", to_str(回), "🔢");  // Outputs: Loop count: 0🔢, Loop count: 1🔢, Loop count: 2🔢
-}
+println("--- Loops with Unicode ---")
+var 回数 = 0
+while (回数 < 2):
+    println("にゃん #", to_str(回数), "🐾")  // Outputs: にゃん #0🐾, にゃん #1🐾
+    回数 = 回数 + 1
+
+var 计数 = 0
+while (计数 < 3):
+    println("Count:", to_str(计数), "🔄")  // Outputs: Count: 0🔄, Count: 1🔄, Count: 2🔄
+    计数 = 计数 + 1
+
+for (var 回 = 0; 回 < 3; 回 = 回 + 1):
+    println("Loop count:", to_str(回), "🔢")  // Outputs: Loop count: 0🔢, Loop count: 1🔢, Loop count: 2🔢
 
 // --- Unicode and Emoji Variables ---
-println("--- Unicode and Emoji Variables ---");
-var 挨拶 = "こんにちは";
-println("挨拶:", 挨拶);  // Outputs: こんにちは
-var 🔢 = 100;
-println("🔢:", 🔢);     // Outputs: 100
-var 💬 = "Emoji!";
-println("💬:", 💬);     // Outputs: Emoji!
-var 挨拶文 = "Hello, world!";
-println("挨拶文:", 挨拶文);  // Outputs: Hello, world!
-var 💬2 = "Chat!";
-println("💬2:", 💬2);       // Outputs: Chat!
+println("--- Unicode and Emoji Variables ---")
+var 挨拶 = "こんにちは"
+println("挨拶:", 挨拶)  // Outputs: こんにちは
+var 🔢 = 100
+println("🔢:", 🔢)     // Outputs: 100
+var 💬 = "Emoji!"
+println("💬:", 💬)     // Outputs: Emoji!
+var 挨拶文 = "Hello, world!"
+println("挨拶文:", 挨拶文)  // Outputs: Hello, world!
+var 💬2 = "Chat!"
+println("💬2:", 💬2)       // Outputs: Chat!
 
 // --- Emoji Structs ---
-println("--- Emoji Structs ---");
-struct 🐱 {}
-var kitty = 🐱();
-kitty.name = "Whiskers";
-kitty.age = 2;
-println("Kitty name:", kitty.name);  // Outputs: Whiskers
-struct 🐶 { breed = "Labrador"; age = 3; color = "Golden"; }
-var buddy = 🐶();
-println("Buddy breed:", buddy.breed);  // Outputs: Labrador
-struct 🐰;
-var thumper = 🐰();
-thumper.favoriteFood = "Carrots";
-println("Thumper favorite food:", thumper.favoriteFood);  // Outputs: Carrots
+println("--- Emoji Structs ---")
+struct 🐱
+var kitty = 🐱()
+kitty.name = "Whiskers"
+kitty.age = 2
+println("Kitty name:", kitty.name)  // Outputs: Whiskers
+struct 🐶:
+    breed = "Labrador"
+    age = 3
+    color = "Golden"
+
+var buddy = 🐶()
+println("Buddy breed:", buddy.breed)  // Outputs: Labrador
+struct 🐰
+var thumper = 🐰()
+thumper.favoriteFood = "Carrots"
+println("Thumper favorite food:", thumper.favoriteFood)  // Outputs: Carrots
 
 // --- Unicode Structs ---
-println("--- Unicode Structs ---");
-struct 猫 {}
-var 子猫 = 猫();
-子猫.名前 = "たまちゃん";
-子猫.年 = 2;
-println("子猫名前:", 子猫.名前);  // Outputs: たまちゃん
-struct 犬 { 種類 = "ラブラドール"; 年 = 3; }
-var 犬子 = 犬();
-println("犬子種類:", 犬子.種類);  // Outputs: ラブラドール
-struct 兎;
-var 兎子 = 兎();
-兎子.好物 = "人参";
-println("兎子好物:", 兎子.好物);  // Outputs: 人参
+println("--- Unicode Structs ---")
+struct 猫
+var 子猫 = 猫()
+子猫.名前 = "たまちゃん"
+子猫.年 = 2
+println("子猫名前:", 子猫.名前)  // Outputs: たまちゃん
+struct 犬:
+    種類 = "ラブラドール"
+    年 = 3
+    
+var 犬子 = 犬()
+println("犬子種類:", 犬子.種類)  // Outputs: ラブラドール
+struct 兎
+var 兎子 = 兎()
+兎子.好物 = "人参"
+println("兎子好物:", 兎子.好物)  // Outputs: 人参
 
 // --- Functions ---
-println("--- Functions ---");
-fn 挨拶する(名) {
-    return "こんにちは、" + 名 + "！";
-}
-var メッセージ = 挨拶する("🙋‍♂️");
-println("挨拶する('🙋‍♂️'):", メッセージ);  // Outputs: こんにちは、🙋‍♂️！
-fn 加える(甲, 乙) {
-    return 甲 + 乙;
-}
-var 合計 = 加える(5, 3);
-println("加える(5, 3):", 合計);  // Outputs: 8
+println("--- Functions ---")
+func 挨拶する(名):
+    return "こんにちは、" + 名 + "！"
+
+var メッセージ = 挨拶する("🙋‍♂️")
+println("挨拶する('🙋‍♂️'):", メッセージ)  // Outputs: こんにちは、🙋‍♂️！
+func 加える(甲, 乙):
+    return 甲 + 乙
+
+var 合計 = 加える(5, 3)
+println("加える(5, 3):", 合計)  // Outputs: 8
 
 // --- Boolean and Scope ---
-println("--- Boolean and Scope ---");
-var 真 = true;
-var ✅ = false;
-println("真:", 真);  // Outputs: true
-println("✅:", ✅);  // Outputs: false
-var 変数 = 10;
-{
-    var 変数 = 20;
-    println("Inner scope 変数:", to_str(変数), "📦");  // Outputs: 20📦
-}
-println("Outer scope 変数:", 変数);  // Outputs: 10
+println("--- Boolean and Scope ---")
+var 真 = true
+var ✅ = false
+println("真:", 真)  // Outputs: true
+println("✅:", ✅)  // Outputs: false

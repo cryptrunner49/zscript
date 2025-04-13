@@ -1,12 +1,12 @@
-func greet(name) {
+func greet(name):
     return "Hello, " + name + "!"
-}
+
 var msg = greet("World")
 println("Greeting:", msg)  // Outputs: Hello, World!
 
-func add(a, b) {
+func add(a, b):
     sum = a + b
     return sum
-}
+
 var total = add(5, 3)
 println("Sum:", total)  // Outputs: 8

@@ -5,6 +5,6 @@ enum Color {
     Blue,
 }
 
-var value = Color::Blue;
+var value = Color::Blue
 
-println(value);
+println(value)

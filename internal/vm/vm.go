@@ -141,6 +141,9 @@ func Push(val runtime.Value) {
 // Pop removes and returns the top value from the VM's stack.
 func Pop() runtime.Value {
 	vm.stackTop--
+	if vm.stackTop < 0 {
+		vm.stackTop = 0
+	}
 	return vm.stack[vm.stackTop]
 }
 

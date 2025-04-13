@@ -1,13 +1,13 @@
 // Section: Closure Demonstration
-println("--- Closure Demo ---");
-fn makeCounter() {
-    var value = 0;
-    fn increment() {
-        value = value + 1;  // Modifies outer scope variable
-        return value;
-    }
-    return increment;
-}
-var counter = makeCounter();
-println("First call:", counter());  // Outputs: 1
-println("Second call:", counter()); // Outputs: 2
+println("--- Closure Demo ---")
+func makeCounter():
+    var value = 0
+    func increment():
+        value = value + 1  // Modifies outer scope variable
+        return value
+
+    return increment
+    
+var counter = makeCounter()
+println("First call:", counter())  // Outputs: 1
+println("Second call:", counter()) // Outputs: 2

@@ -227,10 +227,11 @@ func endCompiler() *runtime.ObjFunction {
 
 // block compiles a block statement by repeatedly compiling declarations until a closing brace is found.
 func block() {
-	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+	consume(token.TOKEN_INDENT, "Expected indented block after ':'.")
+	for !check(token.TOKEN_DEDENT) && !check(token.TOKEN_EOF) {
 		declaration()
 	}
-	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close block (unmatched '{').")
+	consume(token.TOKEN_DEDENT, "Expected dedent after block.")
 }
 
 // beginScope increases the scope depth, starting a new local variable scope.
@@ -274,6 +275,8 @@ func statement() {
 		returnStatement()
 	} else if match(token.TOKEN_MATCH) {
 		matchStatement()
+	} else if match(token.TOKEN_PASS) {
+		passStatement()
 	} else if match(token.TOKEN_LEFT_BRACE) {
 		beginScope()
 		block()
@@ -318,7 +321,7 @@ func parsePrecedence(precedence Precedence) {
 	advance()
 	prefixRule := getRule(parser.previous.Type).Prefix
 	if prefixRule == nil {
-		reportError("Expected an expression but found no valid starting token.")
+		//reportError("Expected an expression but found no valid starting token.")
 		return
 	}
 	canAssign := precedence <= PREC_ASSIGNMENT

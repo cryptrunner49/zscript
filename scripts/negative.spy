@@ -1,2 +1,2 @@
-var negative = -10;
-println("Negative value:", negative);  // Outputs: -10
+var negative = -10
+println("Negative value:", negative)  // Outputs: -10

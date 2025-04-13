@@ -1,50 +1,50 @@
 // DateTime native functions
 
-var dt = DateTime(2023, 10, 15, 14, 30, 45);  // Create a DateTime for Oct 15, 2023, 14:30:45
+var dt = DateTime(2023, 10, 15, 14, 30, 45)  // Create a DateTime for Oct 15, 2023, 14:30:45
 
 // Current datetime
-var now = datetime_now();
-println("Current datetime: " + datetime_format(now, "2006-01-02 15:04:05"));
+var now = datetime_now()
+println("Current datetime: " + datetime_format(now, "2006-01-02 15:04:05"))
 
 // Parse a datetime string
-var parsed = datetime_parse("2024-05-20 09:15:30");
-println("Parsed datetime: " + datetime_format(parsed, "2006-01-02 15:04:05"));
+var parsed = datetime_parse("2024-05-20 09:15:30")
+println("Parsed datetime: " + datetime_format(parsed, "2006-01-02 15:04:05"))
 
 // Format the initial datetime
-println("Formatted datetime: " + datetime_format(dt, "Mon Jan 2, 2006 3:04:05 PM"));
+println("Formatted datetime: " + datetime_format(dt, "Mon Jan 2, 2006 3:04:05 PM"))
 
 // Add datetime interval
-var dt_plus = datetime_add(dt, 1, 2, 3, 4, 5, 6);  // Add 1y, 2m, 3d, 4h, 5m, 6s
-println("After adding 1y 2m 3d 4h 5m 6s: " + datetime_format(dt_plus, "2006-01-02 15:04:05"));
+var dt_plus = datetime_add(dt, 1, 2, 3, 4, 5, 6)  // Add 1y, 2m, 3d, 4h, 5m, 6s
+println("After adding 1y 2m 3d 4h 5m 6s: " + datetime_format(dt_plus, "2006-01-02 15:04:05"))
 
 // Subtract datetime interval
-var dt_minus = datetime_subtract(dt, 0, 5, 7, 2, 10, 15);  // Subtract 5m, 7d, 2h, 10m, 15s
-println("After subtracting 5m 7d 2h 10m 15s: " + datetime_format(dt_minus, "2006-01-02 15:04:05"));
+var dt_minus = datetime_subtract(dt, 0, 5, 7, 2, 10, 15)  // Subtract 5m, 7d, 2h, 10m, 15s
+println("After subtracting 5m 7d 2h 10m 15s: " + datetime_format(dt_minus, "2006-01-02 15:04:05"))
 
 // Get components
-println("Year: " + to_str(datetime_get_component(dt, "year")));
-println("Month: " + to_str(datetime_get_component(dt, "month")));
-println("Day: " + to_str(datetime_get_component(dt, "day")));
-println("Hour: " + to_str(datetime_get_component(dt, "hour")));
-println("Minute: " + to_str(datetime_get_component(dt, "minute")));
-println("Second: " + to_str(datetime_get_component(dt, "second")));
+println("Year: " + to_str(datetime_get_component(dt, "year")))
+println("Month: " + to_str(datetime_get_component(dt, "month")))
+println("Day: " + to_str(datetime_get_component(dt, "day")))
+println("Hour: " + to_str(datetime_get_component(dt, "hour")))
+println("Minute: " + to_str(datetime_get_component(dt, "minute")))
+println("Second: " + to_str(datetime_get_component(dt, "second")))
 
 // Set components
-var dt_modified = datetime_set_component(dt, "hour", 16);
-println("After setting hour to 16: " + datetime_format(dt_modified, "2006-01-02 15:04:05"));
+var dt_modified = datetime_set_component(dt, "hour", 16)
+println("After setting hour to 16: " + datetime_format(dt_modified, "2006-01-02 15:04:05"))
 
 // Add days
-var dt_plus_days = datetime_add_days(dt, 10);
-println("After adding 10 days: " + datetime_format(dt_plus_days, "2006-01-02 15:04:05"));
+var dt_plus_days = datetime_add_days(dt, 10)
+println("After adding 10 days: " + datetime_format(dt_plus_days, "2006-01-02 15:04:05"))
 
 // Subtract days
-var dt_minus_days = datetime_subtract_days(dt, 5);
-println("After subtracting 5 days: " + datetime_format(dt_minus_days, "2006-01-02 15:04:05"));
+var dt_minus_days = datetime_subtract_days(dt, 5)
+println("After subtracting 5 days: " + datetime_format(dt_minus_days, "2006-01-02 15:04:05"))
 
 // Accessing properties directly
-println("Year (via property): " + to_str(dt.year));
-println("Month (via property): " + to_str(dt.month));
-println("Day (via property): " + to_str(dt.day));
-println("Hour (via property): " + to_str(dt.hour));
-println("Minute (via property): " + to_str(dt.minute));
-println("Second (via property): " + to_str(dt.second));
+println("Year (via property): " + to_str(dt.year))
+println("Month (via property): " + to_str(dt.month))
+println("Day (via property): " + to_str(dt.day))
+println("Hour (via property): " + to_str(dt.hour))
+println("Minute (via property): " + to_str(dt.minute))
+println("Second (via property): " + to_str(dt.second))

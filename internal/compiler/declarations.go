@@ -50,61 +50,65 @@ func structDeclaration() {
 	nameConstant := identifierConstant(parser.previous)
 	declareVariable()
 
-	if match(token.TOKEN_LEFT_BRACE) {
-		fieldCount := 0
-		fieldNames := make([]*runtime.ObjString, 0)
-		fieldDefaults := make([]runtime.Value, 0)
-
-		if !check(token.TOKEN_RIGHT_BRACE) {
-			for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
-				consume(token.TOKEN_IDENTIFIER, "Expected a field name in struct (e.g., 'x' in 'x = 0').")
-				fieldName := runtime.NewObjString(parser.previous.Start)
-				fieldNames = append(fieldNames, fieldName)
-
-				var defaultValue runtime.Value
-				if match(token.TOKEN_EQUAL) {
-					if match(token.TOKEN_NUMBER) {
-						val, _ := strconv.ParseFloat(parser.previous.Start, 64)
-						defaultValue = runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
-					} else if match(token.TOKEN_STRING) {
-						text := parser.previous.Start
-						str := text[1 : len(text)-1]
-						defaultValue = runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
-					} else if match(token.TOKEN_TRUE) {
-						defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
-					} else if match(token.TOKEN_FALSE) {
-						defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
-					} else if match(token.TOKEN_NULL) {
-						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
-					} else {
-						reportError("Expected a literal value (number, string, true, false, null) for field default.")
-						defaultValue = runtime.Value{Type: runtime.VAL_NULL}
-					}
-				} else {
-					defaultValue = runtime.Value{Type: runtime.VAL_NULL}
-				}
-				fieldDefaults = append(fieldDefaults, defaultValue)
-				fieldCount++
-
-				if !match(token.TOKEN_COMMA) && !check(token.TOKEN_RIGHT_BRACE) {
-					consumeOptionalSemicolon()
-				}
-			}
-		}
-
-		consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close struct body (unmatched '{').")
-		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
-		emitByte(byte(fieldCount))
-		for i := 0; i < fieldCount; i++ {
-			nameConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fieldNames[i]})
-			defaultConst := makeConstant(fieldDefaults[i])
-			emitByte(nameConst)
-			emitByte(defaultConst)
-		}
-	} else {
+	// If no ':' follows, it's an empty struct
+	if !match(token.TOKEN_COLON) {
 		consumeOptionalSemicolon()
 		emitBytes(byte(runtime.OP_STRUCT), nameConstant)
-		emitByte(0)
+		emitByte(0) // No fields
+		defineVariable(nameConstant)
+		return
+	}
+
+	if !match(token.TOKEN_INDENT) {
+		reportError("Expected indented block after ':' (in struct declaration).")
+		return
+	}
+
+	fieldCount := 0
+	fieldNames := make([]*runtime.ObjString, 0)
+	fieldDefaults := make([]runtime.Value, 0)
+
+	for !check(token.TOKEN_DEDENT) && !check(token.TOKEN_EOF) {
+		consume(token.TOKEN_IDENTIFIER, "Expected a field name in struct (e.g., 'x' in 'x = 0').")
+		fieldName := runtime.NewObjString(parser.previous.Start)
+		fieldNames = append(fieldNames, fieldName)
+
+		var defaultValue runtime.Value
+		if match(token.TOKEN_EQUAL) {
+			if match(token.TOKEN_NUMBER) {
+				val, _ := strconv.ParseFloat(parser.previous.Start, 64)
+				defaultValue = runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
+			} else if match(token.TOKEN_STRING) {
+				text := parser.previous.Start
+				str := text[1 : len(text)-1]
+				defaultValue = runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(str)}
+			} else if match(token.TOKEN_TRUE) {
+				defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
+			} else if match(token.TOKEN_FALSE) {
+				defaultValue = runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
+			} else if match(token.TOKEN_NULL) {
+				defaultValue = runtime.Value{Type: runtime.VAL_NULL}
+			} else {
+				reportError("Expected a literal value (number, string, true, false, null) for field default.")
+				defaultValue = runtime.Value{Type: runtime.VAL_NULL}
+			}
+		} else {
+			defaultValue = runtime.Value{Type: runtime.VAL_NULL}
+		}
+		fieldDefaults = append(fieldDefaults, defaultValue)
+		fieldCount++
+
+		consumeOptionalSemicolon()
+	}
+
+	consume(token.TOKEN_DEDENT, "Expected dedent after struct block.")
+	emitBytes(byte(runtime.OP_STRUCT), nameConstant)
+	emitByte(byte(fieldCount))
+	for i := 0; i < fieldCount; i++ {
+		nameConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fieldNames[i]})
+		defaultConst := makeConstant(fieldDefaults[i])
+		emitByte(nameConst)
+		emitByte(defaultConst)
 	}
 
 	defineVariable(nameConstant)
@@ -112,6 +116,7 @@ func structDeclaration() {
 
 func compileModuleFunction() runtime.Value {
 	var fnCompiler Compiler
+
 	// Initialize a new compiler for this function.
 	initCompiler(&fnCompiler, TYPE_FUNCTION, current.scriptDir)
 	beginScope()
@@ -130,10 +135,12 @@ func compileModuleFunction() runtime.Value {
 		}
 	}
 	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' to close parameter list.")
-	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to start function body.")
+	consume(token.TOKEN_COLON, "Expected ':' after function parameters.")
 	block()
+
 	// Finish the function.
 	fnObj := endCompiler()
+
 	// Emit the closure opcode and capture its constant.
 	closureConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fnObj})
 	emitBytes(byte(runtime.OP_CLOSURE), closureConst)
@@ -149,9 +156,7 @@ func compileModuleFunction() runtime.Value {
 		emitByte(byteToEmit)
 		emitByte(index)
 	}
-	// Here we simulate retrieving the closure value.
-	// (In a full implementation you would fetch the closure from the constant pool,
-	// but for our purposes we create a new closure object from fnObj.)
+
 	return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewClosure(fnObj)}
 }
 
@@ -159,15 +164,16 @@ func modDeclarationField() (*runtime.ObjString, runtime.Value) {
 	// Parse the nested module's name.
 	consume(token.TOKEN_IDENTIFIER, "Expected module name in nested module declaration.")
 	nestedName := runtime.NewObjString(parser.previous.Start)
-	// Do not call declareVariable here.
-	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to begin nested module body.")
+
+	consume(token.TOKEN_COLON, "Expected ':' after nested module name.")
+	consume(token.TOKEN_INDENT, "Expected indented block after ':'.")
 
 	// Prepare slices for the nested module's fields.
 	nestedFieldNames := make([]*runtime.ObjString, 0)
 	nestedFieldDefaults := make([]runtime.Value, 0)
 
 	// Parse declarations inside the nested module body.
-	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+	for !check(token.TOKEN_DEDENT) && !check(token.TOKEN_EOF) {
 		if match(token.TOKEN_VAR) {
 			consume(token.TOKEN_IDENTIFIER, "Expected variable name in nested module.")
 			fName := runtime.NewObjString(parser.previous.Start)
@@ -216,7 +222,7 @@ func modDeclarationField() (*runtime.ObjString, runtime.Value) {
 			synchronize()
 		}
 	}
-	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close nested module body.")
+	consume(token.TOKEN_DEDENT, "Expected dedent after nested module block.")
 
 	// Create the nested module object now.
 	objModule := runtime.NewModule(nestedName)
@@ -290,22 +296,17 @@ func modDeclaration() {
 		return
 	}
 
-	// If no alias, proceed with module definition
-	if !check(token.TOKEN_LEFT_BRACE) {
-		reportError("Expected '{' to define module body or 'as' for aliasing after module name.")
-		return
-	}
-
 	moduleName := modulePathParts[0]
 	nameConstant := identifierConstant(token.Token{Start: moduleName})
 	declareVariable() // Reserve the module name in the current scope.
 
-	consume(token.TOKEN_LEFT_BRACE, "Expected '{' to define module body.")
+	consume(token.TOKEN_COLON, "Expected ':' after module name.")
+	consume(token.TOKEN_INDENT, "Expected indented block after ':'.")
 	fieldNames := make([]*runtime.ObjString, 0)
 	fieldDefaults := make([]runtime.Value, 0)
 
 	// Parse module body
-	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+	for !check(token.TOKEN_DEDENT) && !check(token.TOKEN_EOF) {
 		if match(token.TOKEN_VAR) {
 			consume(token.TOKEN_IDENTIFIER, "Expected variable name in module declaration.")
 			fName := runtime.NewObjString(parser.previous.Start)
@@ -353,7 +354,7 @@ func modDeclaration() {
 			synchronize()
 		}
 	}
-	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' to close module body.")
+	consume(token.TOKEN_DEDENT, "Expected dedent after module block.")
 
 	// Emit module creation
 	emitBytes(byte(runtime.OP_MODULE), nameConstant)
@@ -405,14 +406,14 @@ func useDeclaration() {
 	libName := parser.previous.Start[1 : len(parser.previous.Start)-1] // Remove quotes
 	libPathConstant := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(libName)})
 
-	// Parse opening brace: {
-	consume(token.TOKEN_LEFT_BRACE, "Expected '{' after library name in 'use' statement.")
+	consume(token.TOKEN_COLON, "Expected ':' after library name in 'use' statement.")
+	consume(token.TOKEN_INDENT, "Expected indented block after ':'.")
 
 	// Emit OP_USE with library name
 	emitBytes(byte(runtime.OP_USE), libPathConstant)
 
 	// Parse function declarations until '}'
-	for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+	for !check(token.TOKEN_DEDENT) && !check(token.TOKEN_EOF) {
 		// Parse return type (e.g., "int", "bool", "size_t")
 		consume(token.TOKEN_IDENTIFIER, "Expected return type before function name.")
 		returnType := parser.previous.Start
@@ -449,9 +450,7 @@ func useDeclaration() {
 		// Optional semicolon after each function declaration
 		consumeOptionalSemicolon()
 	}
-
-	// Parse closing brace: }
-	consume(token.TOKEN_RIGHT_BRACE, "Expected '}' after function declarations.")
+	consume(token.TOKEN_DEDENT, "Expected dedent after use block.")
 
 	// Optional semicolon after use statement
 	consumeOptionalSemicolon()

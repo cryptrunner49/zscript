@@ -161,7 +161,8 @@ func CompileMatchCaseBody() []uint8 {
 	start := currentChunk().Count()
 	for !check(token.TOKEN_PIPE) && !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
 		if match(token.TOKEN_BREAK) {
-			consume(token.TOKEN_SEMICOLON, "Expected ';' after 'break'.")
+			// Optional semicolon after use statement
+			consumeOptionalSemicolon()
 			break
 		} else {
 			statement()
@@ -175,20 +176,10 @@ func CompileMatchCaseBody() []uint8 {
 }
 
 // consumeOptionalSemicolon tries to match a semicolon.
-// If a semicolon is not found, it checks for a newline or end-of-file as acceptable.
 func consumeOptionalSemicolon() {
 	if match(token.TOKEN_SEMICOLON) {
 		return
-	}
-	// Check if we are at a natural statement end:
-	// If the current token is the end-of-file or a closing curly brace,
-	// or if the token is on a new line (using token.Line information).
-	if parser.current.Type == token.TOKEN_EOF ||
-		parser.current.Type == token.TOKEN_RIGHT_BRACE ||
-		parser.previous.Line < parser.current.Line {
-		// Implicit semicolon insertion.
+	} else {
 		return
 	}
-	// Otherwise, signal an error because neither a semicolon nor an appropriate line break was found.
-	errorAtCurrent("Expected ';' after statement.")
 }

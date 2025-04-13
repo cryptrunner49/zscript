@@ -1,10 +1,10 @@
 // TODO
-var color = "blue";
+var color = "blue"
 
 if (color == "red") {
-    print("This is red!");
+    print("This is red!")
 } elif (color == "blue") {
-    print("This is blue!");  // Outputs: This is blue!
+    print("This is blue!")  // Outputs: This is blue!
 } else {
-    print("Not red.");
+    print("Not red.")
 }

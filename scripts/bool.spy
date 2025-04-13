@@ -1,6 +1,6 @@
 // Section: Boolean Variables
-println("--- Boolean Demo ---");
-var truth = true;
-var ok = false;
-println("Truth value:", truth);  // Outputs: true
-println("Ok value:", ok);        // Outputs: false
+println("--- Boolean Demo ---")
+var truth = true
+var ok = false
+println("Truth value:", truth)  // Outputs: true
+println("Ok value:", ok)        // Outputs: false

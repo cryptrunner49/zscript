@@ -1,8 +1,9 @@
 // If-Else-If-Else Demonstration
-var color = "blue";
+var color = "blue"
 if (color == "red"):
-    print("This is red!");
-else if (color == "blue"):
-    print("This is blue!");  // Outputs: This is blue!
+    print("This is red!")
 else:
-    print("Not red.");
+    if (color == "blue"):
+        print("This is blue!")  // Outputs: This is blue!
+    else:
+        print("Not red.")

@@ -1,17 +1,16 @@
-fn printDemo() {
+func printDemo():
     // Basic print (no newline)
-    print("Hello ");
-    print("World");
-    println();  // New line
+    print("Hello ")
+    print("World")
+    println()  // New line
     
     // println with multiple arguments
-    println("This", "is", "a", "test");
+    println("This", "is", "a", "test")
     
     // printf with format specifiers
-    var num = 42;
-    var floatNum = 3.14159;
-    printf("Number: %v, Float: %v\n", num, floatNum);
-}
+    var num = 42
+    var floatNum = 3.14159
+    printf("Number: %v, Float: %v\n", num, floatNum)
 
-println("\n=== Print Demo ===");
-printDemo();
+println("\n=== Print Demo ===")
+printDemo()

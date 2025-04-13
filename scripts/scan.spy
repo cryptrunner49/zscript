@@ -1,16 +1,15 @@
-fn scanDemo() {
-    println("Enter some words (space-separated):");
-    var words = scan();  // Returns array of words
-    println("You entered words:", words);
+func scanDemo():
+    println("Enter some words (space-separated):")
+    var words = scan()  // Returns array of words
+    println("You entered words:", words)
     
-    println("Enter a full line:");
-    var line = scanln();  // Returns entire line as string
-    println("You entered line:", line);
+    println("Enter a full line:")
+    var line = scanln()  // Returns entire line as string
+    println("You entered line:", line)
     
-    println("Enter formatted input (e.g., '42 hello'):");
-    var formatted = scanf("%d %s");  // Takes format string, returns input as string
-    println("Formatted input:", formatted);
-}
+    println("Enter formatted input (e.g., '42 hello'):")
+    var formatted = scanf("%d %s")  // Takes format string, returns input as string
+    println("Formatted input:", formatted)
 
-println("\n=== Scan Demo ===");
-scanDemo();
+println("\n=== Scan Demo ===")
+scanDemo()

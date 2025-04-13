@@ -14,17 +14,19 @@ func expressionStatement() {
 }
 
 func ifStatement() {
-	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'if' to start condition.")
+	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'if'.")
 	expression()
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after if condition (e.g., 'if (x > 0)').")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
+	consume(token.TOKEN_COLON, "Expected ':' after if condition.")
 	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
-	statement()
+	block()
 	elseJump := emitJump(byte(runtime.OP_JUMP))
 	patchJump(thenJump)
 	emitByte(byte(runtime.OP_POP))
 	if match(token.TOKEN_ELSE) {
-		statement()
+		consume(token.TOKEN_COLON, "Expected ':' after else.")
+		block()
 	}
 	patchJump(elseJump)
 }
@@ -32,53 +34,41 @@ func ifStatement() {
 func whileStatement() {
 	beginScope()
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'while'.")
-
-	// Set loopStart before the condition
 	loopStart := currentChunk().Count()
-
-	expression() // Emits condition
+	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
-
+	consume(token.TOKEN_COLON, "Expected ':' after while condition.")
 	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
-
-	// Track loop for continue/break
-	current.loops = append(current.loops, Loop{
-		jumpType:        JUMP_WHILE,
-		start:           loopStart,
-		exitPatches:     make([]int, 0),
-		continuePatches: make([]int, 0),
-	})
-	currentLoop := &current.loops[len(current.loops)-1]
-
-	statement() // Body
-
+	current.loops = append(current.loops, Loop{start: loopStart})
+	block()
 	emitLoop(loopStart)
-
-	// Patch continue jumps to loopStart
+	currentLoop := current.loops[len(current.loops)-1]
+	// Patch continue jumps
 	for _, operandPos := range currentLoop.continuePatches {
 		opAddress := operandPos - 1
 		currentIPAfterOperand := opAddress + 3
 		offset := currentIPAfterOperand - loopStart
-		if offset < 0 || offset > 65535 {
-			reportError("Continue jump offset out of range.")
+		if offset < 0 {
+			reportError("Invalid continue jump offset.")
+			return
 		}
-		high := byte(offset >> 8)
-		low := byte(offset)
-		currentChunk().Code()[operandPos] = high
-		currentChunk().Code()[operandPos+1] = low
+		currentChunk().Code()[operandPos] = byte(offset >> 8)
+		currentChunk().Code()[operandPos+1] = byte(offset)
 	}
-
-	// Patch exit jump
 	patchJump(exitJump)
 	emitByte(byte(runtime.OP_POP))
-
 	// Patch break jumps
 	currentLoop.exitAddress = currentChunk().Count()
-	for _, patchPos := range currentLoop.exitPatches {
-		patchJump(patchPos)
+	for _, operandPos := range currentLoop.exitPatches {
+		offset := currentLoop.exitAddress - operandPos - 2
+		if offset < 0 {
+			reportError("Invalid break jump offset.")
+			return
+		}
+		currentChunk().Code()[operandPos] = byte(offset >> 8)
+		currentChunk().Code()[operandPos+1] = byte(offset)
 	}
-
 	current.loops = current.loops[:len(current.loops)-1]
 	endScope()
 }
@@ -123,6 +113,7 @@ func forStatement() {
 		expression() // Increment part
 		emitByte(byte(runtime.OP_POP))
 		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after for clauses.")
+		consume(token.TOKEN_COLON, "Expected ':' after iter clauses.")
 
 		emitLoop(loopStart)
 		loopStart = incrementStart
@@ -132,7 +123,7 @@ func forStatement() {
 		currentLoop.incrementStart = incrementStart
 	}
 
-	statement() // Loop body
+	block() // Loop body
 
 	emitLoop(loopStart)
 
@@ -260,7 +251,8 @@ func iterStatement() {
 	expression()
 
 	// Expect ')' to close the iterator declaration.
-	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after iterable expression.")
+	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
+	consume(token.TOKEN_COLON, "Expected ':' after while condition.")
 
 	// Store the iterable in a temporary local variable to persist across iterations.
 	arraySlot := declareTemporary()                  // Slot for the array (typically slot 2).
@@ -299,7 +291,7 @@ func iterStatement() {
 	// Removed emitByte(byte(runtime.OP_POP)) here to keep the value on the stack.
 
 	// Compile the loop body (e.g., { print item; }).
-	statement()
+	block()
 
 	// Advance the iterator to the next element using iter_next(it).
 	constantIndex = identifierConstant(token.Token{Start: "iter_next", Length: len("iter_next"), Line: parser.previous.Line})
@@ -322,4 +314,8 @@ func iterStatement() {
 func matchStatement() {
 	// TODO
 	fmt.Println("###### TODO ######")
+}
+
+func passStatement() {
+	consumeOptionalSemicolon()
 }
