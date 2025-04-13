@@ -406,7 +406,7 @@ func charLiteral(canAssign bool) {
 // makeConstant adds a constant value to the current chunk and returns its index.
 func makeConstant(val runtime.Value) uint8 {
 	constant := currentChunk().AddConstant(val)
-	if constant > 1024 {
+	if constant > 1024*4 {
 		reportError("Too many constants in this chunk (max 256). Consider splitting the code.")
 		return 0
 	}

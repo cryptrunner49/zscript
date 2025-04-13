@@ -20,13 +20,19 @@ func ifStatement() {
 	consume(token.TOKEN_COLON, "Expected ':' after if condition.")
 	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
+
+	beginScope()
 	block()
+	endScope()
+
 	elseJump := emitJump(byte(runtime.OP_JUMP))
 	patchJump(thenJump)
 	emitByte(byte(runtime.OP_POP))
 	if match(token.TOKEN_ELSE) {
 		consume(token.TOKEN_COLON, "Expected ':' after else.")
+		beginScope()
 		block()
+		endScope()
 	}
 	patchJump(elseJump)
 }

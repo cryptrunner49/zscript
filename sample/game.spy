@@ -1,0 +1,28 @@
+// Guess the Number Game in SPYScript
+
+println("Welcome to the Guess the Number game!")
+println("I'm thinking of a number between 1 and 100.")
+
+// Generate a random target number between 1 and 100.
+var target = random_between(1, 100)
+var guess = 0
+var attempts = 0
+
+while (guess != target):
+    println("Enter your guess (1-100):")
+    // Read input from the user and convert it to an integer.
+    guess = parse_int(scanln())
+    attempts = attempts + 1
+    
+    if (guess < target):
+        println("Too low! Try again.")
+    else:
+        if (guess > target):
+            println("Too high! Try again.")
+        else:
+            println("Congratulations! You guessed the number!")
+            println("Total attempts:", attempts)
+
+// Define a map (on one line) to showcase game statistics.
+var stats = {"attempts": attempts, "target": target}
+println("Game Stats:", stats)

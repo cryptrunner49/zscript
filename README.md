@@ -1,4 +1,4 @@
-# 🕵️‍♂️ SPYScript - Slim PY Script
+# 🕵️‍♂️ SPYScript
 
 **SPYScript** is a lightweight.
 
@@ -7,8 +7,8 @@
 ## 👩‍💻 Hello World
 
 ```spy
-var hello = "Hello, World!";
-println(hello);  // Outputs: Hello, World!
+hello = "Hello, World!";
+println(hello)  // Outputs: Hello, World!
 ```
 
 📖 Explore variables, structs, loops, and more in the [SPYScript Usage Guide](SPYSCRIPT_USAGE.md).
@@ -18,7 +18,7 @@ println(hello);  // Outputs: Hello, World!
 ## ✨ Features
 
 - **🌍 Unicode & Emoji Identifiers** — Use `π` or even `🐱` as variable names.
-- **🧠 Simple Syntax** — Easy-to-learn keywords like `var`, `fn`, `if`, and `for`.
+- **🧠 Simple Syntax** — Easy-to-learn keywords like `var`, `func`, `if`, and `for`.
 - **⚙️ Native Functions** — Built-ins such as `clock()`, `shuffle()`, and `random_between()`.
 - **🧱 Structs & Closures** — Create custom types and use powerful functional constructs.
 - **📁 File I/O** — Read and write files with `read_file()` and `write_file()`.
@@ -79,7 +79,7 @@ chmod +x spyvm
 3. Run a script:
 
    ```bash
-   ./bin/spyvm sample/rpg.spy
+   ./bin/spyvm sample/game.spy
    ```
 
 ---
