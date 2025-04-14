@@ -1,12 +1,10 @@
 var greeting = "Hello, world!"
-var message = "Chat!"
 println(greeting) // Outputs: Hello, world!
-println(message)  // Outputs: Chat!
 
 // Concatenation ASCII
-var greetingText = "Hello, " + "Seed!"
+var greetingText = "Hello, " + "world!"
 var msgAdd = "Hi" + "!"
-println(greetingText) // Outputs: Hello, Seed!
+println(greetingText) // Outputs: Hello, world!
 println(msgAdd)       // Outputs: Hi!
 
 // Cropping ASCII
