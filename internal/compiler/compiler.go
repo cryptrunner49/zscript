@@ -632,20 +632,20 @@ func namedVariable(name token.Token, canAssign bool) {
 		emitBytes(setOp, uint8(arg))
 	} else if match(token.TOKEN_PLUS_PLUS) {
 		// Postfix x++: Load, duplicate, increment, store, pop new value, leave original on stack
-		emitBytes(getOp, uint8(arg))                                     // Load variable value (e.g., 5)
-		emitByte(byte(runtime.OP_DUP))                                   // Duplicate for return (stack: [5, 5])
-		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1 (stack: [5, 5, 1])
-		emitByte(byte(runtime.OP_ADD))                                   // Increment (stack: [5, 6])
-		emitBytes(setOp, uint8(arg))                                     // Store new value back (stack: [5, 6])
-		emitByte(byte(runtime.OP_POP))                                   // Pop new value (stack: [5])
+		emitBytes(getOp, uint8(arg))
+		emitByte(byte(runtime.OP_DUP))
+		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1})
+		emitByte(byte(runtime.OP_ADD))
+		emitBytes(setOp, uint8(arg))
+		emitByte(byte(runtime.OP_POP))
 	} else if match(token.TOKEN_MINUS_MINUS) {
 		// Postfix x--: Load, duplicate, decrement, store, pop new value, leave original on stack
-		emitBytes(getOp, uint8(arg))                                     // Load variable value (e.g., 6)
-		emitByte(byte(runtime.OP_DUP))                                   // Duplicate for return (stack: [6, 6])
-		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1}) // Push 1 (stack: [6, 6, 1])
-		emitByte(byte(runtime.OP_SUBTRACT))                              // Decrement (stack: [6, 5])
-		emitBytes(setOp, uint8(arg))                                     // Store new value back (stack: [6, 5])
-		emitByte(byte(runtime.OP_POP))                                   // Pop new value (stack: [6])
+		emitBytes(getOp, uint8(arg))
+		emitByte(byte(runtime.OP_DUP))
+		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1})
+		emitByte(byte(runtime.OP_SUBTRACT))
+		emitBytes(setOp, uint8(arg))
+		emitByte(byte(runtime.OP_POP))
 	} else {
 		emitBytes(getOp, uint8(arg))
 	}

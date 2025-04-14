@@ -248,7 +248,7 @@ func iterStatement() {
 
 	// Declare the iterator variable (e.g., 'item') and get its slot in the local scope.
 	iterVarDeclaration()
-	iterVarSlot := uint8(current.localCount - 1) // Slot for 'item' (typically slot 1).
+	iterVarSlot := uint8(current.localCount - 1)
 
 	// Expect 'in' to separate the variable from the iterable expression.
 	consume(token.TOKEN_IN, "Expected 'in' after iterator variable.")
@@ -294,17 +294,16 @@ func iterStatement() {
 	emitBytes(byte(runtime.OP_GET_GLOBAL), iteratorConstant) // Push global 'it'.
 	emitBytes(byte(runtime.OP_CALL), 1)                      // Call iter_value, returns value.
 	emitBytes(byte(runtime.OP_SET_LOCAL), iterVarSlot)       // Assign value to 'item'.
-	// Removed emitByte(byte(runtime.OP_POP)) here to keep the value on the stack.
 
 	// Compile the loop body (e.g., { print item; }).
 	block()
 
 	// Advance the iterator to the next element using iter_next(it).
 	constantIndex = identifierConstant(token.Token{Start: "iter_next", Length: len("iter_next"), Line: parser.previous.Line})
-	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex)    // Push iter_next function.
-	emitBytes(byte(runtime.OP_GET_GLOBAL), iteratorConstant) // Push global 'it'.
-	emitBytes(byte(runtime.OP_CALL), 1)                      // Call iter_next, returns null.
-	emitByte(byte(runtime.OP_POP))                           // Pop null result.
+	emitBytes(byte(runtime.OP_GET_GLOBAL), constantIndex)
+	emitBytes(byte(runtime.OP_GET_GLOBAL), iteratorConstant)
+	emitBytes(byte(runtime.OP_CALL), 1)
+	emitByte(byte(runtime.OP_POP))
 
 	// Loop back to the condition check.
 	emitLoop(loopStart)
@@ -313,8 +312,8 @@ func iterStatement() {
 	patchJump(exitJump)
 
 	// Cleanup: Adjust locals for scope exit.
-	current.localCount -= 2 // Account for 'item' and 'array'.
-	endScope()              // Close scope; no additional pops needed.
+	current.localCount -= 2
+	endScope()
 }
 
 func matchStatement() {
