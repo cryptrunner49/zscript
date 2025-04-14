@@ -23,4 +23,4 @@ println(my_c_func_bool(3))    // Should print true
 println(my_c_func_bool(-1))   // Should print false
 println(my_c_func_uint(10))   // Should print some uint32_t value
 
-// LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH_TO_LIBRARY_FOLDER bin/goseedvm scripts/use.seed
+// LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PATH_TO_LIBRARY_FOLDER bin/spyvm scripts/use.spy
