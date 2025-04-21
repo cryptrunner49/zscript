@@ -46,17 +46,27 @@ func whileStatement() {
 	consume(token.TOKEN_COLON, "Expected ':' after while condition.")
 	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
-	current.loops = append(current.loops, Loop{start: loopStart})
+
+	current.loops = append(current.loops, Loop{
+		jumpType:        JUMP_WHILE,
+		start:           loopStart,
+		exitPatches:     make([]int, 0),
+		continuePatches: make([]int, 0),
+	})
+	currentLoop := &current.loops[len(current.loops)-1]
+
+	beginScope()
 	block()
+	endScope()
 	emitLoop(loopStart)
-	currentLoop := current.loops[len(current.loops)-1]
+
 	// Patch continue jumps
 	for _, operandPos := range currentLoop.continuePatches {
 		opAddress := operandPos - 1
 		currentIPAfterOperand := opAddress + 3
 		offset := currentIPAfterOperand - loopStart
-		if offset < 0 {
-			reportError("Invalid continue jump offset.")
+		if offset < 0 || offset > 65535 {
+			reportError("Continue jump offset out of range.")
 			return
 		}
 		currentChunk().Code()[operandPos] = byte(offset >> 8)
@@ -64,16 +74,11 @@ func whileStatement() {
 	}
 	patchJump(exitJump)
 	emitByte(byte(runtime.OP_POP))
+
 	// Patch break jumps
 	currentLoop.exitAddress = currentChunk().Count()
-	for _, operandPos := range currentLoop.exitPatches {
-		offset := currentLoop.exitAddress - operandPos - 2
-		if offset < 0 {
-			reportError("Invalid break jump offset.")
-			return
-		}
-		currentChunk().Code()[operandPos] = byte(offset >> 8)
-		currentChunk().Code()[operandPos+1] = byte(offset)
+	for _, patchPos := range currentLoop.exitPatches {
+		patchJump(patchPos)
 	}
 	current.loops = current.loops[:len(current.loops)-1]
 	endScope()
@@ -116,7 +121,7 @@ func forStatement() {
 		bodyJump = emitJump(byte(runtime.OP_JUMP))
 		incrementStart = currentChunk().Count()
 
-		expression() // Increment part
+		expression()
 		emitByte(byte(runtime.OP_POP))
 		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after for clauses.")
 		consume(token.TOKEN_COLON, "Expected ':' after iter clauses.")
@@ -129,7 +134,9 @@ func forStatement() {
 		currentLoop.incrementStart = incrementStart
 	}
 
+	beginScope()
 	block() // Loop body
+	endScope()
 
 	emitLoop(loopStart)
 
@@ -296,7 +303,9 @@ func iterStatement() {
 	emitBytes(byte(runtime.OP_SET_LOCAL), iterVarSlot)       // Assign value to 'item'.
 
 	// Compile the loop body (e.g., { print item; }).
+	beginScope()
 	block()
+	endScope()
 
 	// Advance the iterator to the next element using iter_next(it).
 	constantIndex = identifierConstant(token.Token{Start: "iter_next", Length: len("iter_next"), Line: parser.previous.Line})
