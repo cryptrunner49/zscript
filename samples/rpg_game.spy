@@ -1,5 +1,4 @@
-//enable_debug()
-//enable_trace()
+// RPG Game in SPYScript
 
 struct Player:
     name = ""
