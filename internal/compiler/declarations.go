@@ -325,8 +325,101 @@ func modDeclaration() {
 					defVal = runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
 				} else if match(token.TOKEN_NULL) {
 					defVal = runtime.Value{Type: runtime.VAL_NULL}
+				} else if match(token.TOKEN_LEFT_BRACKET) {
+					// Parse array literal and collect elements
+					elements := make([]runtime.Value, 0)
+					if !check(token.TOKEN_RIGHT_BRACKET) {
+						for {
+							if match(token.TOKEN_NUMBER) {
+								val, _ := strconv.ParseFloat(parser.previous.Start, 64)
+								elements = append(elements, runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
+								emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: val})
+							} else if match(token.TOKEN_STRING) {
+								text := parser.previous.Start
+								str := text[1 : len(text)-1]
+								objStr := runtime.NewObjString(str)
+								elements = append(elements, runtime.Value{Type: runtime.VAL_OBJ, Obj: objStr})
+								emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: objStr})
+							} else if match(token.TOKEN_TRUE) {
+								elements = append(elements, runtime.Value{Type: runtime.VAL_BOOL, Bool: true})
+								emitConstant(runtime.Value{Type: runtime.VAL_BOOL, Bool: true})
+							} else if match(token.TOKEN_FALSE) {
+								elements = append(elements, runtime.Value{Type: runtime.VAL_BOOL, Bool: false})
+								emitConstant(runtime.Value{Type: runtime.VAL_BOOL, Bool: false})
+							} else if match(token.TOKEN_NULL) {
+								elements = append(elements, runtime.Value{Type: runtime.VAL_NULL})
+								emitConstant(runtime.Value{Type: runtime.VAL_NULL})
+							} else {
+								reportError("Array elements must be literals (number, string, true, false, null).")
+								elements = append(elements, runtime.Value{Type: runtime.VAL_NULL})
+								expression() // Consume invalid expression
+							}
+							if !match(token.TOKEN_COMMA) {
+								break
+							}
+						}
+					}
+					consume(token.TOKEN_RIGHT_BRACKET, "Expected ']' after array elements.")
+					// Create ObjArray and emit OP_ARRAY
+					objArray := runtime.NewArray(elements)
+					defVal = runtime.Value{Type: runtime.VAL_OBJ, Obj: objArray}
+					emitBytes(byte(runtime.OP_ARRAY), byte(len(elements)))
+				} else if match(token.TOKEN_LEFT_BRACE) {
+					// Parse map literal and collect key-value pairs
+					pairs := make(map[*runtime.ObjString]runtime.Value)
+					for !check(token.TOKEN_RIGHT_BRACE) && !check(token.TOKEN_EOF) {
+						var key *runtime.ObjString
+						if match(token.TOKEN_STRING) {
+							key = runtime.NewObjString(parser.previous.Start[1 : len(parser.previous.Start)-1])
+							emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: key})
+						} else if match(token.TOKEN_IDENTIFIER) {
+							key = runtime.NewObjString(parser.previous.Start)
+							emitConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: key})
+						} else {
+							reportError("Map key must be a string or identifier.")
+							break
+						}
+						consume(token.TOKEN_COLON, "Expected ':' after map key.")
+						var value runtime.Value
+						if match(token.TOKEN_NUMBER) {
+							val, _ := strconv.ParseFloat(parser.previous.Start, 64)
+							value = runtime.Value{Type: runtime.VAL_NUMBER, Number: val}
+							emitConstant(value)
+						} else if match(token.TOKEN_STRING) {
+							text := parser.previous.Start
+							str := text[1 : len(text)-1]
+							objStr := runtime.NewObjString(str)
+							value = runtime.Value{Type: runtime.VAL_OBJ, Obj: objStr}
+							emitConstant(value)
+						} else if match(token.TOKEN_TRUE) {
+							value = runtime.Value{Type: runtime.VAL_BOOL, Bool: true}
+							emitConstant(value)
+						} else if match(token.TOKEN_FALSE) {
+							value = runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
+							emitConstant(value)
+						} else if match(token.TOKEN_NULL) {
+							value = runtime.Value{Type: runtime.VAL_NULL}
+							emitConstant(value)
+						} else {
+							reportError("Map values must be literals (number, string, true, false, null).")
+							value = runtime.Value{Type: runtime.VAL_NULL}
+							expression() // Consume invalid expression
+						}
+						pairs[key] = value
+						if !match(token.TOKEN_COMMA) {
+							break
+						}
+					}
+					consume(token.TOKEN_RIGHT_BRACE, "Expected '}' after map literal.")
+					// Create ObjMap and emit OP_MAP
+					objMap := runtime.NewMap()
+					for k, v := range pairs {
+						objMap.Entries[k] = v
+					}
+					defVal = runtime.Value{Type: runtime.VAL_OBJ, Obj: objMap}
+					emitBytes(byte(runtime.OP_MAP), byte(len(pairs)))
 				} else {
-					reportError("Expected a literal value for variable initializer in module.")
+					reportError("Expected a literal value (number, string, true, false, null, array, or map) for variable initializer in module.")
 					defVal = runtime.Value{Type: runtime.VAL_NULL}
 				}
 			} else {
