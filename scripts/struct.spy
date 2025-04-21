@@ -36,3 +36,19 @@ struct Bunny
 var bunny = Bunny()
 bunny.favoriteFood = "Carrot"
 println(bunny.favoriteFood)  // Outputs: Carrot
+
+struct Test:
+    x = 1
+    y = "text"
+    z = true
+    w = null
+    xy = [1, 2]
+    xz = {"1":"test"}
+
+var test = Test()
+println(test.x)
+println(test.y)
+println(test.z)
+println(test.w)
+println(test.xy)
+println(test.xz)
