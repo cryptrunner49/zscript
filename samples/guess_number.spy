@@ -16,12 +16,11 @@ while (guess != target):
     
     if (guess < target):
         println("Too low! Try again.")
+    | (guess > target):
+        println("Too high! Try again.")
     else:
-        if (guess > target):
-            println("Too high! Try again.")
-        else:
-            println("Congratulations! You guessed the number!")
-            println("Total attempts:", attempts)
+        println("Congratulations! You guessed the number!")
+        println("Total attempts:", attempts)
 
 // Define a map (on one line) to showcase game statistics.
 var stats = {"attempts": attempts, "target": target}

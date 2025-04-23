@@ -108,27 +108,25 @@ func create_player():
         player.maxHealth = 120
         player.attack = 12
         player.defense = 8
+    | (classChoice == "2"):
+        player.class = "Mage"
+        player.health = 80
+        player.maxHealth = 80
+        player.attack = 15
+        player.defense = 3
+    | (classChoice == "3"):
+        player.class = "Archer"
+        player.health = 100
+        player.maxHealth = 100
+        player.attack = 10
+        player.defense = 5
     else:
-        if (classChoice == "2"):
-            player.class = "Mage"
-            player.health = 80
-            player.maxHealth = 80
-            player.attack = 15
-            player.defense = 3
-        else:
-            if (classChoice == "3"):
-                player.class = "Archer"
-                player.health = 100
-                player.maxHealth = 100
-                player.attack = 10
-                player.defense = 5
-            else:
-                println("Invalid choice, defaulting to Warrior.")
-                player.class = "Warrior"
-                player.health = 120
-                player.maxHealth = 120
-                player.attack = 12
-                player.defense = 8
+        println("Invalid choice, defaulting to Warrior.")
+        player.class = "Warrior"
+        player.health = 120
+        player.maxHealth = 120
+        player.attack = 12
+        player.defense = 8
     player.inventory = []
     return player
 
@@ -163,7 +161,6 @@ func main():
         println("\n" + location["description"])
         println("What do you want to do?")
 
-
         for (var i = 0; i < len(location["actions"]); i++):
             println(to_str(i + 1) + ". " + location["actions"][i])
         var choice = scanln()
@@ -172,31 +169,26 @@ func main():
             var action = location["actions"][actionIndex]
             if (action == "Go to Forest"):
                 currentLocation = "Forest"
-            else:
-                if (action == "Go to Cave"):
-                    currentLocation = "Cave"
+            | (action == "Go to Cave"):
+                currentLocation = "Cave"
+            | (action == "Go to Town"):
+                currentLocation = "Town"
+            | (action == "Rest"):
+                player.health = player.maxHealth
+                println("You rested and restored your health to full.")
+            | (action == "Fight Enemy"):
+                if (!handle_combat(player, location)):
+                    gameOver = true
+                    println("You were defeated. Game over.")
+            | (action == "Fight Dragon"):
+                var enemy = create_enemy("Dragon")
+                var victory = combat(player, enemy)
+                if (!victory):
+                    gameOver = true
+                    println("You were defeated by the Dragon. Game over.")
                 else:
-                    if (action == "Go to Town"):
-                        currentLocation = "Town"
-                    else:
-                        if (action == "Rest"):
-                            player.health = player.maxHealth
-                            println("You rested and restored your health to full.")
-                        else:
-                            if (action == "Fight Enemy"):
-                                if (!handle_combat(player, location)):
-                                    gameOver = true
-                                    println("You were defeated. Game over.")
-                            else:
-                                if (action == "Fight Dragon"):
-                                    var enemy = create_enemy("Dragon")
-                                    var victory = combat(player, enemy)
-                                    if (!victory):
-                                        gameOver = true
-                                        println("You were defeated by the Dragon. Game over.")
-                                    else:
-                                        println("Congratulations! You defeated the Dragon and saved the land!")
-                                        gameOver = true
+                    println("Congratulations! You defeated the Dragon and saved the land!")
+                    gameOver = true
         else:
             println("Invalid choice. Please select a valid option.")
     

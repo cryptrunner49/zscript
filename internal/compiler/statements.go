@@ -14,27 +14,68 @@ func expressionStatement() {
 }
 
 func ifStatement() {
+	// Collect all jumps that need to skip to the end of the entire if/else-if/else chain
+	var endJumps []int
+
+	// Parse the initial if(condition)
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'if'.")
 	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
 	consume(token.TOKEN_COLON, "Expected ':' after if condition.")
-	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
-	emitByte(byte(runtime.OP_POP))
 
+	// Jump over the then-block if false
+	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+	emitByte(byte(runtime.OP_POP)) // Pop the condition result
+
+	// Compile the 'then' block
 	beginScope()
 	block()
 	endScope()
 
-	elseJump := emitJump(byte(runtime.OP_JUMP))
+	// After running the then-block, skip the rest of the chain
+	endJumps = append(endJumps, emitJump(byte(runtime.OP_JUMP)))
+
+	// Patch the false-condition jump to land here
 	patchJump(thenJump)
-	emitByte(byte(runtime.OP_POP))
+	emitByte(byte(runtime.OP_POP)) // Pop the condition result
+
+	// Handle any number of '|' clauses as else-if
+	for match(token.TOKEN_PIPE) {
+		// Parse: |(condition)
+		consume(token.TOKEN_LEFT_PAREN, "Expected '(' after '|' to start condition.")
+		expression()
+		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after '|' condition.")
+		consume(token.TOKEN_COLON, "Expected ':' after '|' condition.")
+
+		// Jump over this branch if false
+		pipeJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
+		emitByte(byte(runtime.OP_POP))
+
+		// Compile the branch block
+		beginScope()
+		block()
+		endScope()
+
+		// After branch, skip remaining clauses
+		endJumps = append(endJumps, emitJump(byte(runtime.OP_JUMP)))
+
+		// Patch the false-condition jump for this branch
+		patchJump(pipeJump)
+		emitByte(byte(runtime.OP_POP))
+	}
+
+	// Optional final else
 	if match(token.TOKEN_ELSE) {
 		consume(token.TOKEN_COLON, "Expected ':' after else.")
 		beginScope()
 		block()
 		endScope()
 	}
-	patchJump(elseJump)
+
+	// Patch all the skip-to-end jumps
+	for _, j := range endJumps {
+		patchJump(j)
+	}
 }
 
 func whileStatement() {

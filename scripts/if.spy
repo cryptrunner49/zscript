@@ -1,9 +1,22 @@
-// If-Else-If-Else Demonstration
-var color = "blue"
-if (color == "red"):
-    print("This is red!")
-else:
-    if (color == "blue"):
-        print("This is blue!")  // Outputs: This is blue!
+// If-Else-If-Else
+func checkColor(color):
+    if (color == "red"):
+        println("This is red!")
+    | (color == "blue"):
+        println("This is blue!")
+    | (color == "green"):
+        println("This is green!")
+    | (color == "yellow"):
+        println("This is yellow!")
+    | (color == "purple"):
+        println("This is purple!")
     else:
-        print("Not red.")
+        println("Unknown color.")
+
+// Test all branches
+checkColor("red")      // Should print: This is red!
+checkColor("blue")     // Should print: This is blue!
+checkColor("green")    // Should print: This is green!
+checkColor("yellow")   // Should print: This is yellow!
+checkColor("purple")   // Should print: This is purple!
+checkColor("orange")   // Should print: Unknown color.
