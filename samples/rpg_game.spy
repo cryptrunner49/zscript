@@ -18,9 +18,47 @@ struct Enemy:
     defense = 0
     xpReward = 0
 
-var enemies = {"Wolf": {"health":30, "attack":5, "defense":2, "xpReward":20}, "Bear": {"health":50, "attack":10, "defense":5, "xpReward":50}, "Dragon": {"health":140, "attack":18, "defense":10, "xpReward":200}}
+var enemies = {
+    "Wolf": {
+        "health": 30,
+        "attack": 5,
+        "defense": 2,
+        "xpReward": 20
+    },
+    "Bear": {
+        "health": 50,
+        "attack": 10,
+        "defense": 5,
+        "xpReward": 50
+    },
+    "Dragon": {
+        "health": 140,
+        "attack": 18,
+        "defense": 10,
+        "xpReward": 200
+    }
+};
 
-var locations = {"Town": {"description": "A peaceful town.", "actions": ["Go to Forest", "Go to Cave", "Rest"], "enemies": [], "items": []}, "Forest": {"description": "A dense forest teeming with wild animals.", "actions": ["Go to Town", "Fight Enemy"], "enemies": ["Wolf", "Bear"], "items": ["Health Potion"]}, "Cave": {"description": "A dark cave where a fearsome dragon dwells.", "actions": ["Go to Town", "Fight Dragon"], "enemies": ["Dragon"], "items": []}}
+var locations = {
+    "Town": {
+        "description": "A peaceful town.",
+        "actions": ["Go to Forest", "Go to Cave", "Rest"],
+        "enemies": [],
+        "items": []
+    },
+    "Forest": {
+        "description": "A dense forest teeming with wild animals.",
+        "actions": ["Go to Town", "Fight Enemy"],
+        "enemies": ["Wolf", "Bear"],
+        "items": ["Health Potion"]
+    },
+    "Cave": {
+        "description": "A dark cave where a fearsome dragon dwells.",
+        "actions": ["Go to Town", "Fight Dragon"],
+        "enemies": ["Dragon"],
+        "items": []
+    }
+};
 
 func remove_element(arr, index):
     var new_arr = []

@@ -105,9 +105,9 @@ brew install go pkg-config gcc make libffi readline
 
 Coming soon to SPYScript:
 
+- [x] **Elif Support** — Less nesting, more clarity.
 - [ ] **Pattern Matching** — More expressive conditionals.
 - [ ] **Switch Statement** — Cleaner multi-branch logic.
-- [ ] **Elif Support** — Less nesting, more clarity.
 - [ ] **Enums** — Organize data like a pro.
 - [ ] **Error Handling** — Try-catch or similar constructs.
 - [ ] **Standard Library** — More built-in power.

@@ -18,18 +18,20 @@ type Lexer struct {
 	pendingIndents int
 	pendingDedents int
 	atLineStart    bool
+	braceNesting   int // Tracks nesting level of brace-delimited contexts
 }
 
 var lexer Lexer
 
 func InitLexer(source string) {
 	lexer = Lexer{
-		source:      source,
-		start:       0,
-		current:     0,
-		line:        1,
-		indents:     []int{0},
-		atLineStart: true,
+		source:       source,
+		start:        0,
+		current:      0,
+		line:         1,
+		indents:      []int{0},
+		atLineStart:  true,
+		braceNesting: 0, // Initialize brace nesting level
 	}
 
 	// Skip shebang line if present
@@ -85,8 +87,13 @@ func ScanToken() token.Token {
 	case ')':
 		return lexer.makeToken(token.TOKEN_RIGHT_PAREN)
 	case '{':
+		lexer.braceNesting++ // Entering a brace-delimited context
 		return lexer.makeToken(token.TOKEN_LEFT_BRACE)
 	case '}':
+		lexer.braceNesting-- // Exiting a brace-delimited context
+		if lexer.braceNesting < 0 {
+			return lexer.errorToken("Unmatched closing brace '}'.")
+		}
 		return lexer.makeToken(token.TOKEN_RIGHT_BRACE)
 	case '[':
 		return lexer.makeToken(token.TOKEN_LEFT_BRACKET)
@@ -244,7 +251,9 @@ func (l *Lexer) skipWhitespace() {
 		if r == '\n' {
 			l.line++
 			l.advance()
-			l.processIndentation() // Process indentation for the next line immediately
+			if l.braceNesting == 0 {
+				l.processIndentation() // Process indentation only outside brace contexts
+			}
 		} else if unicode.IsSpace(r) {
 			l.advance()
 		} else if r == '/' {
