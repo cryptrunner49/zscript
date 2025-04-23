@@ -1,6 +1,6 @@
-# SPYScript Usage Guide
+# ZScript Usage Guide
 
-Welcome to the SPYScript Usage Guide! SPYScript is a versatile scripting language that supports modern programming constructs, a variety of built-in features, and Unicode/emoji identifiers. This guide walks through the language features with practical examples and explanations.
+Welcome to the ZScript Usage Guide! ZScript is a versatile scripting language that supports modern programming constructs, a variety of built-in features, and Unicode/emoji identifiers. This guide walks through the language features with practical examples and explanations.
 
 ---
 
@@ -23,7 +23,7 @@ Welcome to the SPYScript Usage Guide! SPYScript is a versatile scripting languag
 
 ## 1. Variables
 
-```spy
+```z
 // Implicitly declaring a Number
 num = 42
 println("Number:", num)
@@ -61,7 +61,7 @@ println("Null:", nothing)
 
 ## 2. Closures
 
-```spy
+```z
 func outer():
     var a = 1
     var b = 2
@@ -79,7 +79,7 @@ outer()
 
 ## 3. Fibonacci Recursive
 
-```spy
+```z
 func fib(n):
     if (n < 2):
         return n
@@ -94,7 +94,7 @@ printf("Time taken: %v seconds\n", clock() - start)
 
 ## 4. Fibonacci Iterative
 
-```spy
+```z
 func fib(n):
     if (n < 2):
         return n
@@ -115,7 +115,7 @@ printf("Time taken: %v seconds\n", clock() - start)
 
 ## 5. Structs and Control Flow
 
-```spy
+```z
 struct Animal:
     species = "Unknown"
     length = 50
@@ -143,7 +143,7 @@ while (count < 2):
 
 ## 6. Arrays
 
-```spy
+```z
 var arr = [1, 2, 3, 4, 5]
 println("Original array:", array_to_string(arr))
 push(arr, 6)
@@ -158,7 +158,7 @@ for (var i = 0; i < len(arr); i++):
 
 ## 7. Maps
 
-```spy
+```z
 // Basic Map Operations
 println("--- Map Demo ---")
 var map = { "name": "Alice", "age": 30 }
@@ -198,7 +198,7 @@ println("a - b:", a - b)
 
 ## 8. File Operations
 
-```spy
+```z
 var filename = "test.txt"
 var content = "This is a file handling example.\nDemonstrating how to read and write files."
 write_file(filename, content)
@@ -212,7 +212,7 @@ println("Read from file:", readContent)
 
 ## 9. Native Functions
 
-```spy
+```z
 var time = clock()
 println("Current time:", time)
 
@@ -228,8 +228,8 @@ println("Random number (1-10):", randNum)
 
 ## 10. Modules
 
-```spy
-// geometry.spy
+```z
+// geometry.z
 
 mod Geometry:
     mod Shapes:
@@ -246,9 +246,9 @@ mod Geometry:
 
 ## 11. Import
 
-```spy
-// main.spy
-import "geometry.spy"
+```z
+// main.z
+import "geometry.z"
 
 println("Circle Area:", Geometry.Shapes.area_circle(5))
 println("Circle Perimeter:", Geometry.Shapes.perimeter_circle(5))
@@ -260,7 +260,7 @@ println("Circle Perimeter:", Geometry.Shapes.perimeter_circle(5))
 
 ### 12.1. Input Handling
 
-```spy
+```z
 println("Enter a sentence:")
 var input = scanln()
 println("You entered:", input)
@@ -268,7 +268,7 @@ println("You entered:", input)
 
 ### 12.2. String Formatting
 
-```spy
+```z
 var name = "Alice"
 var age = 25
 var formatted = sprintf("Name: %v, Age: %v", name, age)
@@ -277,7 +277,7 @@ println("Formatted:", formatted)
 
 ### 12.3. Advanced Control Flow
 
-```spy
+```z
 var x = 5
 if (x > 0):
     println("Positive")
@@ -297,7 +297,7 @@ for (i = 0; i < 3; i++):
 
 ### 12.4. Operators
 
-```spy
+```z
 var a = 10
 var b = 3
 println("Add:", a + b)
@@ -310,9 +310,9 @@ println("25 percent of 1000:", 25 %% 1000)
 
 ## 13. Unicode Support
 
-SPYScript supports Unicode and emoji characters in identifiers, strings, and output. This can be useful for internationalization, math expressions, or fun scripting.
+ZScript supports Unicode and emoji characters in identifiers, strings, and output. This can be useful for internationalization, math expressions, or fun scripting.
 
-```spy
+```z
 // Unicode variable
 var π = 3.14159
 println("Value of π:", π)

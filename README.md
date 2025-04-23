@@ -1,6 +1,6 @@
-# 🕵️‍♂️ SPYScript
+# 💤 ZScript
 
-**SPYScript** is a lightweight.
+**ZScript** is a lightweight.
 
 ---
 
@@ -11,7 +11,7 @@ hello = "Hello, World!";
 println(hello)  // Outputs: Hello, World!
 ```
 
-📖 Explore variables, structs, loops, and more in the [SPYScript Usage Guide](SPYSCRIPT_USAGE.md).
+📖 Explore variables, structs, loops, and more in the [ZScript Usage Guide](SPYSCRIPT_USAGE.md).
 
 ---
 
@@ -24,7 +24,7 @@ println(hello)  // Outputs: Hello, World!
 - **📁 File I/O** — Read and write files with `read_file()` and `write_file()`.
 - **🖥 Cross-Platform** — Works on any system with the required dependencies.
 
-📚 Dive deeper in the [SPYScript Usage Guide →](SPYSCRIPT_USAGE.md)
+📚 Dive deeper in the [ZScript Usage Guide →](SPYSCRIPT_USAGE.md)
 
 ---
 
@@ -103,7 +103,7 @@ brew install go pkg-config gcc make libffi readline
 
 ## 🗺 Roadmap
 
-Coming soon to SPYScript:
+Coming soon to ZScript:
 
 - [x] **Elif Support** — Less nesting, more clarity.
 - [ ] **Pattern Matching** — More expressive conditionals.
@@ -126,5 +126,5 @@ We’d love your help! Whether it's fixing bugs, improving docs, or proposing fe
 
 ## 📄 License
 
-SPYScript is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
+ZScript is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
 See the [LICENSE](LICENSE) file for full details.
