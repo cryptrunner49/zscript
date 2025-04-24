@@ -1,0 +1,2 @@
+var num = 42
+println("Number:", num)  // Outputs: 42

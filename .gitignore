@@ -29,3 +29,7 @@ tmp/
 libs/
 shuffled_data.txt
 test.txt
+target/
+ctest
+cpptest
+gotest

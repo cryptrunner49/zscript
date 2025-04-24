@@ -1,0 +1,9 @@
+// File Operations Function
+func fileDemo():
+    // Write to a file
+    write_file("test.txt", "Hello, Word!\nThis is a test file.")
+    // Read from the file
+    var content = read_file("test.txt")
+    println("File contents:", content)
+
+fileDemo()

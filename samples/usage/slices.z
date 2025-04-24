@@ -1,0 +1,63 @@
+/* Basic Array Slicing Examples */
+var arr = [1, 2, 3, 4, 5]
+
+// Get elements from index 1 to 3 (exclusive)
+var slice1 = arr[1:3]  // [2, 3]
+
+// Get elements from index 2 to end
+var slice2 = arr[2:]   // [3, 4, 5]
+
+// Get elements from start to index 3 (exclusive)
+var slice3 = arr[:3]   // [1, 2, 3]
+
+// Get all elements (copy of array)
+var slice4 = arr[:]    // [1, 2, 3, 4, 5]
+
+// Negative indices count from end
+var slice5 = arr[-3:-1] // [3, 4] (same as arr[2:4])
+
+/* Omitted Indices Examples */
+var colors = ["red", "green", "blue", "yellow", "purple"]
+
+// Omit start (defaults to 0)
+var firstThree = colors[:3]  // ["red", "green", "blue"]
+
+// Omit end (defaults to array length)
+var fromTwo = colors[2:]     // ["blue", "yellow", "purple"]
+
+// Omit both (copies entire array)
+var copy = colors[:]         // ["red", "green", "blue", "yellow", "purple"]
+
+// With negative indices
+var lastTwo = colors[-2:]    // ["yellow", "purple"]
+
+/* Practical Usage Examples */
+// 1. Pagination example
+var data = [10, 20, 30, 40, 50, 60, 70, 80]
+var pageSize = 3
+var page2 = data[pageSize:pageSize*2]  // [40, 50, 60]
+
+// 2. String manipulation
+var str = "hello world"
+var chars = to_chars(str)  // Assume this converts to array of characters
+var hello = chars[:5]      // ["h", "e", "l", "l", "o"]
+var world = chars[6:]      // ["w", "o", "r", "l", "d"]
+println(hello)
+println(world)
+
+// 3. Getting first/last elements
+var first = data[:1][0]  // 10 (first element)
+var last = data[-1:][0]  // 80 (last element)
+
+/* Edge Cases */
+var empty = []
+
+// All return empty arrays
+empty[1:3]    // []
+empty[:]      // []
+empty[-2:-1]  // []
+
+var single = [100]
+single[:]     // [100]
+single[0:1]   // [100]
+single[1:]    // []

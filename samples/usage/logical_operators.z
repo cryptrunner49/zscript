@@ -1,0 +1,63 @@
+// Equality
+println("--- Equality Demo ---")
+var equal = 5 == 5
+var pi = 3.14
+var eq = pi == 3.14
+println("5 == 5:", equal)  // Outputs: true
+println("pi == 3.14:", eq) // Outputs: true
+
+// Inequality
+println("--- Inequality Demo ---")
+var notEqual = 5 != 3
+var neq = pi != 3
+println("5 != 3:", notEqual)  // Outputs: true
+println("pi != 3:", neq)      // Outputs: true
+
+// Less Than
+println("--- Less Than Demo ---")
+var less = 3 < 5
+var lt = pi < 4
+println("3 < 5:", less)  // Outputs: true
+println("pi < 4:", lt)   // Outputs: true
+
+// Less Than or Equal
+println("--- Less Than or Equal Demo ---")
+var lessOrEqual = 5 <= 5
+var lte = pi <= 3.14
+println("5 <= 5:", lessOrEqual)  // Outputs: true
+println("pi <= 3.14:", lte)      // Outputs: true
+
+// Greater Than
+println("--- Greater Than Demo ---")
+var greater = 7 > 2
+var gt = 4 > pi
+println("7 > 2:", greater)  // Outputs: true
+println("4 > pi:", gt)      // Outputs: true
+
+// Greater Than or Equal
+println("--- Greater Than or Equal Demo ---")
+var greaterOrEqual = 7 >= 7
+var gte = pi >= 3.14
+println("7 >= 7:", greaterOrEqual)  // Outputs: true
+println("pi >= 3.14:", gte)         // Outputs: true
+
+// Logical NOT
+println("--- Logical NOT Demo ---")
+var not = !true
+var notOk = !false
+println("!true:", not)     // Outputs: false
+println("!false:", notOk)  // Outputs: true
+
+// Logical AND
+println("--- Logical AND Demo ---")
+var _and = true and false
+var both = true and true
+println("true and false:", _and)  // Outputs: false
+println("true and true:", both)   // Outputs: true
+
+// Logical OR
+println("--- Logical OR Demo ---")
+var _or = false or true
+var either = false or false
+println("false or true:", _or)     // Outputs: true
+println("false or false:", either) // Outputs: false

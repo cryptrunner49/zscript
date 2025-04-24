@@ -1,0 +1,44 @@
+// Date native functions
+
+var d = Date(2023, 10, 15)  // Create a Date object for October 15, 2023
+
+// Current date
+var today = date_now()
+println("Today's date: " + date_format_datetime(today, "2006-01-02"))
+
+// Parse a date string
+var parsed = date_parse_datetime("2024-05-20")
+println("Parsed date: " + date_format_datetime(parsed, "2006-01-02"))
+
+// Format the initial date
+println("Formatted date: " + date_format_datetime(d, "Mon Jan 2, 2006"))
+
+// Add days
+var d_plus_5 = date_add_days(d, 5)
+println("After adding 5 days: " + date_format_datetime(d_plus_5, "2006-01-02"))
+
+// Subtract days
+var d_minus_10 = date_subtract_days(d, 10)
+println("After subtracting 10 days: " + date_format_datetime(d_minus_10, "2006-01-02"))
+
+// Add date components
+var d_plus_interval = date_add_datetime(d, 1, 2, 3)  // Add 1 year, 2 months, 3 days
+println("After adding 1y 2m 3d: " + date_format_datetime(d_plus_interval, "2006-01-02"))
+
+// Subtract date components
+var d_minus_interval = date_subtract_datetime(d, 0, 5, 7)  // Subtract 5 months, 7 days
+println("After subtracting 5m 7d: " + date_format_datetime(d_minus_interval, "2006-01-02"))
+
+// Get components
+println("Year: " + to_str(date_get_component(d, "year")))
+println("Month: " + to_str(date_get_component(d, "month")))
+println("Day: " + to_str(date_get_component(d, "day")))
+
+// Set components
+var d_modified = date_set_component(d, "year", 2025)
+println("After setting year to 2025: " + date_format_datetime(d_modified, "2006-01-02"))
+
+// Accessing properties directly
+println("Year (via property): " + to_str(d.year))
+println("Month (via property): " + to_str(d.month))
+println("Day (via property): " + to_str(d.day))

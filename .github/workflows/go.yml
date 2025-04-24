@@ -8,7 +8,7 @@ on:
     branches: [ "main" ]
 
 permissions:
-  contents: write  # Grants permission to create releases
+  contents: write
 
 jobs:
   build:
@@ -23,16 +23,22 @@ jobs:
 
       - name: Install Dependencies
         run: sudo apt-get update && sudo apt-get install -y libffi-dev libreadline-dev gcc pkg-config cmake make
-        
-      - name: Build
-        run: go build -o bin/spyvm cmd/main.go
 
-      - name: Upload Build Artifact
+      - name: Build VM
+        run: go build -o bin/zvm cmd/vm/vm.go
+
+      - name: Build Lib (shared object and header)
+        run: go build -buildmode=c-shared -o bin/libzscript.so cmd/lib/corelib.go
+
+      - name: Upload Build Artifacts
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
-          name: spyvm
-          path: bin/spyvm
+          name: zscript-release
+          path: |
+            bin/zvm
+            bin/libzscript.so
+            bin/libzscript.h
 
   release:
     needs: build
@@ -41,10 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download Build Artifact
+      - name: Download Build Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: spyvm
+          name: zscript-release
           path: .
 
       - name: Get Ubuntu Version
@@ -52,7 +58,6 @@ jobs:
         run: |
           UBUNTU_VERSION=$(lsb_release -r -s)
           echo "UBUNTU_VERSION=${UBUNTU_VERSION}" >> $GITHUB_ENV
-          echo "Ubuntu version is ${UBUNTU_VERSION}"
 
       - name: Create Release
         run: |
@@ -60,26 +65,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate Checksums for spyvm
+      - name: Generate Checksums
         run: |
-          sha256sum spyvm | awk '{print $1}' > SHA256-SUMS.txt
-          sha512sum spyvm | awk '{print $1}' > SHA512-SUMS.txt
+          sha256sum zvm > SHA256-SUMS.txt
+          sha512sum zvm > SHA512-SUMS.txt
+          sha256sum libzscript.so >> SHA256-SUMS.txt
+          sha512sum libzscript.so >> SHA512-SUMS.txt
 
-      - name: Upload Seed VM Artifact
+      - name: Create ZIP Archive
+        run: zip zscript-release.zip zvm libzscript.so libzscript.h SHA256-SUMS.txt SHA512-SUMS.txt
+
+      - name: Upload Artifacts
         run: |
-          gh release upload "${{ github.ref_name }}" spyvm --clobber
+          gh release upload "${{ github.ref_name }}" zvm libzscript.so libzscript.h zscript-release.zip --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update release asset label for spyvm
+      - name: Update Asset Labels
         run: |
-          # Get the repository in "owner/repo" format
           repo="${GITHUB_REPOSITORY}"
-          # Retrieve the asset ID for the 'spyvm' file from the release by filtering on the asset name
-          asset_id=$(gh api repos/$repo/releases/tags/${{ github.ref_name }} --jq '.assets[] | select(.name=="spyvm") | .id')
-          echo "Updating asset id $asset_id with custom label"
-          # Update the asset's label using the GitHub REST API via gh api
-          gh api repos/$repo/releases/assets/$asset_id --method PATCH --field label="SPYScript VM ${{ github.ref_name }} Ubuntu $UBUNTU_VERSION x64"
+          id_zvm=$(gh api repos/$repo/releases/tags/${{ github.ref_name }} --jq '.assets[] | select(.name=="zvm") | .id')
+          id_lib=$(gh api repos/$repo/releases/tags/${{ github.ref_name }} --jq '.assets[] | select(.name=="libzscript.so") | .id')
+          id_header=$(gh api repos/$repo/releases/tags/${{ github.ref_name }} --jq '.assets[] | select(.name=="libzscript.h") | .id')
+          id_zip=$(gh api repos/$repo/releases/tags/${{ github.ref_name }} --jq '.assets[] | select(.name=="zscript-release.zip") | .id')
+          gh api repos/$repo/releases/assets/$id_zvm --method PATCH --field label="ZScript VM ${{ github.ref_name }} Ubuntu $UBUNTU_VERSION x64"
+          gh api repos/$repo/releases/assets/$id_lib --method PATCH --field label="libzscript.so ${{ github.ref_name }} Ubuntu $UBUNTU_VERSION x64"
+          gh api repos/$repo/releases/assets/$id_header --method PATCH --field label="libzscript.h ${{ github.ref_name }}"
+          gh api repos/$repo/releases/assets/$id_zip --method PATCH --field label="ZScript Bundle ${{ github.ref_name }} Ubuntu $UBUNTU_VERSION"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

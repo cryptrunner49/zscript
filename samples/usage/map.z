@@ -1,0 +1,33 @@
+// Basic Map Operations
+println("--- Map Demo ---")
+var map = { "name": "Alice", "age": 30 }
+println("Name:", map["name"])  // Outputs: Alice
+println("Age:", map["age"])    // Outputs: 30
+map["age"] = 31
+println("Updated age:", map["age"])  // Outputs: 31
+
+// Map Functions
+println("--- Map Functions ---")
+var m = {"a": 1, "b": 2}
+println("Initial map:", m)
+map_remove(m, "a")
+println("After removing 'a':", m)
+println("Contains key 'b':", map_contains_key(m, "b"))
+println("Contains value 2:", map_contains_value(m, 2))
+println("Map size:", map_size(m))
+println("Keys:", map_keys(m))
+println("Values:", map_values(m))
+map_clear(m)
+println("After clear:", m)
+
+// Map Addition
+println("--- Map Addition ---")
+var a = {"x": 1, "y": 2}
+var b = {"y": 3, "z": 4}
+println("a + b:", a + b)
+
+// Map Subtraction
+println("--- Map Subtraction ---")
+var a = {"x": 1, "y": 2, "z": 3}
+var b = {"y": null, "w": null}
+println("a - b:", a - b)

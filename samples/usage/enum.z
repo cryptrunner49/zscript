@@ -1,0 +1,10 @@
+// TODO
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+var value = Color::Blue
+
+println(value)

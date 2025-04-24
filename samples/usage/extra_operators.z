@@ -1,0 +1,14 @@
+// Exponentiation Operator (**)
+println("--- Exponentiation ---")
+println("2 ** 2:", 2 ** 2)   // Outputs: 4
+println("6 ** 2:", 6 ** 2)   // Outputs: 36
+
+// Integer Division Operator (/_)
+println("--- Integer Division ---")
+println("7 /_ 3:", 7 /_ 3)   // Outputs: 2
+println("18 /_ 3:", 18 /_ 3) // Outputs: 6
+
+// Percentage Operator (%%)
+println("--- Percentage ---")
+println("50 %% 1000:", 50 %% 1000)  // Outputs: 500
+println("25 %% 1000:", 25 %% 1000)  // Outputs: 250

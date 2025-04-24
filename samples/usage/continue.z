@@ -1,0 +1,21 @@
+// Section: While Loop with Continue
+println("--- While Loop with Continue ---")
+var x = 0
+while (x < 6):
+    x = x + 1
+    if (x == 3):
+        println("Skipping x = 3")
+        continue
+    println("x:", x)
+
+println("Exited while loop")
+
+// Section: For Loop with Continue
+println("--- For Loop with Continue ---")
+for (var y = 0; y < 6; y++):
+    if (y == 2):
+        println("Skipping y = 2")
+        continue
+    println("y:", y)
+
+println("Exited for loop")

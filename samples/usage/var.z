@@ -1,0 +1,34 @@
+// Number
+num = 100     // Assignment without var
+println(num)  // Outputs: 100
+
+var num = 42  // Declaration with var
+println(num)  // Outputs: 42
+
+// String
+message = "Hello, Universe!"    // Assignment without var
+println(message)  // Outputs: Hello, Universe!
+
+var message = "Hello, World!"  // Declaration with var
+println(message)  // Outputs: Hello, World!
+
+// Boolean
+isTrue = false    // Assignment without var
+println(isTrue)  // Outputs: false
+
+var isTrue = true  // Declaration with var
+println(isTrue)  // Outputs: true
+
+// Null
+nothing = "Now I have a value"  // Assignment without var
+println(nothing)  // Outputs: Now I have a value
+
+var nothing = null  // Declaration with var
+println(nothing)  // Outputs: null
+
+// Another Number
+_number = 200     // Assignment without var
+println(_number)  // Outputs: 200
+
+var _number = 100  // Declaration with var
+println(_number)  // Outputs: 100
