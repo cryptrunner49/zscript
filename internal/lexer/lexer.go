@@ -5,8 +5,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/cryptrunner49/spy/internal/common"
-	"github.com/cryptrunner49/spy/internal/token"
+	"github.com/cryptrunner49/zscript/internal/common"
+	"github.com/cryptrunner49/zscript/internal/token"
 )
 
 type Lexer struct {

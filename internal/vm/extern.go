@@ -194,7 +194,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/cryptrunner49/spy/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
 // Type mappings from Seed to C TypeCode

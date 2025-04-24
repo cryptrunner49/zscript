@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/cryptrunner49/spy/internal/common"
-	"github.com/cryptrunner49/spy/internal/debug"
-	"github.com/cryptrunner49/spy/internal/lexer"
-	"github.com/cryptrunner49/spy/internal/runtime"
-	"github.com/cryptrunner49/spy/internal/token"
+	"github.com/cryptrunner49/zscript/internal/common"
+	"github.com/cryptrunner49/zscript/internal/debug"
+	"github.com/cryptrunner49/zscript/internal/lexer"
+	"github.com/cryptrunner49/zscript/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/token"
 )
 
 var compiledFiles = make(map[string]*runtime.ObjFunction)
@@ -206,7 +206,7 @@ func emitBytes(b1, b2 byte) {
 
 // emitReturn writes the return opcode to the chunk, ending the function.
 func emitReturn() {
-	emitByte(byte(runtime.OP_NULL))
+	emitByte(byte(runtime.OP_RNULL))
 	emitByte(byte(runtime.OP_RETURN))
 }
 

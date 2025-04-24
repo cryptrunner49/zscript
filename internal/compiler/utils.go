@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cryptrunner49/spy/internal/lexer"
-	"github.com/cryptrunner49/spy/internal/runtime"
-	"github.com/cryptrunner49/spy/internal/token"
+	"github.com/cryptrunner49/zscript/internal/lexer"
+	"github.com/cryptrunner49/zscript/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/token"
 )
 
 // errorAt reports an error at a specific token and prints the error message along with the line number.

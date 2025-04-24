@@ -1,8 +1,8 @@
 package compiler
 
 import (
-	"github.com/cryptrunner49/spy/internal/runtime"
-	"github.com/cryptrunner49/spy/internal/token"
+	"github.com/cryptrunner49/zscript/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/token"
 )
 
 // function compiles a function declaration, including parameter parsing and function body.

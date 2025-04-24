@@ -5,6 +5,7 @@ type OpCode uint8
 const (
 	OP_CONSTANT OpCode = iota
 	OP_NULL
+	OP_RNULL
 	OP_TRUE
 	OP_FALSE
 	OP_POP

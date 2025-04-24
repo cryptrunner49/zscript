@@ -1,3 +1,0 @@
-// For Loop
-for (var i = 0; i < 3; i++):
-     println("i:", i) // Outputs: 0, 1, 2

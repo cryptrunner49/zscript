@@ -3,8 +3,8 @@ package compiler
 import (
 	"fmt"
 
-	"github.com/cryptrunner49/spy/internal/runtime"
-	"github.com/cryptrunner49/spy/internal/token"
+	"github.com/cryptrunner49/zscript/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/token"
 )
 
 func expressionStatement() {

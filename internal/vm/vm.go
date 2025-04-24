@@ -58,10 +58,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/cryptrunner49/spy/internal/common"
-	"github.com/cryptrunner49/spy/internal/compiler"
-	"github.com/cryptrunner49/spy/internal/debug"
-	"github.com/cryptrunner49/spy/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/common"
+	"github.com/cryptrunner49/zscript/internal/compiler"
+	"github.com/cryptrunner49/zscript/internal/debug"
+	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
 // Maximum number of call frames allowed and the maximum stack size.
@@ -97,6 +97,11 @@ type VM struct {
 	strings      map[uint32]*runtime.ObjString        // Interned strings table.
 	openUpvalues *runtime.ObjUpvalue                  // Linked list of open upvalues for closures.
 	libHandles   []unsafe.Pointer                     // List of loaded library handles.
+	lastValue    runtime.Value                        // Store the last value from script execution
+}
+
+func GetLastValue() runtime.Value {
+	return vm.lastValue
 }
 
 var vm VM // Global VM instance.
@@ -108,6 +113,7 @@ func InitVM(args []string) {
 	vm.objects = nil
 	vm.globals = make(map[*runtime.ObjString]runtime.Value)
 	vm.strings = make(map[uint32]*runtime.ObjString)
+	vm.lastValue = runtime.Value{Type: runtime.VAL_NULL}
 
 	// Define built-in native functions and globals, including command-line arguments.
 	defineAllNatives()
@@ -134,6 +140,12 @@ func resetStack() {
 
 // Push pushes a value onto the VM's stack.
 func Push(val runtime.Value) {
+	vm.stack[vm.stackTop] = val
+	vm.stackTop++
+	vm.lastValue = peek(0)
+}
+
+func PushNull(val runtime.Value) {
 	vm.stack[vm.stackTop] = val
 	vm.stackTop++
 }
@@ -274,6 +286,8 @@ func run() InterpretResult {
 			Push(readConstant(frame))
 		case uint8(runtime.OP_NULL):
 			Push(runtime.Value{Type: runtime.VAL_NULL})
+		case uint8(runtime.OP_RNULL):
+			PushNull(runtime.Value{Type: runtime.VAL_NULL})
 		case uint8(runtime.OP_TRUE):
 			Push(runtime.Value{Type: runtime.VAL_BOOL, Bool: true})
 		case uint8(runtime.OP_FALSE):

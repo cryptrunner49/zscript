@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cryptrunner49/spy/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
 // isFalsey returns true if a value is considered false in boolean context.

@@ -1,4 +1,4 @@
-// Guess the Number Game in SPYScript
+// Guess the Number Game in ZScript
 
 println("Welcome to the Guess the Number game!")
 println("I'm thinking of a number between 1 and 100.")
@@ -14,13 +14,16 @@ while (guess != target):
     guess = parse_int(scanln())
     attempts = attempts + 1
     
-    if (guess < target):
-        println("Too low! Try again.")
-    | (guess > target):
-        println("Too high! Try again.")
+    if (get_runtype(guess) == "number"):
+        if (guess < target):
+            println("Too low! Try again.")
+        | (guess > target):
+            println("Too high! Try again.")
+        else:
+            println("Congratulations! You guessed the number!")
+            println("Total attempts:", attempts)
     else:
-        println("Congratulations! You guessed the number!")
-        println("Total attempts:", attempts)
+        println("Invalid choice!")
 
 // Define a map (on one line) to showcase game statistics.
 var stats = {"attempts": attempts, "target": target}

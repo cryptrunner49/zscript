@@ -1,4 +1,0 @@
-var nothing = null
-var none = null
-println("Nothing:", nothing)  // Outputs: null
-println("None:", none)        // Outputs: null

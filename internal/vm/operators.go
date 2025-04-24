@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/cryptrunner49/spy/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
 // Helper function for numeric addition

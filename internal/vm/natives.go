@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cryptrunner49/spy/internal/common"
-	"github.com/cryptrunner49/spy/internal/runtime"
+	"github.com/cryptrunner49/zscript/internal/common"
+	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
 // Seed the random number generator once during initialization
@@ -148,6 +148,9 @@ func defineAllNatives() {
 
 	// Utility Functions
 	defineNative("parse_int", parseIntNative)
+
+	// Types
+	defineNative("get_runtype", getRunTypeNative)
 
 	// Others
 	defineNative("clock", clockNative)
@@ -2480,10 +2483,23 @@ func parseIntNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 	num, err := strconv.Atoi(strObj.Chars)
 	if err != nil {
-		runtimeError("Failed to parse '%s' as an integer: %v", strObj.Chars, err)
+		//runtimeError("Failed to parse '%s' as an integer: %v", strObj.Chars, err)
 		return runtime.Value{Type: runtime.VAL_NULL}
 	}
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(num)}
+}
+
+// ============================================================================
+// Native Functions: Types
+// ============================================================================
+
+func getRunTypeNative(argCount int, args []runtime.Value) runtime.Value {
+	if argCount != 1 {
+		runtimeError("get_runtype takes exactly 1 argument")
+		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString("Error: get_type expects 1 argument")}
+	}
+
+	return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(typeName(args[0]))}
 }
 
 // ============================================================================
