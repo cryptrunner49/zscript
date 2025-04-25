@@ -823,6 +823,7 @@ func arraySortNative(argCount int, args []runtime.Value) runtime.Value {
 		runtimeError("'array_sort' can only be used on arrays.")
 		return runtime.Value{Type: runtime.VAL_NULL}
 	}
+
 	valueToString := func(v runtime.Value) string {
 		switch v.Type {
 		case runtime.VAL_BOOL:
@@ -843,9 +844,26 @@ func arraySortNative(argCount int, args []runtime.Value) runtime.Value {
 			return "unknown"
 		}
 	}
+
+	// Try to parse a string as a float, return bool success flag too
+	parseNumeric := func(s string) (float64, bool) {
+		num, err := strconv.ParseFloat(s, 64)
+		return num, err == nil
+	}
+
 	sort.Slice(array.Elements, func(i, j int) bool {
-		return valueToString(array.Elements[i]) < valueToString(array.Elements[j])
+		strI := valueToString(array.Elements[i])
+		strJ := valueToString(array.Elements[j])
+
+		numI, okI := parseNumeric(strI)
+		numJ, okJ := parseNumeric(strJ)
+
+		if okI && okJ {
+			return numI < numJ
+		}
+		return strI < strJ
 	})
+
 	return runtime.ObjVal(array)
 }
 
