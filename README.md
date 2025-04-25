@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
         ZScript_RunFile(argv[1]);
     } else {
         int exitCode;
-        char* result = ZScript_InterpretWithResult("1 + 2;", "<repl>", &exitCode);
+        char* result = ZScript_InterpretWithResult("1 + 2;", "<script>", &exitCode);
         if (exitCode == 0) printf("Last value: %s\n", result);
         else printf("Execution failed with code %d\n", exitCode);
         free(result);
