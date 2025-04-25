@@ -1,118 +1,153 @@
-# 💤 ZScript
+# 💤📜 ZScript
 
-**ZScript** is a lightweight.
+**ZScript** is a lightweight, expressive scripting language inspired by Python — but with its own minimalist and expressive style. It supports Unicode and emoji identifiers, functional programming constructs, file I/O, and can be embedded as a shared C library. Whether you're automating tasks, scripting games, or exploring creative code, ZScript makes it simple and fun.
 
 ---
 
-## 👩‍💻 Hello World
+## 🚀 Quick Start
 
-```spy
-hello = "Hello, World!";
-println(hello)  // Outputs: Hello, World!
+```z
+var hello = "Hello, World!";
+println(hello);  // Outputs: Hello, World!
 ```
 
-📖 Explore variables, structs, loops, and more in the [ZScript Usage Guide](SPYSCRIPT_USAGE.md).
+📖 Explore language features in the [Usage Guide →](ZSCRIPT_USAGE.md)
 
 ---
 
 ## ✨ Features
 
-- **🌍 Unicode & Emoji Identifiers** — Use `π` or even `🐱` as variable names.
-- **🧠 Simple Syntax** — Easy-to-learn keywords like `var`, `func`, `if`, and `for`.
-- **⚙️ Native Functions** — Built-ins such as `clock()`, `shuffle()`, and `random_between()`.
-- **🧱 Structs & Closures** — Create custom types and use powerful functional constructs.
-- **📁 File I/O** — Read and write files with `read_file()` and `write_file()`.
-- **🖥 Cross-Platform** — Works on any system with the required dependencies.
-
-📚 Dive deeper in the [ZScript Usage Guide →](SPYSCRIPT_USAGE.md)
+- 🌍 **Unicode & Emoji Identifiers** — Name variables `π`, `🐱`, or any emoji you like.
+- 🧠 **Familiar Python-like Syntax** — Use `var`, `const`, `func`, `if`, `for`, and more.
+- ⚙️ **Built‑in Functions** — `clock()`, `shuffle()`, `random_between()` and others built-in.
+- 📁 **File I/O** — `read_file()` and `write_file()` to handle files natively.
+- 🧱 **Structs & Closures** — Define custom types and encapsulate behavior.
+- 🐧 **Linux‑Only** — Runs out of the box on most Linux distributions.
+- 🧬 **Embeddable VM** — Integrate ZScript with C, Go, Rust, or C++ applications.
 
 ---
 
-## 📦 Installation
+## 🔽 Download
+
+Get the latest prebuilt binaries and development files from the [Releases →](https://github.com/cryptrunner49/zscript/releases/latest):
+
+- **💤 VM Executable**: [Download `zvm`](https://github.com/cryptrunner49/zscript/releases/latest/download/zvm)
+- **🔧 Development Files**:
+  - [libzscript.h](https://github.com/cryptrunner49/zscript/releases/latest/download/libzscript.h)
+  - [libzscript.so](https://github.com/cryptrunner49/zscript/releases/latest/download/libzscript.so)
+- **📦 Full Release Bundle** (VM + Libs + Headers):  
+  [zscript-release.zip](https://github.com/cryptrunner49/zscript/releases/latest/download/zscript-release.zip)
+
+---
+
+## ⚙️ Installation
 
 ### ✅ Requirements
 
-- Linux (Debian, Ubuntu, Fedora, Arch, etc.) or macOS
+- OS: Linux (Debian, Ubuntu, Fedora, Arch, etc.)
+- Tools: `gcc`, `make`, `pkg-config`, `libffi`, `readline`
 - [Go (Golang)](https://golang.org)
-- Dependencies: `gcc`, `pkg-config`, `make`, `libffi`, `readline`
 
-### 🧰 System Setup
+### 🧰 Install with Script
 
-#### Option 1: Install via Script
-
-**System-wide installation (requires `sudo`)**:
+**System-wide:**
 
 ```bash
-curl -sL https://github.com/cryptrunner49/spy/raw/refs/heads/main/install.sh | bash -s -- install --system
+curl -sL https://github.com/cryptrunner49/zscript/raw/refs/heads/main/install.sh | bash -s -- install --system
 ```
 
-**User-only installation (`$HOME/.local/bin`)**:
+**User-only:**
 
 ```bash
-curl -sL https://github.com/cryptrunner49/spy/raw/refs/heads/main/install.sh | bash -s -- install --user
+curl -sL https://github.com/cryptrunner49/zscript/raw/refs/heads/main/install.sh | bash -s -- install --user
 ```
 
-#### Option 2: Manual Download
+### 🏗 Build from Source
 
 ```bash
-curl -LO https://github.com/cryptrunner49/spy/releases/latest/download/spyvm
-chmod +x spyvm
+git clone https://github.com/cryptrunner49/zscript.git
+cd zscript
+make vm
+./bin/zvm samples/scripts/rpg_game.z
 ```
 
 ---
 
-### 🛠 Build From Source
+## 🧠 Embedding ZScript
 
-1. Clone the repository:
+ZScript is easy to embed in other languages like **C, Go, C++**, and **Rust**.
 
-   ```bash
-   git clone https://github.com/cryptrunner49/spy.git
-   cd spy
-   ```
+### ✅ Example in C
 
-2. Build the interpreter:
+```c
+#include "libzscript.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-   ```bash
-   make
-   ```
+int main(int argc, char** argv) {
+    ZScript_Init(argc, argv);
 
-3. Run a script:
+    if (argc > 1) {
+        ZScript_RunFile(argv[1]);
+    } else {
+        int exitCode;
+        char* result = ZScript_InterpretWithResult("1 + 2;", "<repl>", &exitCode);
+        if (exitCode == 0) printf("Last value: %s\n", result);
+        else printf("Execution failed with code %d\n", exitCode);
+        free(result);
+    }
 
-   ```bash
-   ./bin/spyvm sample/game.spy
-   ```
+    ZScript_Free();
+    return 0;
+}
+```
+
+### 🛠 Build & Run
+
+```bash
+make lib
+gcc -o run_sample samples/lib/c/sample.c -Lbin -lzscript -Ibin
+LD_LIBRARY_PATH=bin ./run_sample
+```
 
 ---
 
-## 🧪 Platform-Specific Setup
+## 🔍 More Embedding Examples
 
-### Ubuntu/Debian
+Find ready-to-run embedding samples in:
+
+- [📄 C](samples/lib/c/sample.c)
+- [📄 C++](samples/lib/c/sample.cpp)
+- [📄 Go](samples/lib/c/sample.go)
+- [📄 Rust](samples/lib/c/sample.rust)
+
+These show how to use ZScript with FFI across different ecosystems.
+
+---
+
+## 🧪 Platform‑Specific Setup
+
+### Ubuntu / Debian
 
 ```bash
 sudo apt update
 sudo apt install gcc pkg-config make golang libffi-dev libreadline-dev
 ```
 
-### macOS
-
-```bash
-brew install go pkg-config gcc make libffi readline
-```
-
 ---
 
 ## 🗺 Roadmap
 
-Coming soon to ZScript:
+What’s next for ZScript?
 
-- [x] **Elif Support** — Less nesting, more clarity.
-- [ ] **Pattern Matching** — More expressive conditionals.
-- [ ] **Switch Statement** — Cleaner multi-branch logic.
-- [ ] **Enums** — Organize data like a pro.
-- [ ] **Error Handling** — Try-catch or similar constructs.
-- [ ] **Standard Library** — More built-in power.
+- [x] **Elif**
+- [ ] **Pattern Matching**
+- [ ] **Switch Statement**
+- [ ] **Enums**
+- [ ] **Error Handling**
+- [ ] **Standard Library**
 
-🎯 Track progress or suggest features via [Issues →](https://github.com/cryptrunner49/spy/issues)
+✨ Track progress or suggest features via [Issues →](https://github.com/cryptrunner49/zscript/issues)
 
 ---
 
@@ -120,11 +155,11 @@ Coming soon to ZScript:
 
 We’d love your help! Whether it's fixing bugs, improving docs, or proposing features—your contributions matter.
 
-📘 See the [Contributing Guide →](CONTRIBUTING.md) to get started.
+👉 See the [Contributing Guide →](CONTRIBUTING.md) to get started.
 
 ---
 
 ## 📄 License
 
-ZScript is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.  
-See the [LICENSE](LICENSE) file for full details.
+**ZScript** is licensed under the **GNU GPL-3.0**.  
+See the [LICENSE](LICENSE) for details.
