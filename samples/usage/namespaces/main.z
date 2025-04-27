@@ -1,7 +1,7 @@
-// Section: Script Initialization
+// Script Initialization
 // Marks the start of the script output
 
-// Section: Importing Math Module
+// Importing Math Module
 import "math.z"
 
 // Demonstrate math module functions and variables
@@ -10,7 +10,7 @@ println("math.z add():", add(2, 3)) // Outputs: 5
 println("math.z PI:", PI) // Outputs: 3.14159
 println("---------------------------")
 
-// Section: Importing Geometry Module
+// Importing Geometry Module
 import "geometry.z"
 
 // Access Geometry module's PI and Shapes.area
@@ -18,13 +18,13 @@ println("geometry.z area():", Geometry.Shapes.area(2)) // Outputs: 12.56
 println("geometry.z PI:", Geometry.PI) // Outputs: 3.14
 println("---------------------------")
 
-// Section: Module Aliasing with 'mod as'
+// Module Aliasing with 'mod as'
 // Demonstrates aliasing a module for simpler access
 mod Geometry.Shapes as Shapes
 println("mod as:", Shapes.area(2)) // Outputs: 12.56
 println("---------------------------")
 
-// Section: Definition Aliasing with 'def as'
+// Definition Aliasing with 'def as'
 // Demonstrates aliasing a definition for alternative naming
 def Geometry.Shapes as shapes
 println("def as:", shapes.area(2)) // Outputs: 12.56

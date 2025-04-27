@@ -1,4 +1,4 @@
-// Section: Closure Demonstration
+// Closure Demonstration
 println("--- Closure Demo ---")
 func makeCounter():
     var value = 0

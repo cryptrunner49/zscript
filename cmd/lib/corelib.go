@@ -50,7 +50,10 @@ func ZScript_RunFile(cpath *C.char) C.int {
 	if err != nil {
 		return C.int(74) // File I/O error
 	}
-	// Normalize source and append 'pass;' to ensure a stack value
+	// Trim trailing newlines from the source code and append 'pass;'
+	// This ensures that the last indented block is properly dedented,
+	// conforming to the language's syntax requirements for indented blocks.
+	// Without this, the interpreter may throw an error due to improper indentation.
 	sourceStr := strings.TrimRight(string(source), "\n") + "\npass;\n"
 	return C.int(vm.Interpret(sourceStr, path))
 }
@@ -76,7 +79,10 @@ func ZScript_RunFileWithResult(cpath *C.char, exitCode *C.int) *C.char {
 		*exitCode = C.int(74) // File I/O error
 		return valueToCString(runtime.Value{Type: runtime.VAL_NULL})
 	}
-	// Normalize source and append 'pass;' to ensure a stack value
+	// Trim trailing newlines from the source code and append 'pass;'
+	// This ensures that the last indented block is properly dedented,
+	// conforming to the language's syntax requirements for indented blocks.
+	// Without this, the interpreter may throw an error due to improper indentation.
 	sourceStr := strings.TrimRight(string(source), "\n") + "\npass;\n"
 	code := vm.Interpret(sourceStr, path)
 	*exitCode = C.int(code)
@@ -84,6 +90,7 @@ func ZScript_RunFileWithResult(cpath *C.char, exitCode *C.int) *C.char {
 }
 
 // valueToString converts a runtime.Value to its string representation, mirroring runtime.PrintObject.
+// valueToString converts a runtime.Value into a human-readable string, similar to how runtime.PrintObject displays values.
 func valueToString(val runtime.Value) string {
 	switch val.Type {
 	case runtime.VAL_NULL:
@@ -158,7 +165,7 @@ func valueToString(val runtime.Value) string {
 	}
 }
 
-// valueToCString converts a runtime.Value to a C string, which must be freed by the caller.
+// valueToCString converts a runtime.Value to a C string. The caller is responsible for freeing it.
 func valueToCString(val runtime.Value) *C.char {
 	return C.CString(valueToString(val))
 }

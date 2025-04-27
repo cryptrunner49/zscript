@@ -1,4 +1,4 @@
-// Section: Boolean Variables
+// Boolean Variables
 println("--- Boolean Demo ---")
 var truth = true
 var ok = false

@@ -60,6 +60,7 @@ var locations = {
     }
 }
 
+// Check if player has enough XP to level up and update stats
 func check_level_up(player):
     while (player.xp >= 100):
         player.level = player.level + 1
@@ -80,6 +81,7 @@ func create_enemy(enemyName):
     enemy.xpReward = enemyStats["xpReward"]
     return enemy
 
+// Handle combat between player and enemy, returning true if player survives
 func combat(player, enemy):
     println("You are fighting a " + enemy.name + ".")
     while (player.health > 0 and enemy.health > 0):
@@ -108,7 +110,7 @@ func combat(player, enemy):
                         var itemChoice = scanln()
                         var itemIndex = parse_int(itemChoice)
                         if (get_runtype(itemIndex) == "number" and itemIndex >= 1 and itemIndex <= len(player.inventory)):
-                            var adjustedIndex = itemIndex - 1 // Adjust to 0-based index
+                            var adjustedIndex = itemIndex - 1 // Convert 1-based item selection to 0-based inventory index
                             var item = player.inventory[adjustedIndex]
                             if (item == "Health Potion"):
                                 player.health = player.health + 20
@@ -136,7 +138,7 @@ func combat(player, enemy):
 
 func create_player():
     var player = Player()
-    // Ensure name is not empty
+    // Prompt user for a non-empty name and validate input
     while (true):
         println("Enter your name:")
         player.name = scanln()
@@ -144,7 +146,7 @@ func create_player():
             break
         else:
             println("Name cannot be empty.")
-    // Class selection with retry loop
+    // Handle class selection with validation and retry for invalid inputs
     var validClass = false
     while (!validClass):
         println("Choose your class: 1. Warrior 2. Mage 3. Archer")
@@ -175,6 +177,7 @@ func create_player():
     player.inventory = []
     return player
 
+// Manage combat at a location, including enemy selection and post-combat rewards
 func handle_combat(player, location):
     if (len(location["enemies"]) > 0):
         var enemyName = location["enemies"][random_between(0, len(location["enemies"])-1)]
@@ -192,6 +195,7 @@ func handle_combat(player, location):
         println("There are no enemies here.")
     return true
 
+// Main game loop, handling player actions and game state
 func main():
     println("Welcome to the RPG Adventure!")
     println("You are a hero destined to defeat the Dragon in the Cave.")
@@ -212,7 +216,7 @@ func main():
             var choice = scanln()
             var actionIndex = parse_int(choice)
             if (get_runtype(actionIndex) == "number" and actionIndex >= 1 and actionIndex <= len(location["actions"])):
-                var adjustedIndex = actionIndex - 1 // Adjust to 0-based index
+                var adjustedIndex = actionIndex - 1 // Convert 1-based user input to 0-based array index
                 var action = location["actions"][adjustedIndex]
                 validChoice = true
                 if (action == "Go to Forest"):

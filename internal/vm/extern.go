@@ -16,7 +16,7 @@ package vm
 #include <dlfcn.h>
 #include <ffi.h>
 
-// Define a union to hold any return value
+// ReturnValue is a union that stores the return value of a C function call
 typedef union {
     void* ptr;
     int8_t i8;
@@ -42,7 +42,8 @@ typedef union {
     size_t size;
 } ReturnValue;
 
-// Define an enum for type codes
+// TypeCode is an enumeration of type codes representing C data types, used to map argument and
+// return types for libffi function calls.
 typedef enum {
     TYPE_VOID = 0,
     TYPE_INT8,
@@ -98,7 +99,8 @@ typedef struct {
     } value;
 } Argument;
 
-// Map TypeCode to ffi_type
+// get_ffi_type maps a TypeCode to the corresponding libffi type, enabling proper type handling
+// for function arguments and return values.
 ffi_type* get_ffi_type(TypeCode type) {
     switch (type) {
         case TYPE_VOID: return &ffi_type_void;
@@ -122,7 +124,8 @@ ffi_type* get_ffi_type(TypeCode type) {
         case TYPE_UINTMAX: return &ffi_type_uint64;
         case TYPE_SIZE: return &ffi_type_uint64;
         case TYPE_PTR: return &ffi_type_pointer;
-        // Complex types use placeholders
+        // Map complex types to their real component types as placeholders, since libffi does not
+		// directly support complex numbers.
         case TYPE_FLOAT_COMPLEX: return &ffi_type_float;
         case TYPE_DOUBLE_COMPLEX: return &ffi_type_double;
         default: return &ffi_type_pointer; // Fallback to pointer
@@ -197,7 +200,8 @@ import (
 	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
-// Type mappings from Seed to C TypeCode
+// typeToCode maps ZScript type names to C TypeCode values, enabling conversion of script
+// types to C types for foreign function interface (FFI) calls.
 var typeToCode = map[string]C.TypeCode{
 	"void":            C.TYPE_VOID,
 	"int8_t":          C.TYPE_INT8,
@@ -226,6 +230,8 @@ var typeToCode = map[string]C.TypeCode{
 	"int*":            C.TYPE_PTR,
 }
 
+// createNativeFunc creates an ObjNative wrapper for a C function, converting TulipScript
+// arguments and return values to C types using libffi, and handling type validation and errors.
 func createNativeFunc(funcName string, cFunc unsafe.Pointer, returnType string, paramTypes []string) *runtime.ObjNative {
 	return &runtime.ObjNative{
 		Function: func(argCount int, args []runtime.Value) runtime.Value {
@@ -252,7 +258,7 @@ func createNativeFunc(funcName string, cFunc unsafe.Pointer, returnType string, 
 				return runtime.Value{Type: runtime.VAL_NULL}
 			}
 
-			// Convert Seed arguments to C arguments
+			// Convert ZScript arguments to C arguments
 			cArgs := make([]C.Argument, argCount)
 			var cStrings []unsafe.Pointer // Track allocated C strings
 			for i, pt := range paramTypes {
@@ -457,7 +463,7 @@ func createNativeFunc(funcName string, cFunc unsafe.Pointer, returnType string, 
 				C.free(cStr)
 			}
 
-			// Convert return value back to Seed
+			// Convert return value back to ZScript
 			switch cReturnType {
 			case C.TYPE_VOID:
 				return runtime.Value{Type: runtime.VAL_NULL}

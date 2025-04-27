@@ -1,8 +1,8 @@
-// Section: Function Definitions
+// Function Definitions
 // Defines utility mathematical functions
 func add(a, b):
     // Adds two numbers and returns the result
     return a + b
 
-// Section: Constants
+// Constants
 var PI = 3.14159

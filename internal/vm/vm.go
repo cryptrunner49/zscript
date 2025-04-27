@@ -10,7 +10,7 @@ package vm
 #include <dlfcn.h>
 #include <string.h>
 
-// Load a library, automatically adding "lib" prefix and ".so" suffix if needed
+// Loads a shared library by name, prepending "lib" and appending ".so" if needed
 void* load_library(const char* lib_name) {
     void* handle = dlopen(lib_name, RTLD_LAZY);
     if (!handle) {
@@ -35,7 +35,8 @@ void* load_library(const char* lib_name) {
     return handle;
 }
 
-// Get a function pointer
+// get_function retrieves a function pointer from a loaded library using dlsym, returning the
+// pointer or NULL if the function is not found, and logs an error message.
 void* get_function(void* handle, const char* func_name) {
     void* func = dlsym(handle, func_name);
     if (!func) {
@@ -54,7 +55,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"strings"
 	"time"
 	"unsafe"
 
@@ -176,31 +176,6 @@ func Interpret(source string, scriptPath string) InterpretResult {
 	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure})
 	callValue(runtime.Value{Type: runtime.VAL_OBJ, Obj: closure}, 0)
 	return run()
-}
-
-// concatenate concatenates the top two string objects from the stack.
-func concatenate() {
-	b := Pop()
-	a := Pop()
-	astr := a.Obj.(*runtime.ObjString)
-	bstr := b.Obj.(*runtime.ObjString)
-	result := astr.Chars + bstr.Chars
-	Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(result)})
-}
-
-// crop removes the first occurrence of one string (b) from another (a).
-func crop() {
-	b := Pop()
-	a := Pop()
-	astr := a.Obj.(*runtime.ObjString)
-	bstr := b.Obj.(*runtime.ObjString)
-	idx := strings.Index(astr.Chars, bstr.Chars)
-	if idx >= 0 {
-		newStr := astr.Chars[:idx] + astr.Chars[idx+len(bstr.Chars):]
-		Push(runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString(newStr)})
-	} else {
-		Push(a)
-	}
 }
 
 // captureUpvalue creates or reuses an upvalue that points to a local variable.

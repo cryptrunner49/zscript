@@ -11,9 +11,11 @@ import (
 
 // declareVariable handles variable declarations and checks for redeclaration in the same scope.
 func declareVariable() {
+	// Skip variable declaration for global scope, as globals are defined with defineVariable.
 	if current.scopeDepth == 0 {
 		return
 	}
+
 	name := parser.previous
 	for i := current.localCount - 1; i >= 0; i-- {
 		local := current.locals[i]
@@ -210,7 +212,8 @@ func structDeclaration() {
 func compileModuleFunction() runtime.Value {
 	var fnCompiler Compiler
 
-	// Initialize a new compiler for this function.
+	// Set up a new compiler instance for the module function, initializing it with the function type
+	// and script directory.
 	initCompiler(&fnCompiler, TYPE_FUNCTION, current.scriptDir)
 	beginScope()
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name to start parameter list.")
@@ -234,7 +237,8 @@ func compileModuleFunction() runtime.Value {
 	// Finish the function.
 	fnObj := endCompiler()
 
-	// Emit the closure opcode and capture its constant.
+	// Emit the OP_CLOSURE opcode with the constant index of the compiled function object to create
+	// a closure, capturing any upvalues.
 	closureConst := makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: fnObj})
 	emitBytes(byte(runtime.OP_CLOSURE), closureConst)
 	for i := 0; i < fnObj.UpvalueCount; i++ {
@@ -318,12 +322,13 @@ func modDeclarationField() (*runtime.ObjString, runtime.Value) {
 	consume(token.TOKEN_DEDENT, "Expected dedent after nested module block.")
 
 	// Create the nested module object now.
+	// The nested module object is not currently added to the constant pool, as it is returned
+	// directly for inclusion in the parent module’s fields.
 	objModule := runtime.NewModule(nestedName)
 	for i := 0; i < len(nestedFieldNames); i++ {
 		objModule.Fields[nestedFieldNames[i]] = nestedFieldDefaults[i]
 	}
-	// Add the module object to the constant pool.
-	// (This is a compile-time constant representing the nested module.)
+
 	//_ = makeConstant(runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule})
 	// Return the nested module's name and its module value.
 	return nestedName, runtime.Value{Type: runtime.VAL_OBJ, Obj: objModule}
@@ -349,7 +354,7 @@ func defDeclaration() {
 	consume(token.TOKEN_IDENTIFIER, "Expected alias name after 'as' (e.g., 'def position.x as pos;').")
 	aliasConstant := identifierConstant(parser.previous)
 
-	// Resolve the module path.
+	// Resolve the module path by emitting opcodes to access the global module and its nested properties.
 	emitBytes(byte(runtime.OP_GET_GLOBAL), identifierConstant(token.Token{Start: modulePathParts[0]}))
 	for i := 1; i < len(modulePathParts); i++ {
 		emitBytes(byte(runtime.OP_GET_PROPERTY), identifierConstant(token.Token{Start: modulePathParts[i]}))
@@ -391,7 +396,8 @@ func modDeclaration() {
 
 	moduleName := modulePathParts[0]
 	nameConstant := identifierConstant(token.Token{Start: moduleName})
-	declareVariable() // Reserve the module name in the current scope.
+	// Reserve the module name in the current scope.
+	declareVariable()
 
 	consume(token.TOKEN_COLON, "Expected ':' after module name.")
 	consume(token.TOKEN_INDENT, "Expected indented block after ':'.")
@@ -595,7 +601,7 @@ func useDeclaration() {
 	consume(token.TOKEN_COLON, "Expected ':' after library name in 'use' statement.")
 	consume(token.TOKEN_INDENT, "Expected indented block after ':'.")
 
-	// Emit OP_USE with library name
+	// Emit the OP_USE opcode with the library name constant to load the external library.
 	emitBytes(byte(runtime.OP_USE), libPathConstant)
 
 	// Parse function declarations until '}'

@@ -30,14 +30,13 @@ fn main() {
         .collect();
     argv.push(ptr::null_mut()); // Null-terminate argv
 
-    // Initialize ZScript
+    // Initialize the ZScript scripting environment
     unsafe {
         ZScript_Init(argc, argv.as_ptr());
     }
 
     // Run Seed script
     if args.len() > 1 {
-        // Run script from file
         let path = match CString::new(args[1].as_str()) {
             Ok(path) => path,
             Err(e) => {
@@ -45,12 +44,16 @@ fn main() {
                 return;
             }
         };
+
+        // Run ZScript script from a file
         unsafe { ZScript_RunFile(path.as_ptr()) };
     } else {
         // Run inline script
         let source = CString::new("1 + 2;").expect("Failed to create source CString");
         let name = CString::new("<test>").expect("Failed to create name CString");
         let mut exit_code: c_int = 0;
+
+        // Interpret a ZScript script and capture the result
         let result = unsafe { ZScript_InterpretWithResult(source.as_ptr(), name.as_ptr(), &mut exit_code) };
         if exit_code == 0 {
             let result_str = unsafe { std::ffi::CStr::from_ptr(result) }
@@ -60,12 +63,14 @@ fn main() {
         } else {
             println!("Execution failed with code {}", exit_code);
         }
+
+        // Free the result string to prevent memory leaks
         unsafe {
             libc::free(result as *mut libc::c_void);
         }
     }
 
-    // Free ZScript
+    // Clean up ZScript scripting environment resources
     unsafe {
         ZScript_Free();
     }

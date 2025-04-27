@@ -24,6 +24,32 @@ import (
 	"github.com/cryptrunner49/zscript/internal/vm"
 )
 
+func main() {
+	// Bind the Tab key to insert a tab character instead of triggering autocomplete
+	C.bind_tab_key()
+
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "-h", "--help":
+			showUsage()
+			os.Exit(0)
+		case "-v", "--version":
+			showVersion()
+			os.Exit(0)
+		}
+	}
+
+	vm.InitVM(os.Args)
+	defer vm.FreeVM()
+
+	if len(os.Args) == 1 {
+		fmt.Println("zvm REPL - ZScript Virtual Machine (type Ctrl+D to exit)")
+		repl()
+	} else {
+		runFile(os.Args[1])
+	}
+}
+
 // showUsage prints detailed help and usage instructions.
 func showUsage() {
 	usage := `zvm - A ZScript Virtual Machine Interpreter
@@ -65,37 +91,13 @@ func showVersion() {
 	fmt.Printf("zvm version %s\n", common.Version)
 }
 
-func main() {
-	C.bind_tab_key()
-
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "-h", "--help":
-			showUsage()
-			os.Exit(0)
-		case "-v", "--version":
-			showVersion()
-			os.Exit(0)
-		}
-	}
-
-	vm.InitVM(os.Args)
-	defer vm.FreeVM()
-
-	if len(os.Args) == 1 {
-		fmt.Println("zvm REPL - ZScript Virtual Machine (type Ctrl+D to exit)")
-		repl()
-	} else {
-		runFile(os.Args[1])
-	}
-}
-
+// repl runs the interactive Read-Eval-Print Loop (REPL) for ZScript
 func repl() {
 	var blockLines []string // Accumulate multi-line input (block)
 	inBlock := false        // Flag indicating if we're in a block
 
 	for {
-		// Use ">>> " when not in a block, otherwise the simple "... " prompt
+		// Set prompt to ">>> " for new input or "... " when continuing a multi-line block
 		prompt := ">>> "
 		if inBlock {
 			prompt = "... "
@@ -118,7 +120,7 @@ func repl() {
 			continue
 		}
 
-		// If we are in a block and get an empty line, that signals the end of the block.
+		// An empty line while in a block signals the end of the block
 		if inBlock && trimmed == "" {
 			source := strings.Join(blockLines, "\n")
 			// Add the complete block to history.
@@ -183,7 +185,10 @@ func runFile(path string) {
 		os.Exit(74)
 	}
 
-	// Normalize source and append 'pass;' to ensure a stack value
+	// Trim trailing newlines from the source code and append 'pass;'
+	// This ensures that the last indented block is properly dedented,
+	// conforming to the language's syntax requirements for indented blocks.
+	// Without this, the interpreter may throw an error due to improper indentation.
 	sourceStr := strings.TrimRight(string(source), "\n") + "\npass;\n"
 	result := vm.Interpret(sourceStr, path)
 	switch result {

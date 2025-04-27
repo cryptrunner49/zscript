@@ -97,24 +97,3 @@ func Equal(a, b Value) bool {
 		return false
 	}
 }
-
-func (v Value) Serialize() string {
-	switch v.Type {
-	case VAL_NUMBER:
-		return fmt.Sprintf("number:%v", v.Number)
-	case VAL_OBJ:
-		if str, ok := v.Obj.(*ObjString); ok {
-			return fmt.Sprintf("string:%s", str.Chars)
-		}
-		return fmt.Sprintf("obj:%p", v.Obj) // Fallback for other objects
-	case VAL_BOOL:
-		if v.Bool {
-			return "bool:true"
-		}
-		return "bool:false"
-	case VAL_NULL:
-		return "null"
-	default:
-		return "" // Should not occur with supported types
-	}
-}

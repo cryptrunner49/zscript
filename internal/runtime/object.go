@@ -6,12 +6,13 @@ import (
 	"time"
 )
 
-// ObjType represents the different types of heap-allocated objects.
+// ObjType defines the types of heap-allocated objects in the runtime, used to identify object
+// categories like functions, strings, and structs.
 type ObjType int
 
 // Enumeration of object types.
 const (
-	OBJ_UPVALUE        ObjType = iota // Upvalue: a closed-over variable.
+	OBJ_UPVALUE        ObjType = iota // Upvalue: a variable captured from an outer scope.
 	OBJ_CLOSURE                       // Closure: a function plus its captured environment.
 	OBJ_FUNCTION                      // Function: a user-defined function.
 	OBJ_NATIVE                        // Native: a built-in (native) function.
@@ -24,7 +25,7 @@ const (
 	OBJ_MAP                           // Map: a key-value store.
 	OBJ_DATE                          // Date object (year, month, day)
 	OBJ_TIME                          // Time object (hour, minute, second)
-	OBJ_DATETIME                      // DateTime object (full date and time)
+	OBJ_DATETIME                      // DateTime represents a combined date and time.
 )
 
 // Obj is the header for all heap-allocated objects.
@@ -88,7 +89,8 @@ type ObjInstance struct {
 	Fields    map[*ObjString]Value // Instance field values.
 }
 
-// Map to store interned strings for reuse.
+// strings is a map for interning strings, storing ObjString objects by their hash to reuse
+// identical strings and reduce memory usage.
 var strings = make(map[uint32]*ObjString)
 
 // NewNative creates a new ObjNative wrapping the given native function.
@@ -145,12 +147,8 @@ func NewObjString(s string) *ObjString {
 	return objString
 }
 
-// TakeString returns a new ObjString from the given string (alias for NewObjString).
-func TakeString(s string) *ObjString {
-	return NewObjString(s)
-}
-
-// CopyString returns a new ObjString from the given string (alias for NewObjString).
+// CopyString creates or returns an interned ObjString for the given string, reusing an existing
+// string if it matches an interned one.
 func CopyString(s string) *ObjString {
 	return NewObjString(s)
 }
@@ -311,7 +309,8 @@ func PrintObject(obj interface{}) {
 	case *ObjStruct:
 		fmt.Printf("<struct %s>", o.Name.Chars)
 	case *ObjInstance:
-		// Print instance with all fields in the format <structName.field1=value1, field2=value2>
+		// Print the instance as <(struct structName), field1=value1, field2=value2>, including all
+		// field names and their values.
 		fmt.Print("<")
 		fmt.Printf("(struct %s)", o.Structure.Name.Chars) // Print struct name
 		first := true

@@ -231,7 +231,6 @@ func disableTraceExecution(argCount int, args []runtime.Value) runtime.Value {
 // Native Functions: String Operations
 // ============================================================================
 
-// toStr converts a value to its string representation.
 func toStr(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		return runtime.Value{Type: runtime.VAL_OBJ, Obj: runtime.NewObjString("Error: to_str expects 1 argument")}
@@ -295,7 +294,6 @@ func toStr(argCount int, args []runtime.Value) runtime.Value {
 	}
 }
 
-// arrayToString converts an array to a string like "[1, 2, 3]".
 func arrayToString(array *runtime.ObjArray) string {
 	var sb strings.Builder
 	sb.WriteString("[")
@@ -314,7 +312,6 @@ func arrayToString(array *runtime.ObjArray) string {
 	return sb.String()
 }
 
-// mapToString converts a map to a string like "{key1: value1, key2: value2}".
 func mapToString(mapObj *runtime.ObjMap) string {
 	var sb strings.Builder
 	sb.WriteString("{")
@@ -337,7 +334,6 @@ func mapToString(mapObj *runtime.ObjMap) string {
 	return sb.String()
 }
 
-// instanceToString converts a struct instance to a string like "<StructName{field1=value1, field2=value2}>".
 func instanceToString(instance *runtime.ObjInstance) string {
 	var sb strings.Builder
 	sb.WriteString("<")
@@ -362,22 +358,18 @@ func instanceToString(instance *runtime.ObjInstance) string {
 	return sb.String()
 }
 
-// dateToString converts a Date object to a string like "2023-10-15".
 func dateToString(date *runtime.ObjDate) string {
 	return date.Time.Format("2006-01-02")
 }
 
-// timeToString converts a Time object to a string like "14:30:00".
 func timeToString(timeObj *runtime.ObjTime) string {
 	return timeObj.Time.Format("15:04:05")
 }
 
-// dateTimeToString converts a DateTime object to a string like "2023-10-15 14:30:00".
 func dateTimeToString(dateTime *runtime.ObjDateTime) string {
 	return dateTime.Time.Format("2006-01-02 15:04:05")
 }
 
-// toCharsNative converts a string into an array of single-character strings.
 func toCharsNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("to_chars() expects exactly 1 argument")
@@ -400,7 +392,6 @@ func toCharsNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewArray(chars))
 }
 
-// charAtNative returns character at given index
 func charAtNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'char_at' expects 2 arguments: a string and an index.")
@@ -422,7 +413,6 @@ func charAtNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(string(strObj.Chars[index])))
 }
 
-// substringNative returns a substring between start and end indices
 func substringNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 3 {
 		runtimeError("'substring' expects 3 arguments: a string, start index, and end index.")
@@ -451,7 +441,6 @@ func substringNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(strObj.Chars[start:end]))
 }
 
-// strIndexOfNative returns first occurrence of substring
 func strIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'str_index_of' expects 2 arguments: a string and a substring.")
@@ -471,7 +460,6 @@ func strIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(index)}
 }
 
-// strLastIndexOfNative returns last occurrence of substring
 func strLastIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'str_last_index_of' expects 2 arguments: a string and a substring.")
@@ -491,7 +479,6 @@ func strLastIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(index)}
 }
 
-// strContainsNative checks if substring exists in string
 func strContainsNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'str_contains' expects 2 arguments: a string and a substring.")
@@ -510,7 +497,6 @@ func strContainsNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_BOOL, Bool: strings.Contains(strObj.Chars, subStrObj.Chars)}
 }
 
-// startsWithNative checks if string starts with prefix
 func startsWithNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'starts_with' expects 2 arguments: a string and a prefix.")
@@ -529,7 +515,6 @@ func startsWithNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_BOOL, Bool: strings.HasPrefix(strObj.Chars, prefixObj.Chars)}
 }
 
-// endsWithNative checks if string ends with suffix
 func endsWithNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'ends_with' expects 2 arguments: a string and a suffix.")
@@ -548,7 +533,6 @@ func endsWithNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_BOOL, Bool: strings.HasSuffix(strObj.Chars, suffixObj.Chars)}
 }
 
-// toUpperNative converts string to uppercase
 func toUpperNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'to_upper' expects 1 argument: a string.")
@@ -562,7 +546,6 @@ func toUpperNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(strings.ToUpper(strObj.Chars)))
 }
 
-// toLowerNative converts string to lowercase
 func toLowerNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'to_lower' expects 1 argument: a string.")
@@ -576,7 +559,6 @@ func toLowerNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(strings.ToLower(strObj.Chars)))
 }
 
-// trimNative removes leading and trailing whitespace
 func trimNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'trim' expects 1 argument: a string.")
@@ -590,7 +572,6 @@ func trimNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(strings.TrimSpace(strObj.Chars)))
 }
 
-// splitNative splits string into array of substrings
 func splitNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'split' expects 2 arguments: a string and a delimiter.")
@@ -614,7 +595,6 @@ func splitNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewArray(result))
 }
 
-// replaceNative replaces all occurrences of old with new
 func replaceNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 3 {
 		runtimeError("'replace' expects 3 arguments: a string, old substring, and new substring.")
@@ -638,7 +618,6 @@ func replaceNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(strings.ReplaceAll(strObj.Chars, oldObj.Chars, newObj.Chars)))
 }
 
-// strLengthNative returns the length of the string
 func strLengthNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'str_length' expects 1 argument: a string.")
@@ -652,7 +631,6 @@ func strLengthNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(len(strObj.Chars))}
 }
 
-// arrayLenNative returns the length of an array.
 func arrayLenNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'len' expects 1 argument (the array).")
@@ -673,7 +651,6 @@ func arrayLenNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 }
 
-// arrayPushNative pushes one or more elements onto an array and returns the new length.
 func arrayPushNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount < 1 {
 		runtimeError("'push' expects at least 1 argument.")
@@ -697,7 +674,6 @@ func arrayPushNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 }
 
-// arrayPopNative removes the last element from an array and returns it.
 func arrayPopNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'pop' expects 1 argument.")
@@ -720,7 +696,6 @@ func arrayPopNative(argCount int, args []runtime.Value) runtime.Value {
 	return last
 }
 
-// arrayIterNative creates an iterator for an array.
 func arrayIterNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'array_iter' expects 1 argument (the array).")
@@ -741,7 +716,6 @@ func arrayIterNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 }
 
-// iterNextNative advances the iterator to the next element.
 func iterNextNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'iter_next' expects 1 argument (the iterator).")
@@ -760,7 +734,6 @@ func iterNextNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NULL}
 }
 
-// iterValueNative returns the current value pointed to by the iterator.
 func iterValueNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'iter_value' expects 1 argument (the iterator).")
@@ -781,7 +754,6 @@ func iterValueNative(argCount int, args []runtime.Value) runtime.Value {
 	return iter.Array.Elements[iter.Index]
 }
 
-// iterDoneNative returns a boolean indicating whether the iterator has finished iterating over the array.
 func iterDoneNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'iter_done' expects 1 argument (the iterator).")
@@ -806,9 +778,6 @@ func iterDoneNative(argCount int, args []runtime.Value) runtime.Value {
 // Native Functions: Array Operations
 // ============================================================================
 
-// arraySortNative sorts an array in ascending order.
-// It works with any type by comparing the string representation of elements.
-// The sort is done in-place and the sorted array is returned.
 func arraySortNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'array_sort' expects 1 argument (the array).")
@@ -867,8 +836,6 @@ func arraySortNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(array)
 }
 
-// arraySplitNative splits an array into subarrays using a separator element.
-// Every occurrence of the separator starts a new subarray.
 func arraySplitNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'array_split' expects 2 arguments: an array and a separator.")
@@ -900,8 +867,6 @@ func arraySplitNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewArray(resultElements))
 }
 
-// arrayJoinNative joins two or more arrays into one.
-// It concatenates the elements of each array in the order provided.
 func arrayJoinNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount < 2 {
 		runtimeError("'array_join' expects at least 2 arguments (arrays).")
@@ -923,8 +888,6 @@ func arrayJoinNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewArray(joinedElements))
 }
 
-// arraySortedPushNative inserts a new element into a sorted array while keeping it sorted.
-// The ordering is determined by comparing the string representation of elements.
 func arraySortedPushNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'array_sorted_push' expects 2 arguments: an array and a value.")
@@ -978,8 +941,6 @@ func arraySortedPushNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 }
 
-// arrayLinearSearchNative performs a linear search on an array.
-// It returns the index of the first occurrence of the search value, or -1 if not found.
 func arrayLinearSearchNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'array_linear_search' expects 2 arguments: an array and a search value.")
@@ -1003,9 +964,6 @@ func arrayLinearSearchNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: -1}
 }
 
-// arrayBinarySearchNative performs a binary search on a sorted array.
-// It returns the index of the search value, or -1 if not found.
-// Comparison is based on the string representation of elements.
 func arrayBinarySearchNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'array_binary_search' expects 2 arguments: a sorted array and a search value.")
@@ -1058,7 +1016,6 @@ func arrayBinarySearchNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: -1}
 }
 
-// arrayIndexOfNative returns the index of the first occurrence of an element
 func arrayIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'index_of' expects 2 arguments: an array and an element.")
@@ -1082,7 +1039,6 @@ func arrayIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: -1}
 }
 
-// arrayLastIndexOfNative returns the index of the last occurrence of an element
 func arrayLastIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'last_index_of' expects 2 arguments: an array and an element.")
@@ -1106,7 +1062,6 @@ func arrayLastIndexOfNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: -1}
 }
 
-// arrayContainsNative checks if an element exists in the array
 func arrayContainsNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'array_contains' expects 2 arguments: an array and an element.")
@@ -1130,7 +1085,6 @@ func arrayContainsNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
 }
 
-// arrayClearNative removes all elements from the array
 func arrayClearNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'array_clear' expects 1 argument: an array.")
@@ -1149,7 +1103,6 @@ func arrayClearNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NULL}
 }
 
-// arrayReverseNative reverses the array in place
 func arrayReverseNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'array_reverse' expects 1 argument: an array.")
@@ -1170,7 +1123,6 @@ func arrayReverseNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(array)
 }
 
-// arrayToStringNative converts array to string representation
 func arrayToStringNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'array_to_string' expects 1 argument: an array.")
@@ -1198,7 +1150,6 @@ func arrayToStringNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewObjString(sb.String()))
 }
 
-// arrayRemoveNative removes the first occurrence of an element
 func arrayRemoveNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'array_remove' expects 2 arguments: an array and an element.")
@@ -1227,7 +1178,6 @@ func arrayRemoveNative(argCount int, args []runtime.Value) runtime.Value {
 // Native Functions: Map Operations
 // ============================================================================
 
-// mapRemoveNative removes a key-value pair from a map
 func mapRemoveNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'map_remove' expects 2 arguments: a map and a key.")
@@ -1255,7 +1205,6 @@ func mapRemoveNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NULL}
 }
 
-// mapContainsKeyNative checks if a key exists in a map
 func mapContainsKeyNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'map_contains_key' expects 2 arguments: a map and a key.")
@@ -1283,7 +1232,6 @@ func mapContainsKeyNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_BOOL, Bool: exists}
 }
 
-// mapContainsValueNative checks if a value exists in a map
 func mapContainsValueNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 2 {
 		runtimeError("'map_contains_value' expects 2 arguments: a map and a value.")
@@ -1307,7 +1255,6 @@ func mapContainsValueNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_BOOL, Bool: false}
 }
 
-// mapSizeNative returns the number of key-value pairs in a map
 func mapSizeNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'map_size' expects 1 argument: a map.")
@@ -1328,7 +1275,6 @@ func mapSizeNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 }
 
-// mapClearNative removes all key-value pairs from a map
 func mapClearNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'map_clear' expects 1 argument: a map.")
@@ -1347,7 +1293,6 @@ func mapClearNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{Type: runtime.VAL_NULL}
 }
 
-// mapKeysNative returns an array of all keys in a map
 func mapKeysNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'map_keys' expects 1 argument: a map.")
@@ -1369,7 +1314,6 @@ func mapKeysNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.ObjVal(runtime.NewArray(keys))
 }
 
-// mapValuesNative returns an array of all values in a map
 func mapValuesNative(argCount int, args []runtime.Value) runtime.Value {
 	if argCount != 1 {
 		runtimeError("'map_values' expects 1 argument: a map.")
@@ -2220,6 +2164,7 @@ func printfNative(argCount int, args []runtime.Value) runtime.Value {
 			printArgs = append(printArgs, "unknown")
 		}
 	}
+
 	// Replace all format specifiers with %v
 	adjustedFormat := strings.ReplaceAll(format, "%s", "%v")
 	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%d", "%v")
@@ -2348,6 +2293,7 @@ func sprintfNative(argCount int, args []runtime.Value) runtime.Value {
 			printArgs = append(printArgs, "unknown")
 		}
 	}
+
 	// Replace all format specifiers with %v
 	adjustedFormat := strings.ReplaceAll(format, "%s", "%v")
 	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%d", "%v")
@@ -2409,6 +2355,7 @@ func errorfNative(argCount int, args []runtime.Value) runtime.Value {
 			printArgs = append(printArgs, "unknown")
 		}
 	}
+
 	// Replace all format specifiers with %v
 	adjustedFormat := strings.ReplaceAll(format, "%s", "%v")
 	adjustedFormat = strings.ReplaceAll(adjustedFormat, "%d", "%v")
@@ -2501,7 +2448,6 @@ func parseIntNative(argCount int, args []runtime.Value) runtime.Value {
 	}
 	num, err := strconv.Atoi(strObj.Chars)
 	if err != nil {
-		//runtimeError("Failed to parse '%s' as an integer: %v", strObj.Chars, err)
 		return runtime.Value{Type: runtime.VAL_NULL}
 	}
 	return runtime.Value{Type: runtime.VAL_NUMBER, Number: float64(num)}
@@ -2524,7 +2470,6 @@ func getRunTypeNative(argCount int, args []runtime.Value) runtime.Value {
 // Native Functions: Others Operations
 // ============================================================================
 
-// clockNative returns the current time in seconds as a number.
 func clockNative(argCount int, args []runtime.Value) runtime.Value {
 	return runtime.Value{
 		Type:   runtime.VAL_NUMBER,

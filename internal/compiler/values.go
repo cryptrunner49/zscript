@@ -8,7 +8,9 @@ import (
 // function compiles a function declaration, including parameter parsing and function body.
 func function(funcType FunctionType) {
 	var compiler Compiler
+	// Initialize the compiler for the function, setting up the function type and script directory.
 	initCompiler(&compiler, funcType, current.scriptDir) // Regular function: no module context
+
 	beginScope()
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after function name to start parameter list.")
 	if !check(token.TOKEN_RIGHT_PAREN) {
@@ -68,9 +70,10 @@ func arrayLiteral(canAssign bool) {
 // subscript parses array subscript expressions, handling both element access and slice syntax.
 // For slices, it expects an optional start expression, a colon, and an optional end expression.
 // It emits either an OP_ARRAY_SLICE or an OP_ARRAY_GET/OP_ARRAY_SET opcode depending on the context.
-// subscript handles array/map access and slices. Key changes:
-// 1. Keep OP_ARRAY_SLICE for slice operations
-// 2. Use generic OP_GET_INDEX/OP_SET_INDEX for element access
+// subscript parses array and map subscript expressions, supporting element access and slice syntax.
+// For slices, it handles an optional start expression, a colon, and an optional end expression,
+// emitting OP_ARRAY_SLICE. For element access, it emits generic OP_GET_VALUE or OP_SET_VALUE opcodes
+// based on the context (e.g., assignment or retrieval).
 func subscript(canAssign bool) {
 	// Handle slice start (optional)
 	hasStart := !check(token.TOKEN_COLON) && !check(token.TOKEN_RIGHT_BRACKET)

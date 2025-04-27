@@ -6,6 +6,8 @@ import (
 	"github.com/cryptrunner49/zscript/internal/runtime"
 )
 
+// Disassemble prints a human-readable representation of the chunk’s bytecode, including each
+// instruction, its offset, and associated line number, prefixed with the chunk’s name.
 func Disassemble(ch *runtime.Chunk, name string) {
 	fmt.Printf("== %s ==\n", name)
 	for offset := 0; offset < ch.Count(); {
@@ -13,6 +15,8 @@ func Disassemble(ch *runtime.Chunk, name string) {
 	}
 }
 
+// DisassembleInstruction disassembles a single instruction at the given offset, printing its
+// details (opcode, operands, and line number) and returning the next offset to process.
 func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 	fmt.Printf("%04d ", offset)
 	if offset > 0 && ch.Lines()[offset] == ch.Lines()[offset-1] {
@@ -156,7 +160,7 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 		fmt.Println("'")
 		return offset + 1
 	case uint8(runtime.OP_MATCH):
-		return matchInstruction(ch, offset)
+		return simpleInstruction("OP_MATCH", offset)
 	case uint8(runtime.OP_DUP):
 		return simpleInstruction("OP_DUP", offset)
 	case uint8(runtime.OP_EXPONENTIAL):
@@ -171,11 +175,15 @@ func DisassembleInstruction(ch *runtime.Chunk, offset int) int {
 	}
 }
 
+// simpleInstruction disassembles a single-byte instruction with no operands, printing its name
+// and returning the next offset.
 func simpleInstruction(name string, offset int) int {
 	fmt.Println(name)
 	return offset + 1
 }
 
+// constantInstruction disassembles an instruction with a single constant operand, printing the
+// opcode name, constant index, and constant value, and returning the next offset.
 func constantInstruction(name string, ch *runtime.Chunk, offset int) int {
 	constant := ch.Code()[offset+1]
 	fmt.Printf("%-16s %4d '", name, constant)
@@ -184,18 +192,24 @@ func constantInstruction(name string, ch *runtime.Chunk, offset int) int {
 	return offset + 2
 }
 
+// byteInstruction disassembles an instruction with a single byte operand, printing the opcode
+// name and operand value, and returning the next offset.
 func byteInstruction(name string, ch *runtime.Chunk, offset int) int {
 	slot := ch.Code()[offset+1]
 	fmt.Printf("%-16s %4d\n", name, slot)
 	return offset + 2
 }
 
+// jumpInstruction disassembles a jump instruction, printing the opcode name, current offset,
+// and target offset (adjusted by the jump distance and sign), and returning the next offset.
 func jumpInstruction(name string, sign int, ch *runtime.Chunk, offset int) int {
 	jump := int(ch.Code()[offset+1])<<8 | int(ch.Code()[offset+2])
 	fmt.Printf("%-16s %4d -> %d\n", name, offset, offset+3+sign*jump)
 	return offset + 3
 }
 
+// structInstruction disassembles the OP_STRUCT opcode, printing the struct name constant, field
+// count, and each field’s name and default value constants, and returning the next offset.
 func structInstruction(ch *runtime.Chunk, offset int) int {
 	// Read the struct name constant.
 	constant := ch.Code()[offset+1]
@@ -222,37 +236,5 @@ func structInstruction(ch *runtime.Chunk, offset int) int {
 		fmt.Println("'")
 		offset++
 	}
-	return offset
-}
-
-// New function to disassemble OP_MATCH
-func matchInstruction(ch *runtime.Chunk, offset int) int {
-	fmt.Printf("%-16s", "OP_MATCH")
-	offset++ // Skip opcode
-	numCases := ch.Code()[offset]
-	fmt.Printf("%d cases, default -> ", numCases)
-	offset++
-	defaultOffset := (int(ch.Code()[offset]) << 8) | int(ch.Code()[offset+1])
-	fmt.Printf("%04d", offset+defaultOffset)
-	offset += 2
-	for i := 0; i < int(numCases); i++ {
-		if offset+2 >= len(ch.Code()) {
-			fmt.Println("\n      | <truncated>")
-			return offset
-		}
-		constant := ch.Code()[offset]
-		fmt.Printf("\n%04d      | case constant %d: '", offset, constant)
-		if constant < uint8(len(ch.Constants().Values())) {
-			runtime.PrintValue(ch.Constants().Values()[constant])
-		} else {
-			fmt.Print("<invalid>")
-		}
-		fmt.Print("'")
-		offset++
-		caseOffset := (int(ch.Code()[offset]) << 8) | int(ch.Code()[offset+1])
-		fmt.Printf(" offset -> %04d", offset+caseOffset-1)
-		offset += 2
-	}
-	fmt.Println()
 	return offset
 }

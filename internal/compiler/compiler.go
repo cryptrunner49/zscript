@@ -273,8 +273,6 @@ func statement() {
 		continueStatement()
 	} else if match(token.TOKEN_RETURN) {
 		returnStatement()
-	} else if match(token.TOKEN_MATCH) {
-		matchStatement()
 	} else if match(token.TOKEN_PASS) {
 		passStatement()
 	} else if match(token.TOKEN_LEFT_BRACE) {
@@ -631,7 +629,8 @@ func namedVariable(name token.Token, canAssign bool) {
 		expression()
 		emitBytes(setOp, uint8(arg))
 	} else if match(token.TOKEN_PLUS_PLUS) {
-		// Postfix x++: Load, duplicate, increment, store, pop new value, leave original on stack
+		// Postfix increment (x++): Load the variable, duplicate it, increment by 1, store back, and pop
+		// the incremented value, leaving the original value on the stack.
 		emitBytes(getOp, uint8(arg))
 		emitByte(byte(runtime.OP_DUP))
 		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1})
@@ -639,7 +638,8 @@ func namedVariable(name token.Token, canAssign bool) {
 		emitBytes(setOp, uint8(arg))
 		emitByte(byte(runtime.OP_POP))
 	} else if match(token.TOKEN_MINUS_MINUS) {
-		// Postfix x--: Load, duplicate, decrement, store, pop new value, leave original on stack
+		// Postfix decrement (x--): Load the variable, duplicate it, decrement by 1, store back, and pop
+		// the decremented value, leaving the original value on the stack.
 		emitBytes(getOp, uint8(arg))
 		emitByte(byte(runtime.OP_DUP))
 		emitConstant(runtime.Value{Type: runtime.VAL_NUMBER, Number: 1})
@@ -723,6 +723,8 @@ func patchJump(offset int) {
 
 // and compiles a logical AND operator by emitting short-circuit jump logic.
 func and(canAssign bool) {
+	// Emit a conditional jump to short-circuit the AND operation if the left operand is false, skipping
+	// evaluation of the right operand.
 	endJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
 	parsePrecedence(PREC_AND)
@@ -731,6 +733,8 @@ func and(canAssign bool) {
 
 // or compiles a logical OR operator by emitting appropriate jump instructions.
 func or(canAssign bool) {
+	// Emit jumps to short-circuit the OR operation: skip the right operand if the left is true, or
+	// evaluate the right operand if the left is false.
 	elseJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	endJump := emitJump(byte(runtime.OP_JUMP))
 	patchJump(elseJump)

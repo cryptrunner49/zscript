@@ -8,7 +8,7 @@ import (
 )
 
 // isFalsey returns true if a value is considered false in boolean context.
-// In this VM, only null and false are falsey.
+// In ZScript, only null and false are considered falsey.
 func isFalsey(val runtime.Value) bool {
 	return val.Type == runtime.VAL_NULL || (val.Type == runtime.VAL_BOOL && !val.Bool)
 }
@@ -55,7 +55,8 @@ func runtimeError(format string, args ...interface{}) InterpretResult {
 	fmt.Fprintf(os.Stderr, "Runtime Error: ")
 	fmt.Fprintf(os.Stderr, format, args...)
 	fmt.Fprintln(os.Stderr)
-	// Print the call stack.
+	// Print a backtrace of the call stack, showing the line number and function name (or
+	// "top-level script") for each frame.
 	for i := vm.frameCount - 1; i >= 0; i-- {
 		frame := &vm.frames[i]
 		function := frame.closure.Function
@@ -114,6 +115,9 @@ func call(closure *runtime.ObjClosure, argCount int) bool {
 	return true
 }
 
+// createInstance creates a new struct instance from a struct value, applying key-value pairs
+// from the stack as field initializers, and returns false if validation fails or the callee
+// is not a struct.
 func createInstance(callee runtime.Value, argCount int) bool {
 	if callee.Type == runtime.VAL_OBJ {
 		if structObj, ok := callee.Obj.(*runtime.ObjStruct); ok {
@@ -131,7 +135,8 @@ func createInstance(callee runtime.Value, argCount int) bool {
 			// Base position of the struct on the stack
 			base := vm.stackTop - (argCount * 2) - 1 // 2 slots per pair
 
-			// Assign key-value pairs to fields
+			// Process key-value pairs from the stack, assigning values to the instance’s fields and
+			// validating field names and existence based on the force flag.
 			for i := 0; i < argCount; i++ {
 				value := Pop()  // Pop the value (e.g., 2, then 1)
 				keyVal := Pop() // Pop the key (e.g., "y", then "x")

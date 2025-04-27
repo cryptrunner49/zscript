@@ -14,34 +14,35 @@ func expressionStatement() {
 }
 
 func ifStatement() {
-	// Collect all jumps that need to skip to the end of the entire if/else-if/else chain
+	// Track jump offsets for all branches (then, else-if, else) to patch them to the end of the if
+	// statement, ensuring control flow skips to after the entire construct.
 	var endJumps []int
 
-	// Parse the initial if(condition)
+	// Parse the initial if condition
 	consume(token.TOKEN_LEFT_PAREN, "Expected '(' after 'if'.")
 	expression()
 	consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after condition.")
 	consume(token.TOKEN_COLON, "Expected ':' after if condition.")
 
-	// Jump over the then-block if false
+	// Emit jump if the condition is false, to skip the then branch
 	thenJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP)) // Pop the condition result
 
-	// Compile the 'then' block
+	// Compile the then branch
 	beginScope()
 	block()
 	endScope()
 
-	// After running the then-block, skip the rest of the chain
+	// Jump to the end of the entire if statement after the then branch
 	endJumps = append(endJumps, emitJump(byte(runtime.OP_JUMP)))
 
-	// Patch the false-condition jump to land here
+	// Patch the thenJump to point to the start of the next clause
 	patchJump(thenJump)
 	emitByte(byte(runtime.OP_POP)) // Pop the condition result
 
-	// Handle any number of '|' clauses as else-if
+	// Process chained else-if clauses (marked by '|'), compiling each condition and branch, and
+	// managing jumps to skip to the next clause or the end of the if statement.
 	for match(token.TOKEN_PIPE) {
-		// Parse: |(condition)
 		consume(token.TOKEN_LEFT_PAREN, "Expected '(' after '|' to start condition.")
 		expression()
 		consume(token.TOKEN_RIGHT_PAREN, "Expected ')' after '|' condition.")
@@ -88,6 +89,8 @@ func whileStatement() {
 	exitJump := emitJump(byte(runtime.OP_JUMP_IF_FALSE))
 	emitByte(byte(runtime.OP_POP))
 
+	// Register the while loop in the compiler’s loop stack to manage continue and break statements,
+	// storing the loop’s start position and jump patch lists.
 	current.loops = append(current.loops, Loop{
 		jumpType:        JUMP_WHILE,
 		start:           loopStart,
@@ -140,6 +143,7 @@ func forStatement() {
 	loopStart := currentChunk().Count()
 	exitJump := -1
 
+	// Compile the loop condition, if present, and emit a jump to exit the loop if the condition is false.
 	if !match(token.TOKEN_SEMICOLON) {
 		expression()
 		consumeOptionalSemicolon()
@@ -242,7 +246,9 @@ func continueStatement() {
 		reportError("Cannot use 'continue' inside a match statement.")
 		return
 	}
-	// Existing continue logic remains unchanged
+
+	// Emit the OP_CONTINUE opcode and reserve space for the jump offset, which will be patched to
+	// the loop’s start or increment position.
 	emitByte(byte(runtime.OP_CONTINUE))
 	jumpPos := currentChunk().Count()
 	emitByte(0xFF)
@@ -366,11 +372,7 @@ func iterStatement() {
 	endScope()
 }
 
-func matchStatement() {
-	// TODO
-	fmt.Println("###### TODO ######")
-}
-
+// passStatement compiles a pass statement, which is a no-op that consumes an optional semicolon.
 func passStatement() {
 	consumeOptionalSemicolon()
 }

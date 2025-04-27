@@ -23,31 +23,34 @@ func main() {
 		defer C.free(unsafe.Pointer(argv[i]))
 	}
 
-	// Initialize ZScript
+	// Initialize the ZScript scripting environment
 	C.ZScript_Init(argc, &argv[0])
 
-	// Run Seed script
 	if len(os.Args) > 1 {
-		// Run script from file
 		path := C.CString(os.Args[1])
 		defer C.free(unsafe.Pointer(path))
+
+		// Run ZScript script from a file
 		C.ZScript_RunFile(path)
 	} else {
-		// Run inline script
 		source := C.CString("1 + 2;")
 		name := C.CString("<test>")
 		defer C.free(unsafe.Pointer(source))
 		defer C.free(unsafe.Pointer(name))
 		var exitCode C.int
+
+		// Interpret a ZScript script and capture the result
 		result := C.ZScript_InterpretWithResult(source, name, &exitCode)
 		if exitCode == 0 {
 			fmt.Printf("Last value: %s\n", C.GoString(result))
 		} else {
 			fmt.Printf("Execution failed with code %d\n", exitCode)
 		}
+
+		// Free the result string to prevent memory leaks
 		C.free(unsafe.Pointer(result))
 	}
 
-	// Free ZScript
+	// Clean up ZScript scripting environment resources
 	C.ZScript_Free()
 }

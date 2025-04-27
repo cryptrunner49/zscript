@@ -1,4 +1,4 @@
-// Section: Command-line Arguments Processing
+// Command-line Arguments Processing
 // Initializes verbose flag and processes command-line arguments
 var verbose = false
 for (i = 0; i < args.length-1; i = i + 1):
@@ -13,13 +13,13 @@ else:
     println("--- Mode ---")
     println("Running in normal mode.")
 
-// Section: Argument Array Information
+// Argument Array Information
 // Prints information about the arguments array
 println("--- Argument Details ---")
 println("Array size:", args.length)   // Number of arguments
 println("Array length:", len(args))   // Alternative length method
 
-// Section: Printing Specific Arguments
+// Printing Specific Arguments
 // Displays the first three arguments (if available)
 println("--- Arguments ---")
 if (args.length > 2):

@@ -1,4 +1,4 @@
-// Section: While Loop with Break
+// While Loop with Break
 println("--- While Loop with Break ---")
 var i = 0
 while (i < 10):
@@ -10,7 +10,7 @@ while (i < 10):
 
 println("Exited while loop")
 
-// Section: For Loop with Break
+// For Loop with Break
 println("--- For Loop with Break ---")
 for (var i = 0; i < 10; i++):
     println("i:", i)
