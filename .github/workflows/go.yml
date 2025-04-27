@@ -30,6 +30,9 @@ jobs:
       - name: Build Lib (shared object and header)
         run: go build -buildmode=c-shared -o bin/libzscript.so cmd/lib/corelib.go
 
+      - name: Test
+        run: go test -v ./...
+
       - name: Upload Build Artifacts
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
